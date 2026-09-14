@@ -84,11 +84,20 @@ export const DEMAND_PAYMENT_METHODS = [
 
 export type DemandPaymentMethodKey = (typeof DEMAND_PAYMENT_METHODS)[number]['key'];
 
-/** 간편결제 안의 사업자. 토스만 실제로 고를 수 있다. */
+/**
+ * 간편결제 안의 사업자. 토스만 실제로 고를 수 있다.
+ *
+ * 화면에는 로고 이미지(`DEMAND_FORM_ASSETS`)가 들어가고, 여기 `label`은 그 이미지의 대체
+ * 텍스트로 쓰인다. 카카오 로고에는 `kakao` 글자가 없어서 이름을 여기서 준다.
+ *
+ * ⚠️ 시안 컴포넌트에는 토스 옆에 `혜택` 배지가 붙어 있지만 화면에는 나오지 않는다. 배지
+ *    프레임(`1153:71308`)의 x가 130인데 부모 박스 폭이 107이라 잘려 나간다. 보이지 않는 것을
+ *    임의로 살리지 않으려고 필드를 두지 않았다.
+ */
 export const DEMAND_EASY_PAY_PROVIDERS = [
-  { key: 'toss', label: '토스페이', badge: '혜택', implemented: true },
-  { key: 'naver', label: '네이버페이', badge: null, implemented: false },
-  { key: 'kakao', label: '카카오페이', badge: null, implemented: false },
+  { key: 'toss', label: '토스페이', implemented: true },
+  { key: 'naver', label: '네이버페이', implemented: false },
+  { key: 'kakao', label: '카카오페이', implemented: false },
 ] as const;
 
 export type DemandEasyPayProviderKey = (typeof DEMAND_EASY_PAY_PROVIDERS)[number]['key'];

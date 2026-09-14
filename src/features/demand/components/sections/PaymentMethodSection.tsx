@@ -1,9 +1,11 @@
 'use client';
 
 import { ChevronDown } from 'lucide-react';
+import Image from 'next/image';
 
 import { Radio, RadioGroup } from '@/components/ui/Radio';
 import { useToast } from '@/components/ui/Toast';
+import { DEMAND_FORM_ASSETS } from '@/constants/assets';
 import {
   DEMAND_EASY_PAY_PROVIDERS,
   DEMAND_FORM_MESSAGES,
@@ -31,16 +33,27 @@ import { cn } from '@/lib/cn';
 // 실측(픽셀 직접 샘플): 배너 333x46 radius 8 surface-secondary · 사업자 칸 107x52 radius 4 ·
 // 칸 사이 4 · 선택된 칸 테두리 #434343, 나머지 #d6d6d6 · 행 간격 16 · 라디오와 칸 사이 8.
 //
-// ⚠️ 사업자 로고 이미지가 저장소에 없다. 시안은 토스 로고를 벡터로, 네이버·카카오를 이미지로
-//    갖고 있는데 어느 쪽도 반입되지 않았다. 지금은 이름을 글자로 적어 둔다. 에셋을 받으면
-//    이 자리만 바꾼다.
-//
-// ⚠️ 시안 컴포넌트 안에 `혜택` 배지가 있지만 실제 프레임에는 그려지지 않는다(픽셀로 확인).
-//    보이지 않는 것을 임의로 살리지 않았다.
+// ⚠️ 시안 컴포넌트 안에 `혜택` 배지가 있지만 실제 프레임에는 그려지지 않는다. 배지 프레임
+//    (`1153:71308`)의 x가 130인데 부모 박스 폭이 107이라 잘려 나간다. 보이지 않는 것을 임의로
+//    살리지 않았다.
 
-/** 시안: 사업자 한 칸. 선택 여부로 테두리만 갈린다. */
-const PROVIDER_CLASS =
-  'text-caption-12 flex h-13 flex-1 items-center justify-center rounded-4 border';
+/** 시안: 사업자 한 칸. 선택 여부로 테두리만 갈린다. 로고 색은 그대로 둔다. */
+const PROVIDER_CLASS = 'flex h-13 flex-1 items-center justify-center rounded-4 border';
+
+/**
+ * 사업자 로고와 그 표시 크기(시안 실측).
+ *
+ * 박스는 셋 다 107x52로 같은데 로고 크기는 다르다. 가운데 정렬이라 위치는 따로 주지 않는다.
+ * 소수점(77.2 · 16.78)은 정수로 반올림했다. 1픽셀 미만이라 눈에 보이지 않는다.
+ */
+const PROVIDER_LOGOS: Record<
+  DemandEasyPayProviderKey,
+  { src: string; width: number; height: number }
+> = {
+  toss: { src: DEMAND_FORM_ASSETS.tossPayLogo, width: 77, height: 14 },
+  naver: { src: DEMAND_FORM_ASSETS.naverPayLogo, width: 49, height: 17 },
+  kakao: { src: DEMAND_FORM_ASSETS.kakaoPayLogo, width: 47, height: 18 },
+};
 
 interface PaymentMethodSectionProps {
   paymentMethod: DemandPaymentMethodKey | null;
@@ -96,27 +109,38 @@ export function PaymentMethodSection({
               {/* 간편결제 아래에만 사업자 3칸이 붙는다. */}
               {method.key === 'easy' && (
                 <div className="flex w-full items-center gap-1">
-                  {DEMAND_EASY_PAY_PROVIDERS.map((provider) => (
-                    <button
-                      className={cn(
-                        PROVIDER_CLASS,
-                        easyPayProvider === provider.key
-                          ? 'border-border-secondary text-content-primary'
-                          : 'border-border-quarternary text-content-quarternary',
-                      )}
-                      key={provider.key}
-                      onClick={() => {
-                        if (!provider.implemented) {
-                          showComingSoon();
-                          return;
-                        }
-                        onEasyPayProviderChange(provider.key);
-                      }}
-                      type="button"
-                    >
-                      {provider.label}
-                    </button>
-                  ))}
+                  {DEMAND_EASY_PAY_PROVIDERS.map((provider) => {
+                    const logo = PROVIDER_LOGOS[provider.key];
+
+                    return (
+                      <button
+                        className={cn(
+                          PROVIDER_CLASS,
+                          easyPayProvider === provider.key
+                            ? 'border-border-secondary'
+                            : 'border-border-quarternary',
+                        )}
+                        key={provider.key}
+                        onClick={() => {
+                          if (!provider.implemented) {
+                            showComingSoon();
+                            return;
+                          }
+                          onEasyPayProviderChange(provider.key);
+                        }}
+                        type="button"
+                      >
+                        {/* 로고에 사업자 이름이 다 들어 있지 않다(카카오는 `pay`만). 버튼의
+                            읽히는 이름이 alt에서 나오므로 이름을 넣는다. */}
+                        <Image
+                          alt={provider.label}
+                          height={logo.height}
+                          src={logo.src}
+                          width={logo.width}
+                        />
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>

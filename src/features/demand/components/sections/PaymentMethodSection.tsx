@@ -48,12 +48,22 @@ import { cn } from '@/lib/cn';
  * 다크에서만 흰 판이 된다. 브랜드 마크를 흰 판에 얹는 것은 이 저장소에 이미 있는 방식이다
  * (구글 로그인 버튼도 같은 이유로 `bg-white` 고정, `SocialLoginButtons`).
  *
- * 테두리까지 primitive로 못박는 이유는 시맨틱 토큰이 다크에서 뒤집히기 때문이다. 선택 색
- * `border-secondary`가 다크에서 #d6d6d6가 되어 흰 판 위에서 보이지 않고, 미선택
- * `border-quarternary`(#434343)보다 오히려 연해져 선택 관계가 거꾸로 읽힌다. 시안의 라이트
- * 값을 그대로 쓴다. 선택 #434343(`coolgray-700`) · 미선택 #d6d6d6(`coolgray-300`).
+ * 테두리도 primitive로 못박는다. 시맨틱 토큰이 다크에서 뒤집혀 미선택 `border-quarternary`가
+ * #434343, 선택 `border-secondary`가 #d6d6d6가 되어 선택 관계가 거꾸로 읽힌다. 시안의 라이트
+ * 값을 쓴다. 미선택 #d6d6d6(`coolgray-300`) · 선택 #434343(`coolgray-700`).
+ *
+ * ⚠️ **선택 표시는 테두리가 아니라 안쪽 선(`inset-ring`)이다.** 시안은 테두리 색만 바꾸는데
+ *    (미선택 `border-default` → 선택 `border-strong`) 그 방식은 다크에서 보이지 않는다.
+ *    테두리는 요소의 바깥 경계에 그려져 어두운 카드(#1a1a1a)와 맞닿는다. 어두운 테두리가 어두운
+ *    배경에 섞여, 흰 판이 1픽셀 작아진 것으로만 보인다. 라이트에서는 카드가 흰색이라 같은 선이
+ *    뚜렷해서 시안에서는 문제가 드러나지 않는다.
+ *
+ *    그래서 바깥 테두리는 미선택 색으로 고정해 판의 윤곽만 잡고, 선택 표시를 판 안쪽에 그린다.
+ *    양옆이 #d6d6d6와 흰색이라 뒤쪽 배경과 무관하게 보인다. 시안보다 선이 굵어지는 것이 유일한
+ *    차이다. 다크용 시안을 받으면 그쪽에 맞춘다.
  */
-const PROVIDER_CLASS = 'flex h-13 flex-1 items-center justify-center rounded-4 border bg-white';
+const PROVIDER_CLASS =
+  'border-coolgray-300 active:bg-coolgray-100 flex h-13 flex-1 items-center justify-center rounded-4 border bg-white';
 
 /**
  * 사업자 로고와 그 표시 크기(시안 실측).
@@ -131,9 +141,8 @@ export function PaymentMethodSection({
                       <button
                         className={cn(
                           PROVIDER_CLASS,
-                          easyPayProvider === provider.key
-                            ? 'border-coolgray-700'
-                            : 'border-coolgray-300',
+                          easyPayProvider === provider.key &&
+                            'inset-ring-coolgray-700 inset-ring-2',
                         )}
                         key={provider.key}
                         onClick={() => {

@@ -528,6 +528,21 @@
   --color-yellow-a80: #ffca00cc;
   --color-yellow-a90: #ffca00e5;
 
+  /* component: badge 표면색 (모드 무관, 대부분 primitive A20 별칭) */
+  --color-badge-surface-white-a100: #ffffff;
+  --color-badge-surface-white: #ffffff33;
+  --color-badge-surface-brand: #ff5f6633;
+  --color-badge-surface-red: #ff186033;
+  --color-badge-surface-orange: #ff7f0033;
+  --color-badge-surface-yellow: #ffca0033;
+  --color-badge-surface-green: #00c51f33;
+  --color-badge-surface-sky: #00c6f133;
+  --color-badge-surface-blue: #3268ff33;
+  --color-badge-surface-purple: #c14bff33;
+  --color-badge-surface-pink: #ff6eb333;
+  --color-badge-surface-black: #00000033;
+  --color-badge-surface-gray: #a5a5a533;
+
   /* radius */
   --radius-4: 4px;
   --radius-8: 8px;

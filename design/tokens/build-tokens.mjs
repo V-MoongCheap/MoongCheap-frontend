@@ -8,7 +8,7 @@
  *
  * ## 이름을 두 층으로 나누는 이유
  *
- * 모드가 갈리는 토큰(semantic, component)은 아래처럼 **이름을 분리**해야 합니다.
+ * 모드가 갈리는 토큰(semantic)은 아래처럼 **이름을 분리**해야 합니다.
  *
  *   1층  :root / .dark        --content-primary: #0a0a0a
  *   2층  @theme inline        --color-content-primary: var(--content-primary)
@@ -109,14 +109,14 @@ const numbers = loadFlat(collection('04'));
 const typography = loadFlat(collection('05'));
 const responsive = loadFlat(collection('06'));
 
-// component 컬렉션은 아직 비어 있습니다. 디자인팀이 light/dark 2모드로 만든다고 확인해 주어
-// 도착하면 semantic과 같은 층에 합쳐지도록 미리 열어 둡니다.
-const componentLight = loadFlat(collection('03'), 'light.tokens.json');
-const componentDark = loadFlat(collection('03'), 'dark.tokens.json');
+// component 컬렉션(03)은 단일 모드(Mode 1)로 도착했습니다. 배지 표면색은 모드에 안 갈리는
+// 고정 틴트(대부분 primitive A20 별칭)라 semantic처럼 light/dark로 분기하지 않고,
+// primitive와 같은 mode-agnostic @theme 블록에 출력합니다.
+const component = loadFlat(collection('03'));
 
-/** 모드가 갈리는 토큰 전체(semantic + component). 이름이 겹치면 component가 이깁니다. */
-const modedLight = { ...semanticLight, ...(componentLight ?? {}) };
-const modedDark = { ...semanticDark, ...(componentDark ?? {}) };
+/** 모드가 갈리는 토큰(semantic). */
+const modedLight = semanticLight;
+const modedDark = semanticDark;
 const modedKeys = Object.keys(modedLight).sort();
 
 /** `number` 컬렉션의 `{number-reference-value.16}` 별칭을 실제 값으로 풉니다. */
@@ -188,6 +188,13 @@ for (const key of Object.keys(primitives).sort()) {
   if (!key.startsWith('opacity/')) continue;
   write(`  --color-${opacitySlug(key)}: ${toCssColor(primitives[key].$value)};`);
 }
+if (component) {
+  write();
+  write('  /* component: badge 표면색 (모드 무관, 대부분 primitive A20 별칭) */');
+  for (const key of Object.keys(component)) {
+    write(`  --color-${slug(key)}: ${toCssColor(component[key].$value)};`);
+  }
+}
 write();
 write('  /* radius */');
 for (const key of Object.keys(numbers)) {
@@ -233,12 +240,11 @@ writeFileSync(OUT, lines.join('\n') + '\n');
 
 const count = (table, filter = () => true) => Object.keys(table).filter(filter).length;
 console.log(`생성 완료: src/app/globals.css`);
-console.log(
-  `  모드 전환  ${modedKeys.length}개 x 2모드 (semantic ${count(semanticLight)}${componentLight ? ` + component ${count(componentLight)}` : ' · component 미도착'})`,
-);
+console.log(`  모드 전환  ${modedKeys.length}개 x 2모드 (semantic ${count(semanticLight)})`);
 console.log(
   `  primitives ${count(primitives, (k) => !k.startsWith('opacity/'))}개 + 알파 ${count(primitives, (k) => k.startsWith('opacity/'))}개`,
 );
+console.log(`  component ${count(component ?? {})}개 (badge 표면색, 모드 무관)`);
 console.log(
   `  radius ${count(numbers, (k) => k.startsWith('radius/'))}개 · typography ${sizeKeys.length}개`,
 );

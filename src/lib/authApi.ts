@@ -139,20 +139,15 @@ export async function logout(): Promise<void> {
  * 구글) 전용이라 로컬 비밀번호가 없고, 소셜 가입 유저는 `password: null`로 보내면 백엔드가 정상
  * 탈퇴한다(2026-09-14 백엔드 구두 확인). 이메일 가입(Full 범위)이 생기면 그때만 실제 값을 넣는다.
  *
- * 로그아웃과 마찬가지로 이미 폐기된 세션(401)도 결과적으로 "탈퇴/미로그인"이라 성공으로 접는다.
+ * 로그아웃과 달리 401을 성공으로 접지 않는다. 로그아웃의 401은 "이미 로그아웃됨"이라 목적이 달성된
+ * 것이지만, 탈퇴의 401은 세션이 없어 계정이 **삭제되지 않은** 실패다. 이를 성공으로 접으면 탈퇴가
+ * 안 됐는데도 완료로 안내하게 된다. 모든 실패는 그대로 던져 호출부가 재시도 토스트를 띄우게 한다.
  * `DELETE /api/auth/withdraw`
  */
 export async function withdraw(): Promise<void> {
-  try {
-    await apiFetch('/api/auth/withdraw', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: null }),
-    });
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 401) {
-      return;
-    }
-    throw error;
-  }
+  await apiFetch('/api/auth/withdraw', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: null }),
+  });
 }

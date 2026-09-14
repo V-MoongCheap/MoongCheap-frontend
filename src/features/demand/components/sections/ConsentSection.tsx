@@ -77,10 +77,12 @@ export function ConsentSection({ consents, onConsentsChange }: ConsentSectionPro
               onChange={(event) => onConsentsChange({ ...consents, [key]: event.target.checked })}
               type="checkbox"
             />
+            {/* input이 sr-only라 포커스 링을 이 표시 아이콘이 대신 받는다. 없으면 키보드로
+                내려올 때 지금 어느 줄에 있는지 보이지 않는다. 위 전체동의 상자와 같은 링이다. */}
             <Check
               aria-hidden
               className={cn(
-                'size-5 shrink-0',
+                'rounded-4 peer-focus-visible:ring-effect-focus-ring-primary size-5 shrink-0 peer-focus-visible:ring-2 peer-focus-visible:ring-offset-1',
                 consents[key] ? 'text-content-brand' : 'text-content-quinary',
               )}
               strokeWidth={2}

@@ -118,6 +118,8 @@ export function PaymentMethodSection({
           {DEMAND_PAYMENT_METHODS.map((method) => (
             <div className="flex w-full flex-col gap-2" key={method.key}>
               <Radio
+                // 사업자 칸과 같은 이유다. 카드·계좌·휴대폰은 눌러도 선택되지 않는다.
+                aria-disabled={!method.implemented}
                 checked={paymentMethod === method.key}
                 label={method.label}
                 name="demand-payment-method"
@@ -139,6 +141,15 @@ export function PaymentMethodSection({
 
                     return (
                       <button
+                        // 값 하나만 고르는 버튼 그룹이라 `aria-pressed`로 선택 상태를 알린다
+                        // (`SegmentControl`과 같은 방침). 테두리만 바뀌면 보조기술에는 아무
+                        // 변화가 없어 고른 뒤에도 평범한 버튼으로 읽힌다.
+                        aria-pressed={easyPayProvider === provider.key}
+                        // 미구현 사업자는 눌러도 선택되지 않는다. 시안에 흐린 상태가 없어 겉모습은
+                        // 그대로 두지만, 고를 수 없다는 사실은 알려야 한다(`SearchView`와 같은
+                        // 방침). `disabled`가 아니라 `aria-disabled`인 이유는 포커스와 클릭을
+                        // 살려 '준비 중' 토스트를 띄워야 하기 때문이다.
+                        aria-disabled={!provider.implemented}
                         className={cn(
                           PROVIDER_CLASS,
                           easyPayProvider === provider.key &&

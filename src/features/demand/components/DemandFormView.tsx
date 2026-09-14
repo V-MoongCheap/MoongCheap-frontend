@@ -4,7 +4,8 @@ import { useState } from 'react';
 
 import { AppBar } from '@/components/layout/AppBar';
 import { Button } from '@/components/ui/Button';
-import { ORDER_QUANTITY_DEFAULT } from '@/constants/businessRules';
+import { useToast } from '@/components/ui/Toast';
+import { ORDER_QUANTITY_DEFAULT, PRICE_BANDS, type PriceBandKey } from '@/constants/businessRules';
 import { DEMAND_FORM_CONSENTS, DEMAND_FORM_MESSAGES } from '@/constants/demandFormMessages';
 import { AddressSection } from '@/features/demand/components/sections/AddressSection';
 import { ConsentSection } from '@/features/demand/components/sections/ConsentSection';
@@ -13,6 +14,7 @@ import { PriceBandSection } from '@/features/demand/components/sections/PriceBan
 import { ProductSummarySection } from '@/features/demand/components/sections/ProductSummarySection';
 import { SubstituteSection } from '@/features/demand/components/sections/SubstituteSection';
 import type { DemandFormValues } from '@/types/demandForm';
+import type { ProductDetail } from '@/types/product';
 
 // B-09 수요 등록/참여 폼의 껍데기. 시안 `1153:71238`.
 //
@@ -34,14 +36,33 @@ const EMPTY_VALUES: DemandFormValues = {
   consents: { autoPayment: false, privacy: false, pgTerms: false },
 };
 
+/**
+ * 시장평균가가 속한 구간과, 그보다 비싼 구간들.
+ *
+ * 시장평균가 필드가 서버에 없어서 정가(`listPrice`)로 대신한다. 정가가 없으면 비교할 기준이
+ * 없으므로 아무 구간도 초과로 보지 않는다 — 근거 없이 경고를 띄우지 않기 위해서다.
+ */
+function resolveMarketBand(listPrice: number | undefined) {
+  const market = listPrice === undefined ? undefined : PRICE_BANDS.find((b) => listPrice <= b.max);
+  if (market === undefined) {
+    return { label: '-', overBands: [] as readonly PriceBandKey[] };
+  }
+  return {
+    label: market.label,
+    overBands: PRICE_BANDS.filter((b) => b.min > market.max).map((b) => b.key),
+  };
+}
+
 interface DemandFormViewProps {
-  productId: string;
+  product: ProductDetail;
   /** 앱바 뒤로가기가 갈 곳. 라우트는 호출부(page)가 정한다. */
   backHref: string;
 }
 
-export function DemandFormView({ productId, backHref }: DemandFormViewProps) {
+export function DemandFormView({ product, backHref }: DemandFormViewProps) {
   const [values, setValues] = useState<DemandFormValues>(EMPTY_VALUES);
+  const { showToast } = useToast();
+  const market = resolveMarketBand(product.listPrice);
 
   /** 값 하나만 갈아 끼운다. 섹션마다 setter를 따로 만들지 않기 위한 것이다. */
   function update<Key extends keyof DemandFormValues>(key: Key, value: DemandFormValues[Key]) {
@@ -61,18 +82,24 @@ export function DemandFormView({ productId, backHref }: DemandFormViewProps) {
       {/* 하단 고정 버튼에 가리지 않도록 그 높이(80)만큼 비운다. */}
       <div className="flex w-full flex-1 flex-col gap-6 py-4 pb-[calc(80px+env(safe-area-inset-bottom))]">
         <ProductSummarySection
+          marketPriceLabel={market.label}
           onQuantityChange={(quantity) => update('quantity', quantity)}
-          productId={productId}
+          product={product}
           quantity={values.quantity}
         />
 
-        <AddressSection
-          addressId={values.addressId}
-          onAddressChange={(addressId) => update('addressId', addressId)}
-        />
+        {/* 시안에 배송지를 고르는 UI가 없어 값을 위로 올리지 않는다. 기본 배송지를 그대로 쓴다. */}
+        <AddressSection />
 
         <PriceBandSection
-          onPriceBandChange={(priceBand) => update('priceBand', priceBand)}
+          onPriceBandChange={(priceBand) => {
+            update('priceBand', priceBand);
+            // 시장평균가를 넘는 구간을 고르면 알리기만 한다. 선택을 되돌리거나 막지 않는다.
+            if (market.overBands.includes(priceBand)) {
+              showToast(DEMAND_FORM_MESSAGES.priceOverMarket);
+            }
+          }}
+          overMarketBands={market.overBands}
           priceBand={values.priceBand}
         />
 

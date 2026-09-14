@@ -27,11 +27,22 @@ import { cn } from '@/lib/cn';
 type RadioProps = Omit<ComponentPropsWithRef<'input'>, 'type' | 'className'> & {
   label: ReactNode;
   className?: string;
+  /**
+   * 안쪽 점의 색만 따로 바꿀 때 쓴다. 희망가격에서 시장평균가를 넘는 구간이 붉게 표시된다
+   * (시안 `1153:71594`).
+   */
+  dotClassName?: string;
 };
 
-export function Radio({ label, className, ...props }: RadioProps) {
+export function Radio({ label, className, dotClassName, ...props }: RadioProps) {
   return (
-    <label className={cn('flex items-center gap-2 has-[:disabled]:opacity-50', className)}>
+    // 글자색을 바깥 label에 둔다. 안쪽 span에 박으면 호출부가 className으로 덮을 수 없다.
+    <label
+      className={cn(
+        'text-content-primary flex items-center gap-2 has-[:disabled]:opacity-50',
+        className,
+      )}
+    >
       <span className="relative flex size-5 shrink-0">
         <input
           className="peer border-border-disabled-secondary rounded-round focus-visible:ring-effect-focus-ring-primary size-5 appearance-none border-2 outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
@@ -41,11 +52,14 @@ export function Radio({ label, className, ...props }: RadioProps) {
         {/* 안쪽 점. inset-1(4)이 테두리 2를 뺀 자리에 2 간격을 남겨 12짜리 점이 된다. */}
         <span
           aria-hidden
-          className="rounded-round bg-surface-quinary pointer-events-none absolute inset-1 opacity-0 peer-checked:opacity-100"
+          className={cn(
+            'rounded-round bg-surface-quinary pointer-events-none absolute inset-1 opacity-0 peer-checked:opacity-100',
+            dotClassName,
+          )}
         />
       </span>
 
-      <span className="text-body-14 text-content-primary">{label}</span>
+      <span className="text-body-14">{label}</span>
     </label>
   );
 }

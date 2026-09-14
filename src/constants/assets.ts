@@ -29,6 +29,24 @@ export const CATALOG_SEARCH_ASSETS = {
   emptyResult: '/images/catalog-search/1-1.webp',
 } as const;
 
+/**
+ * 수요 등록/참여(B-09) 전용 에셋. public/images/demand-register/.
+ *
+ * 간편결제 사업자 로고 셋이다. 시안에서 토스는 벡터, 네이버·카카오는 이미지 채움인데 #60 일괄
+ * 반입에서 셋 다 WebP로 들어왔다. 표시 크기의 정확히 4배라 고밀도 화면에서도 선명하다.
+ *
+ * 표시 크기가 사업자마다 다르다(시안 실측). 박스는 107x52로 같고 로고만 다르게 들어간다.
+ *   토스 77.2x14 · 네이버 49x16.78 · 카카오 47x18
+ */
+export const DEMAND_FORM_ASSETS = {
+  /** `toss pay` 워드마크(심볼+글자). 309x56. */
+  tossPayLogo: '/images/demand-register/2-1.webp',
+  /** `N pay` 워드마크. 196x68. */
+  naverPayLogo: '/images/demand-register/2-2.webp',
+  /** 카카오페이 워드마크(말풍선+`pay`). `kakao` 글자는 로고에 없다. 188x72. */
+  kakaoPayLogo: '/images/demand-register/2-3.webp',
+} as const;
+
 /** 스플래쉬(B-01 세션 확인) 전용 에셋. public/images/splash/. */
 export const SPLASH_ASSETS = {
   /** 워드마크 `뭉치`. 144x66 벡터라 리사이즈 대상이 아니다. */

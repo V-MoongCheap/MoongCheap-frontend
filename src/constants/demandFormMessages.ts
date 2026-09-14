@@ -38,6 +38,21 @@ export const DEMAND_FORM_MESSAGES = {
   /** 결제수단 카드 아래 안내. */
   autoPaymentNote: '낙찰이 확정되면 등록된 결제수단으로 자동 결제돼요',
 
+  /**
+   * 제품 카드 오른쪽 값의 라벨.
+   *
+   * ⚠️ 피그마 레이어 이름은 `희망 가격대`인데 실제로 그려진 글자는 `시장평균가`다. 이름이 아니라
+   *    화면에 보이는 쪽을 따랐다. 사용자가 아래에서 고르는 희망가격과는 **다른 값**이다.
+   */
+  marketPrice: '시장평균가',
+  /** 수량 스테퍼 왼쪽 라벨. */
+  quantity: '수량',
+  /** 수량 스테퍼 왼쪽에 붙는 현재 값 표기. */
+  quantityUnit: (count: number) => `${count}개`,
+
+  /** 희망가격을 시장평균가보다 높게 고르면 뜨는 토스트(시안 `1153:71594`). */
+  priceOverMarket: '시장평균가보다 높은 금액입니다',
+
   /** 대체 상품 동의 제목 옆 물음표를 눌렀을 때 뜨는 말풍선. */
   substituteTooltip: '대체 상품이란? 내가 원하는 상품이 없을시 비슷한 대체 상품을 추천드려요.',
   substituteAgree: '동의',
@@ -69,11 +84,20 @@ export const DEMAND_PAYMENT_METHODS = [
 
 export type DemandPaymentMethodKey = (typeof DEMAND_PAYMENT_METHODS)[number]['key'];
 
-/** 간편결제 안의 사업자. 토스만 실제로 고를 수 있다. */
+/**
+ * 간편결제 안의 사업자. 토스만 실제로 고를 수 있다.
+ *
+ * 화면에는 로고 이미지(`DEMAND_FORM_ASSETS`)가 들어가고, 여기 `label`은 그 이미지의 대체
+ * 텍스트로 쓰인다. 카카오 로고에는 `kakao` 글자가 없어서 이름을 여기서 준다.
+ *
+ * ⚠️ 시안 컴포넌트에는 토스 옆에 `혜택` 배지가 붙어 있지만 화면에는 나오지 않는다. 배지
+ *    프레임(`1153:71308`)의 x가 130인데 부모 박스 폭이 107이라 잘려 나간다. 보이지 않는 것을
+ *    임의로 살리지 않으려고 필드를 두지 않았다.
+ */
 export const DEMAND_EASY_PAY_PROVIDERS = [
-  { key: 'toss', label: '토스페이', badge: '혜택', implemented: true },
-  { key: 'naver', label: '네이버페이', badge: null, implemented: false },
-  { key: 'kakao', label: '카카오페이', badge: null, implemented: false },
+  { key: 'toss', label: '토스페이', implemented: true },
+  { key: 'naver', label: '네이버페이', implemented: false },
+  { key: 'kakao', label: '카카오페이', implemented: false },
 ] as const;
 
 export type DemandEasyPayProviderKey = (typeof DEMAND_EASY_PAY_PROVIDERS)[number]['key'];
@@ -95,3 +119,12 @@ export type DemandConsentKey = (typeof DEMAND_FORM_CONSENTS)[number]['key'];
 
 /** 필수 동의 3개를 한 번에 켜고 끄는 체크박스. */
 export const DEMAND_CONSENT_ALL_LABEL = '주문 내용 확인 및 결제동의';
+
+/*
+ * 희망가격 라디오의 라벨은 여기 두지 않고 `PRICE_BANDS.label`(businessRules)을 그대로 쓴다.
+ *
+ * ⚠️ 같은 시안 안에서 표기가 갈린다. 라디오 목록은 `5천원대 이하`처럼 `대`가 붙는데, 제품 카드의
+ *    시장평균가는 `3만원 이하`로 붙지 않는다. 기능명세서의 가격 매핑표(FN-B09-01)와 `PRICE_BANDS`
+ *    도 `대` 없는 쪽이고, 구간이 0~5,000원이라 `5천원 이하`가 뜻도 맞다. 그래서 `대` 없는 쪽으로
+ *    통일했다. 디자인 확인 대상.
+ */

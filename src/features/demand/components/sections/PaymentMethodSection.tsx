@@ -37,8 +37,23 @@ import { cn } from '@/lib/cn';
 //    (`1153:71308`)의 x가 130인데 부모 박스 폭이 107이라 잘려 나간다. 보이지 않는 것을 임의로
 //    살리지 않았다.
 
-/** 시안: 사업자 한 칸. 선택 여부로 테두리만 갈린다. 로고 색은 그대로 둔다. */
-const PROVIDER_CLASS = 'flex h-13 flex-1 items-center justify-center rounded-4 border';
+/**
+ * 시안: 사업자 한 칸. 선택 여부로 테두리만 갈린다. 로고 색은 그대로 둔다.
+ *
+ * 바탕과 테두리를 **모드 무관 primitive로 고정한다.** 로고가 검정 글자를 구운 브랜드 이미지라
+ * CSS로 색을 못 바꾸는데, 다크에서 어두운 카드 위에 놓으면 토스 글자와 카카오 로고가 배경에
+ * 묻혀 사라진다(네이버만 초록이라 살아남는다).
+ *
+ * 라이트에서 카드 바탕 `background-default`가 #ffffff이므로 흰 판은 **라이트에서 시안과 똑같고**
+ * 다크에서만 흰 판이 된다. 브랜드 마크를 흰 판에 얹는 것은 이 저장소에 이미 있는 방식이다
+ * (구글 로그인 버튼도 같은 이유로 `bg-white` 고정, `SocialLoginButtons`).
+ *
+ * 테두리까지 primitive로 못박는 이유는 시맨틱 토큰이 다크에서 뒤집히기 때문이다. 선택 색
+ * `border-secondary`가 다크에서 #d6d6d6가 되어 흰 판 위에서 보이지 않고, 미선택
+ * `border-quarternary`(#434343)보다 오히려 연해져 선택 관계가 거꾸로 읽힌다. 시안의 라이트
+ * 값을 그대로 쓴다. 선택 #434343(`coolgray-700`) · 미선택 #d6d6d6(`coolgray-300`).
+ */
+const PROVIDER_CLASS = 'flex h-13 flex-1 items-center justify-center rounded-4 border bg-white';
 
 /**
  * 사업자 로고와 그 표시 크기(시안 실측).
@@ -117,8 +132,8 @@ export function PaymentMethodSection({
                         className={cn(
                           PROVIDER_CLASS,
                           easyPayProvider === provider.key
-                            ? 'border-border-secondary'
-                            : 'border-border-quarternary',
+                            ? 'border-coolgray-700'
+                            : 'border-coolgray-300',
                         )}
                         key={provider.key}
                         onClick={() => {

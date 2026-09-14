@@ -6,21 +6,21 @@ import { useRouter } from 'next/navigation';
 
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { useToast } from '@/components/ui/Toast';
-import { LOGOUT_CONFIRM } from '@/constants/commonMessages';
-import { useLogout } from '@/features/auth/session';
+import { WITHDRAW_CONFIRM } from '@/constants/commonMessages';
+import { useWithdraw } from '@/features/auth/session';
 import { SETTINGS_ROW_PRESSABLE_CLASS } from '@/features/user/components/SettingsRow';
 
-// B-24 로그아웃 실행 행(#70). 확인 다이얼로그를 거쳐
-// POST /api/auth/logout으로 세션을 폐기하고 전역 상태를 미로그인으로 만든 뒤(useLogout),
-// 완료 조건(FN-B24-02 "뒤로가기로 재진입 불가")에 맞춰 로그인 화면으로 replace 한다.
+// B-24 회원탈퇴 실행 행(#91). 로그아웃 행(LogoutRow)과 같은 구조다 — 확인 다이얼로그를 거쳐
+// DELETE /api/auth/withdraw로 계정을 탈퇴하고, 세션 캐시를 비워 전역 상태를 미로그인으로 만든 뒤
+// (useWithdraw), 로그인 화면으로 replace 해 히스토리에서 마이페이지를 지운다(BR-B24-01-04).
 // 실패는 토스트로 알리고 화면에 머문다(재시도 가능). SettingsList의 <ul> 안에 놓이므로 <li>로 감싼다.
 
-const LOGOUT_FAILED_MESSAGE = '로그아웃에 실패했어요. 잠시 후 다시 시도해 주세요.';
+const WITHDRAW_FAILED_MESSAGE = '회원탈퇴에 실패했어요. 잠시 후 다시 시도해 주세요.';
 
-export function LogoutRow() {
+export function WithdrawRow() {
   const router = useRouter();
   const { showToast } = useToast();
-  const { mutate, isPending } = useLogout();
+  const { mutate, isPending } = useWithdraw();
   const [isOpen, setIsOpen] = useState(false);
 
   const handleConfirm = () => {
@@ -30,12 +30,12 @@ export function LogoutRow() {
     mutate(undefined, {
       onSuccess: () => {
         setIsOpen(false);
-        // 세션 캐시는 useLogout이 비웠다. 로그인 화면으로 replace 해 히스토리에서 마이페이지를 지운다.
+        // 세션 캐시는 useWithdraw가 비웠다. 로그인 화면으로 replace 해 뒤로가기 재진입을 막는다.
         router.replace('/login');
       },
       onError: () => {
         setIsOpen(false);
-        showToast(LOGOUT_FAILED_MESSAGE);
+        showToast(WITHDRAW_FAILED_MESSAGE);
       },
     });
   };
@@ -47,14 +47,14 @@ export function LogoutRow() {
         onClick={() => setIsOpen(true)}
         type="button"
       >
-        로그아웃
+        회원탈퇴
       </button>
 
       <AlertDialog
         isOpen={isOpen}
-        title={LOGOUT_CONFIRM.title}
-        message={LOGOUT_CONFIRM.message}
-        confirmLabel={LOGOUT_CONFIRM.confirmLabel}
+        title={WITHDRAW_CONFIRM.title}
+        message={WITHDRAW_CONFIRM.message}
+        confirmLabel={WITHDRAW_CONFIRM.confirmLabel}
         isProcessing={isPending}
         onConfirm={handleConfirm}
         onClose={() => {

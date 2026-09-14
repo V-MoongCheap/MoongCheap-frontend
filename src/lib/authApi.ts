@@ -131,3 +131,28 @@ export async function logout(): Promise<void> {
     throw error;
   }
 }
+
+/**
+ * 회원 탈퇴(#91). `DELETE /api/auth/withdraw`로 백엔드가 계정을 탈퇴 처리하고 세션을 폐기한다.
+ *
+ * 바디는 백엔드 `WithdrawRequestDto`에 맞춰 `{ password }`를 보낸다. 지금 서비스는 소셜(카카오/
+ * 구글) 전용이라 로컬 비밀번호가 없고, 소셜 가입 유저는 `password: null`로 보내면 백엔드가 정상
+ * 탈퇴한다(2026-09-14 백엔드 구두 확인). 이메일 가입(Full 범위)이 생기면 그때만 실제 값을 넣는다.
+ *
+ * 로그아웃과 마찬가지로 이미 폐기된 세션(401)도 결과적으로 "탈퇴/미로그인"이라 성공으로 접는다.
+ * `DELETE /api/auth/withdraw`
+ */
+export async function withdraw(): Promise<void> {
+  try {
+    await apiFetch('/api/auth/withdraw', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: null }),
+    });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      return;
+    }
+    throw error;
+  }
+}

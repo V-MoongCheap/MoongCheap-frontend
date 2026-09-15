@@ -9,7 +9,7 @@ import { RoleSwitchSheet } from '@/features/user/components/RoleSwitchSheet';
 import type { ActiveRole } from '@/types/user';
 
 // 마이페이지 프로필 카드의 역할 전환 버튼(B-26). 시트 열림 상태만 들고 있는 얇은 client 조각이라
-// `mypage/page.tsx`는 서버 컴포넌트로 남는다(ComingSoonButton·ConfirmActionRow와 같은 방식).
+// `mypage/page.tsx`는 서버 컴포넌트로 남는다(ComingSoonButton·LogoutRow와 같은 방식).
 //
 // 라벨은 "지금이 아닌 쪽"을 가리킨다 — 구매자면 '판매자 전환', 판매자면 '구매자 전환'.
 // 시안 `453:25351`(판매자 현재상태)의 pill은 '판매자 전환'으로 그려져 있으나, S-01 전환완료

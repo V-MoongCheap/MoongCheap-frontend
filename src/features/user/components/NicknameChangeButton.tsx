@@ -215,7 +215,7 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
                 type="button"
                 onClick={handleCheck}
                 disabled={!formatValid || check.state === 'checking'}
-                className="bg-surface-button-tertiary-default hover:bg-surface-button-tertiary-hover active:bg-surface-button-tertiary-pressed text-content-inverse focus-visible:ring-effect-focus-ring-primary rounded-8 text-button-14 px-3 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:opacity-40"
+                className="bg-surface-button-secondary-default hover:bg-surface-button-secondary-hover active:bg-surface-button-secondary-pressed text-content-brand focus-visible:ring-effect-focus-ring-primary rounded-8 text-button-14 px-3 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:opacity-40"
               >
                 {check.state === 'checking' ? '확인 중' : '중복확인'}
               </button>
@@ -246,7 +246,7 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
             취소
           </button>
           <button
-            className={`${DIALOG_BUTTON_CLASS} bg-surface-button-tertiary-default hover:bg-surface-button-tertiary-hover active:bg-surface-button-tertiary-pressed text-content-inverse`}
+            className={`${DIALOG_BUTTON_CLASS} bg-surface-button-primary-default hover:bg-surface-button-primary-hover active:bg-surface-button-primary-pressed text-content-oncolor`}
             disabled={!passed || isPending}
             onClick={handleSubmit}
             type="button"

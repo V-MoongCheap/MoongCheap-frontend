@@ -82,6 +82,14 @@ export function AlertDialog({
     <dialog
       ref={dialogRef}
       onClose={onClose}
+      // Esc는 close 이전에 취소 가능한 cancel 이벤트를 먼저 던진다. 처리 중에는 여기서 기본
+      // 동작(네이티브 dialog 닫힘)을 막아, onClose 가드만으로 남던 React·DOM 상태 불일치
+      // (React는 열림·화면은 닫힘)를 원천 차단한다. 버튼 disabled와 함께 중도 이탈을 막는다.
+      onCancel={(event) => {
+        if (isProcessing) {
+          event.preventDefault();
+        }
+      }}
       role="alertdialog"
       // 제목이 있으면 제목이 이름, 없으면 메시지를 이름으로 삼아 모달에 항상 접근성 이름을 준다.
       aria-labelledby={title !== undefined ? titleId : messageId}

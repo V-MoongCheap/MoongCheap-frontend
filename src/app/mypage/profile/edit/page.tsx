@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 
 import { AppBar } from '@/components/layout/AppBar';
-import { WITHDRAW_CONFIRM } from '@/constants/commonMessages';
 import { LinkButton } from '@/features/user/components/LinkButton';
 import { LogoutRow } from '@/features/user/components/LogoutRow';
 import { NicknameChangeButton } from '@/features/user/components/NicknameChangeButton';
@@ -9,6 +8,7 @@ import { SessionProfileCard } from '@/features/user/components/SessionProfileCar
 import { SettingsList } from '@/features/user/components/SettingsList';
 import { SettingsRow } from '@/features/user/components/SettingsRow';
 import { SettingsSection } from '@/features/user/components/SettingsSection';
+import { WithdrawRow } from '@/features/user/components/WithdrawRow';
 
 export const metadata: Metadata = {
   title: '프로필 설정',
@@ -43,10 +43,10 @@ export default function ProfileEditPage() {
             <SettingsRow comingSoon label="비밀번호 변경" />
             {/* 환불계좌는 기능 명세서에 근거가 없다. `User-09`는 판매자 정산 계좌다. PM 확인 필요. */}
             <SettingsRow comingSoon label="환불계좌 관리" />
-            {/* 로그아웃은 세션 폐기(POST /api/auth/logout)까지 실제로 동작한다(#70, LogoutRow).
-                회원탈퇴는 진입점·확인 다이얼로그만 있고 동작은 아직 mock이다(BR-B24-01-04). */}
+            {/* 로그아웃(POST /api/auth/logout, #70)·회원탈퇴(DELETE /api/auth/withdraw, #91) 모두
+                확인 다이얼로그를 거쳐 실제로 세션을 폐기하고 로그인 화면으로 replace 한다(BR-B24-01-04). */}
             <LogoutRow />
-            <SettingsRow confirm={WITHDRAW_CONFIRM} label="회원탈퇴" />
+            <WithdrawRow />
           </SettingsList>
         </SettingsSection>
       </div>

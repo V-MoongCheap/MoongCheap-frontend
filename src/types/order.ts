@@ -4,7 +4,7 @@ import type { OrderStatus } from '@/constants/orderStatus';
  * 주문 화면(B-21 목록 · B-28 상세)이 요구하는 타입.
  *
  * `types/user.ts`와 같은 원칙이다. 백엔드 응답을 옮긴 것이 아니라 **화면이 필요로 하는 모양**이며,
- * 규격이 나오면 API 계층에서 변환해 이 타입으로 맞춘다. 도메인 B(거래·주문) 명세는 아직 없다.
+ * API 계층에서 변환해 이 타입으로 맞춘다. 백엔드 원형은 `types/api/order.ts`, 변환은 `lib/orderApi.ts`다.
  */
 
 /**
@@ -37,7 +37,13 @@ export interface OrderSummary {
   orderedAt: string;
   /** 판매자(스토어)명. */
   sellerName: string;
-  status: OrderStatus;
+  /**
+   * 주문 상태. 백엔드가 화면이 모르는 상태를 보내면 비어 온다(`lib/orderApi.ts`의 `toOrderStatus`).
+   *
+   * 다른 상태로 대신 채우지 않는 이유는 실제와 다른 상태를 보여 주게 되기 때문이다. 모르는 상태에 붙일
+   * 문구도 시안에 없어, 카드는 상태 줄만 비우고 나머지를 그린다.
+   */
+  status?: OrderStatus;
   /**
    * 주문에 담긴 상품. 시안은 카드마다 1건이지만 공동구매 주문은 여러 건이 될 수 있어 배열로 둔다.
    */
@@ -54,6 +60,14 @@ export interface OrderListItem {
   detailHref: string;
 }
 
+/** 주문 목록 한 페이지. 무한 스크롤(`BR-B21-01-11`, 20건 단위)이 다음 페이지를 이어 붙인다. */
+export interface OrderListPage {
+  orders: OrderSummary[];
+  /** 이 페이지의 번호. 0부터다. */
+  page: number;
+  hasNext: boolean;
+}
+
 /** B-28 결제내역 한 줄. 시안이 항목을 고정하지 않고 나열만 해 배열로 받는다. */
 export interface OrderPaymentLine {
   label: string;
@@ -65,19 +79,25 @@ export interface OrderPaymentLine {
 export interface OrderDetail extends OrderSummary {
   /** 주문번호. 시안 표기는 `12012348371629`. */
   orderNumber: string;
-  /** 결제일. 시안은 주문일자가 아니라 `26.08.26 결제`로 결제일을 쓴다. */
-  paidAt: string;
+  /**
+   * 결제일. 시안은 주문일자가 아니라 `26.08.26 결제`로 결제일을 쓴다.
+   *
+   * ⚠️ 백엔드 상세 응답에 결제일이 없다(주문일만 온다). 결제대기 주문은 결제일 자체가 없기도 하다.
+   *    없으면 화면이 주문일자만 쓴다. 필드가 생기면 `lib/orderApi.ts`에서 채운다.
+   */
+  paidAt?: string;
+  /** 배송지를 입력하기 전 주문은 값이 비어 온다(배송지 입력은 결제완료 뒤다). */
   shipping: {
-    recipient: string;
+    recipient?: string;
     /** 마스킹된 휴대폰 번호(`BR-B28-01` 배송 정보 마스킹). 서버가 마스킹해 내려준다. */
-    phoneMasked: string;
-    address: string;
+    phoneMasked?: string;
+    address?: string;
   };
   payment: {
     /** 상품 금액 · 쿠폰 할인 · 포인트 사용 · 배송비. 시안 순서를 그대로 따른다. */
     lines: OrderPaymentLine[];
     total: number;
-    /** 결제수단 표기. 시안 `카드결제`. */
-    method: string;
+    /** 결제수단 표기. 시안 `카드결제`. 결제수단이 연결되지 않은 주문은 비어 온다. */
+    method?: string;
   };
 }

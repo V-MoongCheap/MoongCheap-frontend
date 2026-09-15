@@ -18,8 +18,15 @@ import type { OrderProgressStatus } from '@/types/user';
  * 정방향 진행이 원칙이며 CANCELED만 예외 분기다. DELIVERY_REQUESTED("배송요청")는 되돌아갈 수 없는
  * 지점으로, 진입 후 수량 변경이 불가능하다(여분 구매 마감선).
  *
- * ⚠️ 백엔드 상태 코드 목록을 아직 받지 못했다(API 계약 초안 Q19). 코드·라벨·전이는 잠정이며,
- *    확정되면 **이 파일만** 고치면 화면(레지스트리 소비처 전부)이 따라온다.
+ * 2026-09-15 백엔드 develop의 `OrderStatus`(10종)를 확인했다. 이름이 다른 상태는 레지스트리 키를
+ * 바꾸지 않고 `lib/orderApi.ts`가 옮긴다(화면 타입은 API 계층에서 변환한다는 `types/order.ts` 원칙).
+ *
+ * ⚠️ 두 목록이 서로 맞지 않는다.
+ *    - `DELIVERY_REQUESTED`(배송요청)는 백엔드에 없다. 응답에 나오지 않지만 마이페이지 요약 단계
+ *      (`ORDER_PROGRESS_STEPS`)가 쓰고 있어 지우지 않는다
+ *    - 결제실패·환불처리중·환불완료 3종은 백엔드에만 있다. 응답에 나오면 화면이 죽으므로 아래에
+ *      추가했다. 라벨은 백엔드 enum 주석(`결제 실패` · `환불 처리 중` · `환불 완료`)에서 가져와 이
+ *      레지스트리의 표기(띄어 쓰지 않음)에 맞췄다. 상태정의 시트에 없는 상태라 잠정이다
  */
 export const ORDER_STATUS = {
   /** 결제대기 — 낙찰(GB_CLOSED)로 주문 레코드 생성. 48h 유예 뒤 자동결제 대기. 대부분의 주문이 머무는 단계. */
@@ -68,6 +75,30 @@ export const ORDER_STATUS = {
   PURCHASE_CONFIRMED: {
     label: '구매확정',
     tone: 'success',
+    isTerminal: true,
+    next: [],
+  },
+  /**
+   * 결제실패 - 백엔드에만 있는 상태(`PAYMENT_FAILED`). 다음 전이가 명세에 없어 비워 둔다.
+   * 결제수단을 바꿔야 하는 상황일 수 있어 '사용자 조치 필요' 톤으로 둔다.
+   */
+  PAYMENT_FAILED: {
+    label: '결제실패',
+    tone: 'warning',
+    isTerminal: false,
+    next: [],
+  },
+  /** 환불처리중 - 백엔드에만 있는 상태(`REFUND_PENDING`). */
+  REFUND_PENDING: {
+    label: '환불처리중',
+    tone: 'info',
+    isTerminal: false,
+    next: ['REFUNDED'],
+  },
+  /** 환불완료 - 백엔드에만 있는 상태(`REFUNDED`). */
+  REFUNDED: {
+    label: '환불완료',
+    tone: 'neutral',
     isTerminal: true,
     next: [],
   },
@@ -129,32 +160,23 @@ export function canTransitionOrder(from: OrderStatus, to: OrderStatus): boolean 
  *    기능명세 `FN-B21-01`만 매핑을 정의하고 있어 명세의 4종을 따른다(2026-09-04 결정).
  *    시안이 4탭으로 갱신되면 라벨만 맞추면 된다.
  *
- * `PAYMENT_PENDING`(결제대기)은 명세의 어느 탭에도 없다. 명세가 '진행중'을 결제완료부터로
- * 정의하는데, 2026-08-27 구조 변경으로 결제대기가 그 앞에 생겼기 때문이다. 실제로는 가장 많은
- * 주문이 머무는 단계라 '진행중'에 넣어 두고 PM 확인 대상으로 남긴다.
- * `CANCELED`는 별도 진입점(취소/교환/반품 조회)이라 탭에 넣지 않는다 — '전체'에서만 보인다.
+ * **탭이 어떤 상태를 묶는지는 서버가 정한다.** `GET /api/orders/list?tab=`으로 거른 결과를 받는다
+ * (탭 키 → 백엔드 값 변환은 `lib/orderApi.ts`). 2026-09-15 백엔드 `OrderService.viewOrderList`를
+ * 확인한 결과는 아래와 같고, 명세 4종과 같다.
+ *
+ *   진행중    결제대기 · 결제완료 · 배송준비중 · 배송중
+ *   배송완료  배송완료
+ *   완료      구매확정
+ *
+ * 결제대기를 '진행중'에 넣은 것은 원래 PM 확인 대상으로 남긴 프론트 판단이었는데 백엔드도 같다.
+ * 취소·결제실패·환불 계열은 어느 탭에도 없고 '전체'에서만 보인다.
  */
 export const ORDER_LIST_TABS = [
-  { key: 'all', label: '전체', statuses: null },
-  {
-    key: 'inProgress',
-    label: '진행중',
-    statuses: [
-      'PAYMENT_PENDING',
-      'PAYMENT_COMPLETED',
-      'DELIVERY_REQUESTED',
-      'PREPARING',
-      'SHIPPING',
-    ],
-  },
-  { key: 'delivered', label: '배송완료', statuses: ['DELIVERED'] },
-  { key: 'confirmed', label: '완료', statuses: ['PURCHASE_CONFIRMED'] },
-] as const satisfies readonly {
-  key: string;
-  label: string;
-  /** null이면 전 상태. */
-  statuses: readonly OrderStatus[] | null;
-}[];
+  { key: 'all', label: '전체' },
+  { key: 'inProgress', label: '진행중' },
+  { key: 'delivered', label: '배송완료' },
+  { key: 'confirmed', label: '완료' },
+] as const satisfies readonly { key: string; label: string }[];
 
 /** 탭 키 유니온. 탭 정의에서 파생하므로 상수와 항상 일치한다. */
 export type OrderListTabKey = (typeof ORDER_LIST_TABS)[number]['key'];

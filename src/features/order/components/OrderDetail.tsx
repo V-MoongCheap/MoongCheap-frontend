@@ -30,8 +30,15 @@ export function OrderDetail({ order }: OrderDetailProps) {
     <div className="flex w-full flex-col gap-8 py-4">
       <section className="flex w-full flex-col gap-2.5">
         <div className="flex w-full items-center gap-3 px-4">
-          <h2 className="text-section-title-16 text-content-primary">{order.paidAt} 결제</h2>
-          <p className="text-caption-10 text-content-quarternary">주문번호 {order.orderNumber}</p>
+          {/* 시안은 결제일(`26.08.26 결제`)이다. 응답에 결제일이 없으면(결제대기 주문은 결제일 자체가
+              없다) 목록(B-21) 그룹 헤더처럼 주문일자만 쓴다. 결제하지 않은 날짜에 '결제'를 붙이지 않는다. */}
+          <h2 className="text-section-title-16 text-content-primary shrink-0">
+            {order.paidAt === undefined ? order.orderedAt : `${order.paidAt} 결제`}
+          </h2>
+          {/* 백엔드 주문번호는 `ORD_` + UUID(40자)라 시안 값(14자리)보다 훨씬 길다. 넘치지 않게 끊어 감싼다. */}
+          <p className="text-caption-10 text-content-quarternary min-w-0 break-all">
+            주문번호 {order.orderNumber}
+          </p>
         </div>
 
         <div className="w-full px-4">
@@ -81,9 +88,11 @@ export function OrderDetail({ order }: OrderDetailProps) {
               <p className="text-label-14 text-content-primary">총 결제금액</p>
               <p className="text-title-18 text-content-brand">{formatWon(order.payment.total)}</p>
             </div>
-            <p className="text-caption-12 text-content-tertiary w-full text-right">
-              {order.payment.method}
-            </p>
+            {order.payment.method !== undefined && (
+              <p className="text-caption-12 text-content-tertiary w-full text-right">
+                {order.payment.method}
+              </p>
+            )}
           </div>
         </div>
       </section>

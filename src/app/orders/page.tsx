@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 
 import { AppBar } from '@/components/layout/AppBar';
 import { OrderList } from '@/features/order/components/OrderList';
-import { mockGetOrders } from '@/mocks/order';
 
 export const metadata: Metadata = {
   title: '주문 내역',
@@ -10,19 +9,15 @@ export const metadata: Metadata = {
 
 // B-21 주문 내역(FN-B21-01). 마이페이지 '진행중인 주문내역 > 자세히보기'에서 진입한다.
 //
-// 조회만 서버에서 하고 탭 전환은 OrderList(client)가 맡는다.
-// backHref는 /mypage로 고정한다(명세: 헤더 백버튼 → B-26으로 복귀).
+// 페이지는 앱바만 조립하고 조회 · 탭 · 무한 스크롤은 OrderList(client)가 맡는다. 조회를 서버에서 하지
+// 않는 이유는 세션이 SID httpOnly 쿠키라 브라우저만 갖고 있기 때문이다(`lib/orderApi.ts`).
 //
-// ⚠️ 무한 스크롤(`BR-B21-01-11`, 20건 단위)은 붙이지 않았다. 페이지네이션 응답 규격이 없고
-//    목이 3건이라 확인할 수도 없다. API 연동 시 추가한다.
-export default async function OrdersPage() {
-  const orders = await mockGetOrders();
-
+// backHref는 /mypage로 고정한다(명세: 헤더 백버튼 → B-26으로 복귀).
+export default function OrdersPage() {
   return (
     <main className="flex w-full flex-1 flex-col">
       <AppBar backHref="/mypage" title="주문 내역" />
-      {/* 상세 경로는 라우트가 만든다. 목록 컴포넌트는 라우트 구조를 모른다. */}
-      <OrderList items={orders.map((order) => ({ order, detailHref: `/orders/${order.id}` }))} />
+      <OrderList detailHrefBase="/orders" />
     </main>
   );
 }

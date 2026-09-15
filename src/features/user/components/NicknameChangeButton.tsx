@@ -169,6 +169,9 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
               autoComplete="off"
               placeholder="새 닉네임을 입력해주세요."
               value={nickname}
+              // 변경 처리 중에는 폼을 잠근다. 열어 두면 제출값을 바꾼 뒤 이전 요청 실패가 새 입력에
+              // 인라인 오류(formError)로 남을 수 있다(#102 CodeRabbit). 변경·취소 버튼과 동일 잠금.
+              disabled={isPending}
               aria-invalid={errorText !== null}
               aria-describedby={errorText !== null || showSuccess ? helperId : undefined}
               onChange={(event) => {
@@ -204,7 +207,7 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
               <button
                 type="button"
                 onClick={handleCheck}
-                disabled={!formatValid || check.state === 'checking'}
+                disabled={isPending || !formatValid || check.state === 'checking'}
                 className="bg-surface-button-secondary-default hover:bg-surface-button-secondary-hover active:bg-surface-button-secondary-pressed text-content-brand focus-visible:ring-effect-focus-ring-primary rounded-8 text-button-14 px-3 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:opacity-40"
               >
                 {check.state === 'checking' ? '확인 중' : '중복확인'}

@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 
-import { DIALOG_BUTTON_CLASS } from '@/components/ui/dialog';
+import { Dialog, DIALOG_BUTTON_CLASS } from '@/components/ui/Dialog';
+import type { DialogHandle } from '@/components/ui/Dialog';
 import { useToast } from '@/components/ui/Toast';
 import { AUTH_ERROR_MESSAGES, AUTH_SUCCESS_MESSAGES } from '@/constants/authMessages';
 import { useSession, useUpdateNickname } from '@/features/auth/session';
@@ -16,7 +17,7 @@ import { signupNicknameSchema } from '@/schemas/auth';
 // 흐름: 입력 → 중복확인 → 변경 → PATCH /api/members/me → 모달 닫히며 프로필 카드에 반영.
 //
 // 화면(라우트)이 아니라 모달인 이유는 입력 1개짜리 단발 동작이기 때문이다. AlertDialog는 메시지
-// 전용(입력칸 슬롯이 없다)이라, 같은 네이티브 <dialog> 패턴으로 입력형 다이얼로그를 여기 둔다.
+// 전용(입력칸 슬롯이 없다)이라, 같은 공용 프리미티브(Dialog, #102)로 입력형 다이얼로그를 여기 둔다.
 // 닉네임 규칙·중복확인·성공/오류 문구는 회원가입 닉네임 스텝과 동일 모듈(schemas/auth·authMessages·
 // checkNicknameAvailability)을 재사용해 규칙이 바뀌면 한곳만 고치면 된다.
 //
@@ -51,7 +52,7 @@ type NicknameCheck = {
 };
 
 function NicknameEditDialog({ onClose }: { onClose: () => void }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const dialogRef = useRef<DialogHandle>(null);
   // 중복확인 진행 여부. state가 아니라 ref인 이유는 같은 렌더에서 발생한 두 트리거(버튼 클릭 +
   // Enter)가 각각 렌더 시점의 check.state를 보고 둘 다 통과해 요청이 두 번 나가는 것을 막기 위함이다
   // (ref는 즉시 반영돼 동기 이중 호출을 차단한다).
@@ -66,11 +67,6 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
 
   const [nickname, setNickname] = useState('');
   const [check, setCheck] = useState<NicknameCheck>({ state: 'idle', forValue: '' });
-
-  // 마운트 시 모달로 연다. showModal()이라야 백드롭·포커스 트랩·Esc 닫힘이 브라우저 기본으로 붙는다.
-  useEffect(() => {
-    dialogRef.current?.showModal();
-  }, []);
 
   const isPending = mutation.isPending;
   const formatValid = signupNicknameSchema.safeParse(nickname).success;
@@ -87,13 +83,10 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
         ? AUTH_ERROR_MESSAGES.nickname.taken
         : undefined;
 
-  // 처리 중에는 닫기(취소·Esc·백드롭)를 막아 이중 실행·중도 이탈을 방지한다. close()로 닫아야
-  // 네이티브 dialog 닫힘 절차(트리거로 포커스 복원)가 실행된다 — 언마운트만으로는 복원되지 않는다.
-  // 닫힘은 <dialog onClose>가 받아 부모에 onClose로 전달한다.
+  // 닫기 요청. Dialog.close()가 네이티브 닫힘 절차(트리거로 포커스 복원)를 태우고 처리 중(busy)
+  // 이면 무시한다 — 언마운트만으로는 복원되지 않는다. 닫힘은 <Dialog onClose>가 받아 부모에 전달한다.
   const requestClose = () => {
-    if (!isPending) {
-      dialogRef.current?.close();
-    }
+    dialogRef.current?.close();
   };
 
   const handleCheck = async () => {
@@ -128,7 +121,7 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
     }
     mutation.mutate(nickname.trim(), {
       onSuccess: () => {
-        // close()로 닫아 네이티브 닫힘 절차(포커스 복원)를 태운다. onClose는 <dialog onClose>가 받는다.
+        // close()로 닫아 네이티브 닫힘 절차(포커스 복원)를 태운다. onClose는 <Dialog onClose>가 받는다.
         dialogRef.current?.close();
         showToast(NICKNAME_CHANGED_MESSAGE);
       },
@@ -149,18 +142,9 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <dialog
-      ref={dialogRef}
-      onClose={onClose}
-      // Esc·백드롭으로 닫으려 할 때 처리 중이면 취소한다(닫힘 이벤트 자체를 막는다).
-      onCancel={(event) => {
-        if (isPending) {
-          event.preventDefault();
-        }
-      }}
-      aria-labelledby={`${id}-title`}
-      className="bg-surface-primary rounded-32 m-auto w-[calc(100%-54px)] max-w-85 p-0 backdrop:bg-black/40"
-    >
+    // open 상수 true + 조건부 마운트: 열 때마다 입력·중복확인 상태를 새로 시작한다(부모가 마운트로 연다).
+    // 닫기는 requestClose/onSuccess의 ref.close()로 하며, busy 중에는 Dialog가 닫힘을 막는다.
+    <Dialog open onClose={onClose} busy={isPending} ref={dialogRef} aria-labelledby={`${id}-title`}>
       <div className="flex flex-col gap-5 p-5">
         <div className="flex flex-col gap-2">
           <p className="text-title-17 text-content-primary" id={`${id}-title`}>
@@ -262,6 +246,6 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
           </button>
         </div>
       </div>
-    </dialog>
+    </Dialog>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 
+import { DIALOG_BUTTON_CLASS } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/Toast';
 import { AUTH_ERROR_MESSAGES, AUTH_SUCCESS_MESSAGES } from '@/constants/authMessages';
 import { useSession, useUpdateNickname } from '@/features/auth/session';
@@ -43,10 +44,6 @@ export function NicknameChangeButton() {
   );
 }
 
-/** 2버튼 다이얼로그의 버튼 공통 형태. AlertDialog(로그아웃·회원탈퇴)와 나란히 놓여 크기를 맞춘다. */
-const DIALOG_BUTTON_CLASS =
-  'text-button-15 focus-visible:ring-effect-focus-ring-primary rounded-round flex h-12 flex-1 items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50';
-
 /** 중복확인 결과. forValue는 어떤 값에 대해 확인했는지 — 값을 고치면 통과를 무효화하는 데 쓴다. */
 type NicknameCheck = {
   state: 'idle' | 'checking' | 'available' | 'taken';
@@ -55,6 +52,10 @@ type NicknameCheck = {
 
 function NicknameEditDialog({ onClose }: { onClose: () => void }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  // 중복확인 진행 여부. state가 아니라 ref인 이유는 같은 렌더에서 발생한 두 트리거(버튼 클릭 +
+  // Enter)가 각각 렌더 시점의 check.state를 보고 둘 다 통과해 요청이 두 번 나가는 것을 막기 위함이다
+  // (ref는 즉시 반영돼 동기 이중 호출을 차단한다).
+  const checkingRef = useRef(false);
   const id = useId();
   const inputId = `${id}-nickname`;
   const helperId = `${id}-helper`;
@@ -86,21 +87,24 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
         ? AUTH_ERROR_MESSAGES.nickname.taken
         : undefined;
 
-  // 처리 중에는 닫기(취소·Esc·백드롭)를 막아 이중 실행·중도 이탈을 방지한다.
+  // 처리 중에는 닫기(취소·Esc·백드롭)를 막아 이중 실행·중도 이탈을 방지한다. close()로 닫아야
+  // 네이티브 dialog 닫힘 절차(트리거로 포커스 복원)가 실행된다 — 언마운트만으로는 복원되지 않는다.
+  // 닫힘은 <dialog onClose>가 받아 부모에 onClose로 전달한다.
   const requestClose = () => {
     if (!isPending) {
-      onClose();
+      dialogRef.current?.close();
     }
   };
 
   const handleCheck = async () => {
     const trimmed = nickname.trim();
-    if (trimmed.length === 0 || check.state === 'checking' || !formatValid) {
+    if (checkingRef.current || trimmed.length === 0 || !formatValid) {
       return;
     }
     if (trimmed !== nickname) {
       setNickname(trimmed);
     }
+    checkingRef.current = true;
     setCheck({ state: 'checking', forValue: trimmed });
     try {
       const available = await checkNicknameAvailability(trimmed);
@@ -113,6 +117,8 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
           ? SESSION_EXPIRED_MESSAGE
           : NICKNAME_CHECK_FAILED_MESSAGE,
       );
+    } finally {
+      checkingRef.current = false;
     }
   };
 
@@ -122,7 +128,8 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
     }
     mutation.mutate(nickname.trim(), {
       onSuccess: () => {
-        onClose();
+        // close()로 닫아 네이티브 닫힘 절차(포커스 복원)를 태운다. onClose는 <dialog onClose>가 받는다.
+        dialogRef.current?.close();
         showToast(NICKNAME_CHANGED_MESSAGE);
       },
       onError: (error) => {

@@ -117,6 +117,28 @@ export async function getMe(): Promise<SessionUser | null> {
 }
 
 /**
+ * 닉네임 변경(#92). `PATCH /api/members/me`로 현재 세션 회원의 닉네임만 바꾼다.
+ *
+ * 백엔드 `ProfileEditRequestDto`는 nickname·phoneNumber·email·imageUrl을 모두 담지만, PATCH는
+ * 부분 수정이라 넘기지 않은(=null) 필드는 그대로 둔다(`Member.changeProfile`이 non-null 필드만
+ * 반영, 백엔드 소스 확인). 그래서 닉네임만 담아 보내면 연락처·이메일은 보존된다. 백엔드는 받은
+ * 닉네임을 정규화(normalize→key)해 저장하므로 화면에 반영할 최종 값은 이 호출 뒤 getMe 재조회로
+ * 받는다. 성공 시 204 No Content라 반환값이 없다.
+ *
+ * 형식·중복은 호출 전 중복확인(checkNicknameAvailability)으로 거르지만, 그 사이 다른 유저가
+ * 선점하면 백엔드가 409(비즈니스 코드 USER_002)로 던진다. 모든 실패는 그대로 던져 호출부가
+ * 안내하게 한다.
+ * `PATCH /api/members/me`
+ */
+export async function updateNickname(nickname: string): Promise<void> {
+  await apiFetch('/api/members/me', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nickname }),
+  });
+}
+
+/**
  * 세션 폐기(로그아웃). `POST /api/auth/logout`으로 백엔드가 SID 쿠키를 만료시킨다.
  * 이미 만료된 세션(401)도 결과적으로 "로그아웃됨"이라 성공으로 접는다. 그 외 오류는 던진다.
  * `POST /api/auth/logout`

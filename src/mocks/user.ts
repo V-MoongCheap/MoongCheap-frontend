@@ -16,7 +16,6 @@ const mockOverview: MyPageOverview = {
   // 판매자 시트(시안 453:25351)를 확인하려면 'seller'로 바꾼다.
   role: 'buyer',
   orderProgress: {
-    PAYMENT_PENDING: 2,
     PAYMENT_COMPLETED: 0,
     DELIVERY_REQUESTED: 0,
     PREPARING: 1,

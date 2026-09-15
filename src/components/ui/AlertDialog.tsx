@@ -1,14 +1,14 @@
 'use client';
 
-import { useEffect, useId, useRef } from 'react';
+import { useId } from 'react';
 
 import { Button } from '@/components/ui/Button';
+import { Dialog, DIALOG_BUTTON_CLASS } from '@/components/ui/Dialog';
 
 // 알림·확인 모달. Figma `ios-popup-2button` 시안(453:25498)에 대응한다.
 //
-// 의존성을 늘리지 않으려고 네이티브 <dialog>의 showModal()을 쓴다. 포커스 트랩·Esc 닫힘·
-// 백드롭·접근성(모달 시맨틱)이 브라우저 기본으로 제공된다. 공통 UI 프리미티브(shadcn Dialog)
-// 규약이 확정되면 이 컴포넌트를 그 스캐폴드로 치환하되, 아래 props 계약은 유지한다.
+// 네이티브 <dialog> 스캐폴딩(showModal·onCancel 가드·표면·백드롭·onClose 전달)은 공용
+// 프리미티브 Dialog로 뺐고(#102), 여기서는 확인/알림 내용 구성만 담당한다.
 //
 // 버튼 수는 onConfirm 유무로 갈린다.
 //   없음  알림 1버튼. 확인을 누르면 닫기만 한다(로그인 실패 안내 등).
@@ -17,10 +17,6 @@ import { Button } from '@/components/ui/Button';
 // 컨테이너(폭·radius·타이포)는 시안 실측값이다. 안쪽 여백이 20인 근거는, 시안 프레임이 298로
 // 잡혀 있으나 그 안의 버튼 행이 300(x=-1)이라 프레임 쪽이 반올림 아티팩트이고
 // `340 - 20×2 = 300`이 정확히 맞아떨어지기 때문이다.
-
-/** 2버튼 구성의 버튼 공통 형태. 시안: height-48 · radius-round · button-15. */
-const DIALOG_BUTTON_CLASS =
-  'text-button-15 focus-visible:ring-effect-focus-ring-primary rounded-round flex h-12 flex-1 items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50';
 
 interface AlertDialogProps {
   /**
@@ -57,7 +53,6 @@ export function AlertDialog({
   isProcessing = false,
   onClose,
 }: AlertDialogProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
   // 한 화면에 인스턴스가 여럿 뜬다(B-24의 로그아웃·회원탈퇴). ID를 고정하면 문서에 중복이
   // 생겨 aria-labelledby가 다른 다이얼로그의 문구를 가리킬 수 있다. useId는 SSR·CSR 값이
   // 일치하도록 React가 보장하므로 하이드레이션 경고도 나지 않는다.
@@ -65,36 +60,15 @@ export function AlertDialog({
   const titleId = `${id}-title`;
   const messageId = `${id}-message`;
 
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (dialog === null) {
-      return;
-    }
-
-    if (isOpen && !dialog.open) {
-      dialog.showModal();
-    } else if (!isOpen && dialog.open) {
-      dialog.close();
-    }
-  }, [isOpen]);
-
   return (
-    <dialog
-      ref={dialogRef}
+    <Dialog
+      open={isOpen}
       onClose={onClose}
-      // Esc는 close 이전에 취소 가능한 cancel 이벤트를 먼저 던진다. 처리 중에는 여기서 기본
-      // 동작(네이티브 dialog 닫힘)을 막아, onClose 가드만으로 남던 React·DOM 상태 불일치
-      // (React는 열림·화면은 닫힘)를 원천 차단한다. 버튼 disabled와 함께 중도 이탈을 막는다.
-      onCancel={(event) => {
-        if (isProcessing) {
-          event.preventDefault();
-        }
-      }}
+      busy={isProcessing}
       role="alertdialog"
       // 제목이 있으면 제목이 이름, 없으면 메시지를 이름으로 삼아 모달에 항상 접근성 이름을 준다.
       aria-labelledby={title !== undefined ? titleId : messageId}
       aria-describedby={title !== undefined ? messageId : undefined}
-      className="bg-surface-primary rounded-32 m-auto w-[calc(100%-54px)] max-w-85 p-0 backdrop:bg-black/40"
     >
       <div className="flex flex-col gap-3 p-5">
         <div className="flex flex-col gap-2">
@@ -139,6 +113,6 @@ export function AlertDialog({
           </div>
         )}
       </div>
-    </dialog>
+    </Dialog>
   );
 }

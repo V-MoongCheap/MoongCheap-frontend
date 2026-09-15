@@ -1,7 +1,7 @@
 'use client';
 
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-import type { ReactNode } from 'react';
+import { useEffect, useImperativeHandle, useRef } from 'react';
+import type { ReactNode, Ref } from 'react';
 
 // 입력형·확인형 모달의 공용 스캐폴딩. 확인 모달(AlertDialog)과 닉네임 변경 모달이 나란히
 // 같은 네이티브 <dialog> 껍데기를 쓰므로, 그 공통부만 이 프리미티브로 뺐다.
@@ -46,6 +46,8 @@ interface DialogProps {
   'aria-labelledby'?: string;
   /** 보조 설명 요소 id(선택). */
   'aria-describedby'?: string;
+  /** 명령형 닫기 핸들(선택). 조건부 마운트 방식(닉네임 모달)에서 ref.close()로 닫을 때 넘긴다. */
+  ref?: Ref<DialogHandle>;
   children: ReactNode;
 }
 
@@ -53,18 +55,17 @@ interface DialogProps {
 const DIALOG_SURFACE_CLASS =
   'bg-surface-primary rounded-32 m-auto w-[calc(100%-54px)] max-w-85 p-0 backdrop:bg-black/40';
 
-export const Dialog = forwardRef<DialogHandle, DialogProps>(function Dialog(
-  {
-    open,
-    onClose,
-    busy = false,
-    role,
-    'aria-labelledby': ariaLabelledBy,
-    'aria-describedby': ariaDescribedBy,
-    children,
-  },
+// React 19에서 ref는 일반 prop이라 forwardRef 없이 받는다.
+export function Dialog({
+  open,
+  onClose,
+  busy = false,
+  role,
+  'aria-labelledby': ariaLabelledBy,
+  'aria-describedby': ariaDescribedBy,
   ref,
-) {
+  children,
+}: DialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useImperativeHandle(
@@ -112,7 +113,7 @@ export const Dialog = forwardRef<DialogHandle, DialogProps>(function Dialog(
       {children}
     </dialog>
   );
-});
+}
 
 // 2버튼 다이얼로그의 버튼 공통 형태. 시안: height-48 · radius-round · button-15.
 // AlertDialog(로그아웃·회원탈퇴)와 닉네임 변경 모달이 나란히 같은 규격을 쓰도록 한곳에서 관리한다.

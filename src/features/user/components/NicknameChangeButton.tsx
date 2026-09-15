@@ -2,8 +2,7 @@
 
 import { useId, useRef, useState } from 'react';
 
-import { Dialog, DIALOG_BUTTON_CLASS } from '@/components/ui/Dialog';
-import type { DialogHandle } from '@/components/ui/Dialog';
+import { Dialog, DIALOG_BUTTON_CLASS, type DialogHandle } from '@/components/ui/Dialog';
 import { useToast } from '@/components/ui/Toast';
 import { AUTH_ERROR_MESSAGES, AUTH_SUCCESS_MESSAGES } from '@/constants/authMessages';
 import { useSession, useUpdateNickname } from '@/features/auth/session';
@@ -83,12 +82,6 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
         ? AUTH_ERROR_MESSAGES.nickname.taken
         : undefined;
 
-  // 닫기 요청. Dialog.close()가 네이티브 닫힘 절차(트리거로 포커스 복원)를 태우고 처리 중(busy)
-  // 이면 무시한다 — 언마운트만으로는 복원되지 않는다. 닫힘은 <Dialog onClose>가 받아 부모에 전달한다.
-  const requestClose = () => {
-    dialogRef.current?.close();
-  };
-
   const handleCheck = async () => {
     const trimmed = nickname.trim();
     if (checkingRef.current || trimmed.length === 0 || !formatValid) {
@@ -143,7 +136,7 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
 
   return (
     // open 상수 true + 조건부 마운트: 열 때마다 입력·중복확인 상태를 새로 시작한다(부모가 마운트로 연다).
-    // 닫기는 requestClose/onSuccess의 ref.close()로 하며, busy 중에는 Dialog가 닫힘을 막는다.
+    // 닫기는 취소 버튼·onSuccess의 ref.close()로 하며, busy 중에는 Dialog가 닫힘을 막는다.
     <Dialog open onClose={onClose} busy={isPending} ref={dialogRef} aria-labelledby={`${id}-title`}>
       <div className="flex flex-col gap-5 p-5">
         <div className="flex flex-col gap-2">
@@ -228,10 +221,12 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="flex gap-2">
+          {/* Dialog.close()가 네이티브 닫힘 절차(트리거로 포커스 복원)를 태우고 busy 중엔 무시한다.
+              닫힘은 <Dialog onClose>가 받아 부모에 전달한다(언마운트만으로는 포커스가 복원되지 않음). */}
           <button
             className={`${DIALOG_BUTTON_CLASS} border-border-button-quarternary bg-background-default hover:bg-surface-button-quarternary-hover active:bg-surface-button-quarternary-pressed text-content-primary border`}
             disabled={isPending}
-            onClick={requestClose}
+            onClick={() => dialogRef.current?.close()}
             type="button"
           >
             취소

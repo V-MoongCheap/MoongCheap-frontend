@@ -4,6 +4,7 @@ import Image from 'next/image';
 
 import { ComingSoonButton } from '@/components/ui/ComingSoonButton';
 import { getOrderStatusMeta } from '@/constants/orderStatus';
+import { isRenderableImageSrc } from '@/lib/imageSource';
 import type { OrderItem, OrderSummary } from '@/types/order';
 
 // 주문 카드 한 장. B-21 목록(`818:35734`)과 B-28 주문상세(`453:25885`)가 같은 카드를 쓴다.
@@ -34,8 +35,9 @@ const SPLIT_ACTION_CLASS =
 function OrderItemRow({ item }: { item: OrderItem }) {
   return (
     <div className="flex w-full items-center gap-3">
-      {/* 시안은 60×60 상품 사진이다. 응답에 이미지가 없으면 자리만 회색으로 둔다. */}
-      {item.imageUrl === undefined ? (
+      {/* 시안은 60×60 상품 사진이다. 이미지가 없거나 앱이 그릴 수 없는 외부 주소면 자리만 회색으로
+          둔다. 백엔드 이미지는 외부 절대 URL이라 거르지 않으면 화면이 통째로 죽는다(`lib/imageSource`). */}
+      {!isRenderableImageSrc(item.imageUrl) ? (
         <div aria-hidden className="bg-surface-tertiary rounded-8 size-15 shrink-0" />
       ) : (
         <Image

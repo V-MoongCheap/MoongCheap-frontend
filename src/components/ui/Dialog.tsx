@@ -22,7 +22,11 @@ import type { ReactNode, Ref } from 'react';
 export interface DialogHandle {
   /**
    * 네이티브 dialog.close()를 호출해 닫힘 절차(트리거로 포커스 복원)를 태운다.
-   * 언마운트만으로는 포커스가 복원되지 않는다. busy 중에는 무시한다(중도 이탈 방지).
+   * 언마운트만으로는 포커스가 복원되지 않는다.
+   *
+   * busy와 무관하게 항상 닫는다: 성공 콜백(예: 뮤테이션 onSuccess)이 이 close()를 부르는데,
+   * 그 시점엔 busy=false로 재렌더되기 전이라 busy를 가드하면 성공 닫힘이 막힌다. 처리 중 사용자
+   * 이탈 차단은 onCancel(Esc·백드롭)과 트리거 버튼 disabled가 담당한다.
    */
   close: () => void;
 }
@@ -36,8 +40,8 @@ interface DialogProps {
   /** 닫힘(취소·확인·Esc·백드롭·ref.close) 시 호출. open을 false로 되돌리거나 언마운트하는 책임이 여기 있다. */
   onClose: () => void;
   /**
-   * 처리 중 표시. true면 Esc·백드롭 닫힘(onCancel)과 ref.close()를 막아, 파괴적 동작 처리 중
-   * 중도 이탈을 원천 차단한다. 버튼 disabled와 함께 쓴다.
+   * 처리 중 표시. true면 Esc·백드롭 닫힘(onCancel)을 막아, 파괴적 동작 처리 중 중도 이탈을
+   * 차단한다. 트리거 버튼 disabled와 함께 쓴다. (ref.close()는 막지 않는다 — DialogHandle 참고.)
    */
   busy?: boolean;
   /** 시맨틱 역할. 확인 모달은 'alertdialog', 입력 모달은 기본(native dialog 역할). */
@@ -72,13 +76,9 @@ export function Dialog({
   useImperativeHandle(
     ref,
     () => ({
-      close: () => {
-        if (!busy) {
-          dialogRef.current?.close();
-        }
-      },
+      close: () => dialogRef.current?.close(),
     }),
-    [busy],
+    [],
   );
 
   useEffect(() => {

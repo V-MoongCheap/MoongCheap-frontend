@@ -66,6 +66,9 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
 
   const [nickname, setNickname] = useState('');
   const [check, setCheck] = useState<NicknameCheck>({ state: 'idle', forValue: '' });
+  // 일반 API 실패(중복확인·변경)를 모달 안 인라인 오류로 남긴다. 토스트만으론 실패 원인이 모달에
+  // 표시되지 않는다(#102 CodeRabbit). 입력 변경·재시도 시 초기화한다.
+  const [formError, setFormError] = useState<string | null>(null);
 
   const isPending = mutation.isPending;
   const formatValid = signupNicknameSchema.safeParse(nickname).success;
@@ -75,12 +78,10 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
 
   const status: 'default' | 'success' | 'error' =
     resolved === 'available' ? 'success' : resolved === 'taken' ? 'error' : 'default';
-  const helper =
-    status === 'success'
-      ? AUTH_SUCCESS_MESSAGES.confirmed
-      : status === 'error'
-        ? AUTH_ERROR_MESSAGES.nickname.taken
-        : undefined;
+  // 인라인 메시지: 일반 실패(formError)를 최우선으로, 없으면 중복확인 'taken'을 오류로 표시한다.
+  // 성공 문구는 오류가 없을 때만 노출한다.
+  const errorText = formError ?? (status === 'error' ? AUTH_ERROR_MESSAGES.nickname.taken : null);
+  const showSuccess = errorText === null && status === 'success';
 
   const handleCheck = async () => {
     const trimmed = nickname.trim();
@@ -91,18 +92,20 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
       setNickname(trimmed);
     }
     checkingRef.current = true;
+    setFormError(null);
     setCheck({ state: 'checking', forValue: trimmed });
     try {
       const available = await checkNicknameAvailability(trimmed);
       setCheck({ state: available ? 'available' : 'taken', forValue: trimmed });
     } catch (error) {
-      // 통과 상태로 두면 안 되므로 idle로 되돌리고 토스트로 알린다.
+      // 통과 상태로 두면 안 되므로 idle로 되돌린다. 401(세션 만료)은 재로그인 안내라 토스트로,
+      // 그 외 일반 실패는 모달 안 인라인 오류로 원인을 남긴다(#102 CodeRabbit).
       setCheck({ state: 'idle', forValue: '' });
-      showToast(
-        error instanceof ApiError && error.status === 401
-          ? SESSION_EXPIRED_MESSAGE
-          : NICKNAME_CHECK_FAILED_MESSAGE,
-      );
+      if (error instanceof ApiError && error.status === 401) {
+        showToast(SESSION_EXPIRED_MESSAGE);
+      } else {
+        setFormError(NICKNAME_CHECK_FAILED_MESSAGE);
+      }
     } finally {
       checkingRef.current = false;
     }
@@ -112,6 +115,7 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
     if (!passed || isPending) {
       return;
     }
+    setFormError(null);
     mutation.mutate(nickname.trim(), {
       onSuccess: () => {
         // close()로 닫아 네이티브 닫힘 절차(포커스 복원)를 태운다. onClose는 <Dialog onClose>가 받는다.
@@ -119,17 +123,18 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
         showToast(NICKNAME_CHANGED_MESSAGE);
       },
       onError: (error) => {
-        // 중복확인 뒤 제출 전에 다른 유저가 선점하면 409(USER_002). 인라인으로 "사용 중"을 다시
-        // 표시하고 모달은 열어 둔다(다른 닉네임으로 재시도). 그 외는 토스트로 알린다.
+        // 409(제출 직전 선점, USER_002)는 중복확인 'taken'으로 되돌려 인라인 표시. 401(세션 만료)은
+        // 재로그인 안내라 토스트. 그 외 일반 실패는 모달 안 인라인 오류로 남기고 모달은 열어 둔다
+        // (다른 닉네임으로 재시도, #102 CodeRabbit).
         if (error instanceof ApiError && error.status === 409) {
           setCheck({ state: 'taken', forValue: nickname.trim() });
           return;
         }
-        showToast(
-          error instanceof ApiError && error.status === 401
-            ? SESSION_EXPIRED_MESSAGE
-            : NICKNAME_FAILED_MESSAGE,
-        );
+        if (error instanceof ApiError && error.status === 401) {
+          showToast(SESSION_EXPIRED_MESSAGE);
+          return;
+        }
+        setFormError(NICKNAME_FAILED_MESSAGE);
       },
     });
   };
@@ -164,12 +169,13 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
               autoComplete="off"
               placeholder="새 닉네임을 입력해주세요."
               value={nickname}
-              aria-invalid={status === 'error'}
-              aria-describedby={helper !== undefined ? helperId : undefined}
+              aria-invalid={errorText !== null}
+              aria-describedby={errorText !== null || showSuccess ? helperId : undefined}
               onChange={(event) => {
                 setNickname(event.target.value);
-                // 값을 고치면 직전 중복확인 결과를 무효화한다(다시 확인해야 변경 가능).
+                // 값을 고치면 직전 중복확인 결과·오류를 무효화한다(다시 확인해야 변경 가능).
                 setCheck({ state: 'idle', forValue: '' });
+                setFormError(null);
               }}
               onKeyDown={(event) => {
                 // IME 조합 확정(한글)의 Enter는 무시. 통과면 변경, 아니면 중복확인으로 흘린다.
@@ -185,10 +191,10 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
               }}
               className={cn(
                 'placeholder:text-content-quinary rounded-8 text-body-14 h-14 w-full border pr-28 pl-4 outline-none',
-                status === 'success'
-                  ? 'border-border-success'
-                  : status === 'error'
-                    ? 'border-border-error'
+                errorText !== null
+                  ? 'border-border-error'
+                  : showSuccess
+                    ? 'border-border-success'
                     : nickname.length > 0
                       ? 'border-border-primary'
                       : 'border-border-subtle focus:border-border-primary',
@@ -206,18 +212,15 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
-          {helper !== undefined && (
-            <p
-              id={helperId}
-              role={status === 'error' ? 'alert' : undefined}
-              className={cn(
-                'text-caption-12',
-                status === 'success' ? 'text-content-success' : 'text-content-error',
-              )}
-            >
-              {helper}
+          {errorText !== null ? (
+            <p id={helperId} role="alert" className="text-content-error text-caption-12">
+              {errorText}
             </p>
-          )}
+          ) : showSuccess ? (
+            <p id={helperId} className="text-content-success text-caption-12">
+              {AUTH_SUCCESS_MESSAGES.confirmed}
+            </p>
+          ) : null}
         </div>
 
         <div className="flex gap-2">

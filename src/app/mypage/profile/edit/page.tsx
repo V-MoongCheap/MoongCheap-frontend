@@ -4,6 +4,7 @@ import { AppBar } from '@/components/layout/AppBar';
 import { WITHDRAW_CONFIRM } from '@/constants/commonMessages';
 import { LinkButton } from '@/features/user/components/LinkButton';
 import { LogoutRow } from '@/features/user/components/LogoutRow';
+import { NicknameChangeButton } from '@/features/user/components/NicknameChangeButton';
 import { SessionProfileCard } from '@/features/user/components/SessionProfileCard';
 import { SettingsList } from '@/features/user/components/SettingsList';
 import { SettingsRow } from '@/features/user/components/SettingsRow';
@@ -27,9 +28,10 @@ export default function ProfileEditPage() {
               재사용하되, 여기선 편집 아이콘·역할 전환을 달지 않는다(경로를 넘기지 않음). */}
           <SessionProfileCard />
           <div className="flex w-full items-start gap-2.5 px-4 pb-4">
-            {/* 프로필 사진 변경(FN-B24-04)·닉네임 변경(FN-B24-03) 모두 Full 범위라 화면이 없다. */}
+            {/* 프로필 사진 변경(FN-B24-04)은 이미지 업로드가 얽혀 아직 Full 범위(화면 없음).
+                닉네임 변경(FN-B24-03)은 모달로 실제 동작한다(#92, PATCH /api/members/me). */}
             <LinkButton label="프로필 사진 변경" />
-            <LinkButton label="닉네임 변경" />
+            <NicknameChangeButton />
           </div>
         </div>
 

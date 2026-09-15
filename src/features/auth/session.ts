@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { getMe, logout } from '@/lib/authApi';
+import { getMe, logout, updateNickname } from '@/lib/authApi';
 import type { SessionUser } from '@/types/auth';
 
 // 전역 로그인 상태(#70). TanStack Query 캐시의 ['session'] 키가 곧 전역 세션 상태다 —
@@ -61,6 +61,24 @@ export function useLogout() {
       // 세션을 null로 바꿔 전역 상태를 미로그인으로 만든다. 재요청(invalidate)이 아니라 직접
       // 세팅하는 이유는, 쿠키가 이미 폐기돼 재조회해도 결과가 null이라 왕복이 불필요하기 때문이다.
       queryClient.setQueryData(SESSION_QUERY_KEY, null);
+    },
+  });
+}
+
+/**
+ * 닉네임 변경 뮤테이션(#92). 성공 시 세션 캐시를 무효화해 getMe를 재조회한다.
+ *
+ * 로그아웃과 달리 낙관적 setQueryData를 쓰지 않는 이유는, 백엔드가 닉네임을 정규화(normalize→key)해
+ * 저장하므로 입력값과 저장값이 다를 수 있기 때문이다. 저장된 실제 값을 다시 받아 프로필 카드에
+ * 반영한다. 화면 이동은 없고(모달만 닫힌다) 상태 갱신만 책임진다.
+ */
+export function useUpdateNickname() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (nickname: string) => updateNickname(nickname),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
     },
   });
 }

@@ -52,8 +52,9 @@ interface DialogProps {
 }
 
 // 컨테이너(폭·radius) + 백드롭. 시안 실측값이며 두 모달이 동일하게 쓴다.
+// 백드롭은 디자인 시스템 오버레이 토큰(effect-overlay)으로 통일 — RoleSwitchSheet 등 다른 다이얼로그와 동일.
 const DIALOG_SURFACE_CLASS =
-  'bg-surface-primary rounded-32 m-auto w-[calc(100%-54px)] max-w-85 p-0 backdrop:bg-black/40';
+  'bg-surface-primary rounded-32 m-auto w-[calc(100%-54px)] max-w-85 p-0 backdrop:bg-effect-overlay';
 
 // React 19에서 ref는 일반 prop이라 forwardRef 없이 받는다.
 export function Dialog({

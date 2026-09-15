@@ -10,9 +10,12 @@ import type { HomeProductCard } from '@/types/home';
 // ProductRow(361×65)와 달리 이미지가 120이고, 상품명 아래가 `참여업체 N곳`이 아니라
 // 브랜드명이다. 마감 배지도 코랄이 아니라 이미지 위 흰 배지다.
 
-/** 시안: 흰 배경 80% + 테두리 #e6e6e6, radius 4. 이미지 오른쪽 위. */
+/**
+ * 시안: 흰 배경 80% + 테두리 #e6e6e6, radius 4. 이미지 오른쪽 위.
+ * 색을 모드와 무관하게 고정한 이유는 `ProductCard`의 같은 상수 주석 참고(#98).
+ */
 const TIME_BADGE_CLASS =
-  'border-border-subtle rounded-4 text-label-10 text-content-primary bg-normal-1 border px-1 py-0.5 opacity-80';
+  'border-coolgray-200 rounded-4 text-label-10 text-coolgray-950 bg-badge-surface-white-a100 border px-1 py-0.5 opacity-80';
 
 /** 시안 `badge/surface/gary` = 회색 20%. */
 const PERSONNEL_BADGE_CLASS =

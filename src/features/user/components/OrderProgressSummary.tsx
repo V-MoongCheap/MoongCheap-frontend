@@ -2,8 +2,8 @@ import { ORDER_PROGRESS_LABELS, ORDER_PROGRESS_STEPS } from '@/constants/orderSt
 import { cn } from '@/lib/cn';
 import type { OrderProgressCounts } from '@/types/user';
 
-// 진행중인 주문 단계별 건수. 단계 목록은 `constants/orderStatus.ts`가 갖는다.
-// 시안이 기능 명세서(`Order-03` 결제 대기)와 어긋나 있어, 확인이 끝나면 상수만 고치면 되도록 뺐다.
+// 진행중인 주문 단계별 건수. 단계 목록은 `constants/orderStatus.ts`(ORDER_PROGRESS_STEPS)가 갖는다.
+// 2026-09-15 Figma 최종본에 맞춰 결제완료~배송완료 5단계로 확정(결제대기 제외). 단계가 바뀌면 상수만 고친다.
 
 interface OrderProgressSummaryProps {
   counts: OrderProgressCounts;

@@ -122,7 +122,6 @@ export type OrderStatus = keyof typeof ORDER_STATUS;
  * 컴파일 단계에서 걸린다.
  */
 export const ORDER_PROGRESS_STEPS = [
-  'PAYMENT_PENDING',
   'PAYMENT_COMPLETED',
   'DELIVERY_REQUESTED',
   'PREPARING',
@@ -132,10 +131,9 @@ export const ORDER_PROGRESS_STEPS = [
 
 /**
  * 진행 단계 라벨 맵. 레지스트리 메타에서 파생하므로 라벨 단일 출처가 유지된다.
- * `Record<OrderProgressStatus, string>` 제약으로 6단계가 모두 레지스트리에 존재함을 보장한다.
+ * `Record<OrderProgressStatus, string>` 제약으로 5단계가 모두 레지스트리에 존재함을 보장한다.
  */
 export const ORDER_PROGRESS_LABELS: Record<OrderProgressStatus, string> = {
-  PAYMENT_PENDING: ORDER_STATUS.PAYMENT_PENDING.label,
   PAYMENT_COMPLETED: ORDER_STATUS.PAYMENT_COMPLETED.label,
   DELIVERY_REQUESTED: ORDER_STATUS.DELIVERY_REQUESTED.label,
   PREPARING: ORDER_STATUS.PREPARING.label,

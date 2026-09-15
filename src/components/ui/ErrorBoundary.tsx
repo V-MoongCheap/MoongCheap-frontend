@@ -5,11 +5,11 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { ErrorState } from '@/components/ui/ErrorState';
 
 // 부분 트리용 에러 바운더리. App Router의 error.tsx가 '세그먼트 전체'를 잡는 것과 달리,
-// 이 컴포넌트는 '한 화면 안의 특정 위젯'만 감싸 그 위젯이 터져도 나머지 화면은 살려 둔다.
-// 예) 홈에서 추천 섹션 하나가 렌더 중 예외를 던져도 헤더·다른 섹션은 그대로 보이게.
+// 이 컴포넌트는 감싼 하위 트리 하나만 격리해, 그 트리가 터져도 형제 트리와 상위 화면은 살려 둔다.
 //
-// error.tsx는 라우트 단위라 위젯 단위로는 못 쓴다. 그래서 클래스형 바운더리가 따로 필요하다
-// (React에서 에러를 잡는 라이프사이클 훅은 클래스 컴포넌트에만 있다).
+// error.tsx는 라우트 단위라 트리 일부만 감쌀 수 없다. 그래서 별도 바운더리가 필요하고,
+// React에서 렌더 오류를 잡는 라이프사이클은 클래스 컴포넌트에만 있어 구현은 클래스로 둔다
+// (공개 API는 프로젝트 규칙대로 함수 컴포넌트로 노출한다 — 파일 하단 참고).
 //
 // 기본 폴백은 인라인 오류(ui/ErrorState) + 재시도다. 재시도를 누르면 바운더리 상태를 초기화해
 // children을 다시 렌더한다. 화면에 맞는 다른 생김새가 필요하면 fallback으로 갈아끼운다.
@@ -34,7 +34,7 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundaryInner extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = { error: null };
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
@@ -48,7 +48,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidUpdate(prevProps: ErrorBoundaryProps): void {
-    // resetKeys가 하나라도 바뀌면 오류를 털고 children을 다시 렌더한다.
+    // 오류 상태에서 resetKeys가 바뀐 건 '다른 입력으로 다시 시도'라는 신호 — 사용자가
+    // 재시도를 누르지 않아도 복구되도록 오류를 턴다. 정상 상태에선 볼 필요가 없어 조기 반환.
     if (this.state.error === null) return;
     if (!areKeysEqual(prevProps.resetKeys, this.props.resetKeys)) {
       this.reset();
@@ -75,7 +76,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 }
 
-// resetKeys 얕은 비교. 배열 유무·길이·각 원소를 Object.is로 본다.
+// 공개 API는 함수 컴포넌트로 노출한다(프로젝트 규칙: export function). 오류 포착 라이프사이클이
+// 클래스 전용이라 구현만 내부 클래스에 두고, props는 손대지 않고 그대로 넘긴다.
+export function ErrorBoundary(props: ErrorBoundaryProps): ReactNode {
+  return <ErrorBoundaryInner {...props} />;
+}
+
+// resetKeys는 id 같은 원시 식별자 배열을 전제로 하므로 원소별 Object.is 얕은 비교로 충분하다.
+// 깊은 비교는 불필요하게 매 렌더 순회 비용만 늘린다.
 function areKeysEqual(
   a: readonly unknown[] | undefined,
   b: readonly unknown[] | undefined,

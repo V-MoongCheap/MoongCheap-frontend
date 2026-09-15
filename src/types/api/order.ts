@@ -99,15 +99,3 @@ export interface OrderDetailResponseDto {
     paymentMethod: string | null;
   };
 }
-
-/**
- * 주문 비즈니스 에러 코드. 출처: 백엔드 `ErrorCode`.
- * 화면이 `ApiError.code`로 분기할 때 문자열을 직접 적지 않도록 모아 둔다.
- */
-export const ORDER_ERROR_CODE = {
-  /**
-   * 404 주문을 찾을 수 없습니다. 조회가 주문번호 + 회원 id로 걸려 있어 **남의 주문도 같은 코드**다.
-   * 같은 404라도 탈퇴 회원(`USER_001`)은 주문이 없는 것이 아니라 코드로 가른다.
-   */
-  notFound: 'ORDER_001',
-} as const;

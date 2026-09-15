@@ -1,11 +1,8 @@
 'use client';
 
 import { ERROR_ACTION_CLASS, ErrorScreen } from '@/components/ui/ErrorScreen';
-import { GoBackButton } from '@/components/ui/GoBackButton';
 import { ERROR_SCREEN_RETRY_LABEL } from '@/constants/commonMessages';
 import { useOrderDetail } from '@/features/order/hooks/useOrders';
-import { ApiError } from '@/lib/api';
-import { ORDER_ERROR_CODE } from '@/types/api/order';
 
 import { OrderDetail } from './OrderDetail';
 import { OrderDetailSkeleton } from './OrderSkeleton';
@@ -14,13 +11,10 @@ import { OrderDetailSkeleton } from './OrderSkeleton';
 //
 // 조회가 클라이언트인 이유는 `lib/orderApi.ts` 주석 참고(SID httpOnly 쿠키는 브라우저만 갖고 있다).
 //
-// 없는 주문 · 남의 주문(404 `ORDER_001`)은 루트 404(`app/not-found.tsx`)와 같은 화면을 그린다.
-// `notFound()`를 부르지 않는 이유는 Next 16 문서가 그 사용처를 서버 컴포넌트 · 서버 함수 · 라우트
-// 핸들러로 적고 있기 때문이다. 이 조회는 브라우저에서 끝난다.
-//
-// 루트 404와 달리 버튼에 `fallbackHref`를 준다. 주문번호가 든 주소는 공유 링크 · 새 탭으로 첫 진입하기
-// 쉬운데, 그때 `router.back()`은 돌아갈 곳이 없어 버튼이 아무 일도 하지 않는다. 주문상세의 상위 화면인
-// 주문 내역으로 보낸다. 라벨은 시안 문구(`ERROR_SCREEN_RETRY_LABEL`) 그대로다.
+// 조회가 실패하면 없는 주문 · 남의 주문(404 `ORDER_001`)까지 전부 같은 오류 화면을 그리고, 버튼은
+// 다시 조회한다. 버튼 문구가 시안의 `다시 시도` 하나뿐이라, 404만 다른 동작(뒤로 가기 등)을 주면
+// 라벨과 동작이 어긋난다. 이동 문구는 시안에 없어 만들지 않았다. 화면을 벗어나는 길은 페이지 앱바의
+// 뒤로가기(`/orders`)가 맡는다.
 //
 // ⚠️ 로딩 · 조회 실패는 시안이 없다. 목록(`OrderList`)과 같은 방침으로 공용 컴포넌트를 재사용한다.
 
@@ -33,16 +27,6 @@ export function OrderDetailView({ orderNo }: OrderDetailViewProps) {
   const { data, error, refetch } = useOrderDetail(orderNo);
 
   if (error !== null) {
-    if (error instanceof ApiError && error.code === ORDER_ERROR_CODE.notFound) {
-      return (
-        <ErrorScreen>
-          <GoBackButton className={ERROR_ACTION_CLASS} fallbackHref="/orders">
-            {ERROR_SCREEN_RETRY_LABEL}
-          </GoBackButton>
-        </ErrorScreen>
-      );
-    }
-
     return (
       <ErrorScreen>
         <button className={ERROR_ACTION_CLASS} onClick={() => void refetch()} type="button">

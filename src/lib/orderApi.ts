@@ -205,7 +205,8 @@ export async function getOrders(tab: OrderListTabKey, page: number): Promise<Ord
 }
 
 /**
- * 주문 상세. 없는 주문과 남의 주문은 둘 다 404 `ORDER_001`(`ORDER_ERROR_CODE.notFound`)로 온다.
+ * 주문 상세. 없는 주문과 남의 주문은 둘 다 404 `ORDER_001`로 온다. 조회가 주문번호 + 회원 id로 걸려
+ * 있어서다. 화면은 다른 조회 실패와 같이 다룬다(`OrderDetailView` 주석).
  *
  * `GET /api/orders/{orderNo}`
  */

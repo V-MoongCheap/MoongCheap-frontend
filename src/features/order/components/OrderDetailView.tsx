@@ -18,6 +18,10 @@ import { OrderDetailSkeleton } from './OrderSkeleton';
 // `notFound()`를 부르지 않는 이유는 Next 16 문서가 그 사용처를 서버 컴포넌트 · 서버 함수 · 라우트
 // 핸들러로 적고 있기 때문이다. 이 조회는 브라우저에서 끝난다.
 //
+// 루트 404와 달리 버튼에 `fallbackHref`를 준다. 주문번호가 든 주소는 공유 링크 · 새 탭으로 첫 진입하기
+// 쉬운데, 그때 `router.back()`은 돌아갈 곳이 없어 버튼이 아무 일도 하지 않는다. 주문상세의 상위 화면인
+// 주문 내역으로 보낸다. 라벨은 시안 문구(`ERROR_SCREEN_RETRY_LABEL`) 그대로다.
+//
 // ⚠️ 로딩 · 조회 실패는 시안이 없다. 목록(`OrderList`)과 같은 방침으로 공용 컴포넌트를 재사용한다.
 
 interface OrderDetailViewProps {
@@ -32,7 +36,9 @@ export function OrderDetailView({ orderNo }: OrderDetailViewProps) {
     if (error instanceof ApiError && error.code === ORDER_ERROR_CODE.notFound) {
       return (
         <ErrorScreen>
-          <GoBackButton className={ERROR_ACTION_CLASS}>{ERROR_SCREEN_RETRY_LABEL}</GoBackButton>
+          <GoBackButton className={ERROR_ACTION_CLASS} fallbackHref="/orders">
+            {ERROR_SCREEN_RETRY_LABEL}
+          </GoBackButton>
         </ErrorScreen>
       );
     }

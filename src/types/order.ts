@@ -37,7 +37,13 @@ export interface OrderSummary {
   orderedAt: string;
   /** 판매자(스토어)명. */
   sellerName: string;
-  status: OrderStatus;
+  /**
+   * 주문 상태. 백엔드가 화면이 모르는 상태를 보내면 비어 온다(`lib/orderApi.ts`의 `toOrderStatus`).
+   *
+   * 다른 상태로 대신 채우지 않는 이유는 실제와 다른 상태를 보여 주게 되기 때문이다. 모르는 상태에 붙일
+   * 문구도 시안에 없어, 카드는 상태 줄만 비우고 나머지를 그린다.
+   */
+  status?: OrderStatus;
   /**
    * 주문에 담긴 상품. 시안은 카드마다 1건이지만 공동구매 주문은 여러 건이 될 수 있어 배열로 둔다.
    */

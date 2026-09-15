@@ -45,6 +45,22 @@ const STATUS_FROM_DTO: Record<OrderStatusDto, OrderStatus> = {
   REFUNDED: 'REFUNDED',
 };
 
+/**
+ * 응답의 상태 문자열을 레지스트리 키로 옮긴다. 표에 없는 값이면 `undefined`다.
+ *
+ * 응답은 타입 단언만 거쳐 들어오므로 `OrderStatusDto`에 없는 상태도 실제로 올 수 있다. 표를 그대로
+ * 조회하면 `undefined`가 카드까지 가서 상태 라벨을 읽다가 목록 전체가 죽는다. 여기서 걸러 그 주문의
+ * 상태만 비운다(`OrderSummary.status` 주석).
+ *
+ * `in` 대신 자기 속성만 보는 이유는 `toString` 같은 상속 속성 이름이 통과하지 않게 하기 위해서다.
+ */
+function toOrderStatus(value: string): OrderStatus | undefined {
+  if (!Object.prototype.hasOwnProperty.call(STATUS_FROM_DTO, value)) {
+    return undefined;
+  }
+  return STATUS_FROM_DTO[value as OrderStatusDto];
+}
+
 /** 화면 탭 → 백엔드 탭. 탭이 어떤 상태를 묶는지는 서버가 정한다(`ORDER_LIST_TABS` 주석). */
 const TAB_TO_DTO: Record<OrderListTabKey, OrderListTabDto> = {
   all: 'ALL',
@@ -108,7 +124,7 @@ function toOrderSummary(dto: OrderListResponseDto): OrderSummary {
     id: dto.orderNo,
     orderedAt: formatOrderDate(dto.orderDate),
     sellerName: dto.businessName,
-    status: STATUS_FROM_DTO[dto.orderStatus],
+    status: toOrderStatus(dto.orderStatus),
     items: [
       toItem({
         orderNo: dto.orderNo,
@@ -137,7 +153,7 @@ function toOrderDetail(dto: OrderDetailResponseDto): OrderDetail {
     id: dto.orderNo,
     orderedAt: formatOrderDate(dto.orderDate),
     sellerName: product.businessName,
-    status: STATUS_FROM_DTO[product.orderStatus],
+    status: toOrderStatus(product.orderStatus),
     items: [
       toItem({
         orderNo: dto.orderNo,

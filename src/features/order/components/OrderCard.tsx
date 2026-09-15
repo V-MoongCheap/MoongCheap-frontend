@@ -83,9 +83,12 @@ export function OrderCard({ order, actions, showSellerDivider = true }: OrderCar
 
       <div className="flex w-full flex-col gap-3">
         <div className="flex w-full flex-col gap-1.5 py-1">
-          <p className="text-label-13 text-content-secondary w-full">
-            {getOrderStatusMeta(order.status).label}
-          </p>
+          {/* 화면이 모르는 상태면 줄을 비운다(`OrderSummary.status` 주석). */}
+          {order.status !== undefined && (
+            <p className="text-label-13 text-content-secondary w-full">
+              {getOrderStatusMeta(order.status).label}
+            </p>
+          )}
           {order.items.map((item) => (
             <OrderItemRow item={item} key={item.id} />
           ))}

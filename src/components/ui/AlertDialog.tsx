@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef } from 'react';
 
 import { Button } from '@/components/ui/Button';
+import { DIALOG_BUTTON_CLASS } from '@/components/ui/dialog';
 
 // 알림·확인 모달. Figma `ios-popup-2button` 시안(453:25498)에 대응한다.
 //
@@ -17,10 +18,8 @@ import { Button } from '@/components/ui/Button';
 // 컨테이너(폭·radius·타이포)는 시안 실측값이다. 안쪽 여백이 20인 근거는, 시안 프레임이 298로
 // 잡혀 있으나 그 안의 버튼 행이 300(x=-1)이라 프레임 쪽이 반올림 아티팩트이고
 // `340 - 20×2 = 300`이 정확히 맞아떨어지기 때문이다.
-
-/** 2버튼 구성의 버튼 공통 형태. 시안: height-48 · radius-round · button-15. */
-const DIALOG_BUTTON_CLASS =
-  'text-button-15 focus-visible:ring-effect-focus-ring-primary rounded-round flex h-12 flex-1 items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50';
+//
+// 버튼 공통 형태(DIALOG_BUTTON_CLASS)는 닉네임 변경 모달과 나란히 쓰이므로 `components/ui/dialog`로 뺐다.
 
 interface AlertDialogProps {
   /**

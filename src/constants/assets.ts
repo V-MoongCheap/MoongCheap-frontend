@@ -49,8 +49,8 @@ export const DEMAND_FORM_ASSETS = {
 
 /** 스플래쉬(B-01 세션 확인) 전용 에셋. public/images/splash/. */
 export const SPLASH_ASSETS = {
-  /** 워드마크 `뭉치`. 144x66 벡터라 리사이즈 대상이 아니다. */
-  wordmark: '/images/splash/wordmark.svg',
+  // 워드마크 `뭉치`는 모드마다 색이 달라 파일이 아니라 인라인 SVG 컴포넌트다
+  // (`features/auth/components/SplashWordmark.tsx`).
   /** 기본 스플래쉬의 마스코트. 원본 4960x4960 PNG를 684x684로 줄인 것(표시 342의 2배수). */
   mascot: '/images/splash/mascot.webp',
   /**

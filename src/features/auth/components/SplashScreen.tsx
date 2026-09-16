@@ -3,9 +3,11 @@ import Image from 'next/image';
 import { SPLASH_ASSETS } from '@/constants/assets';
 import { SPLASH_MESSAGES } from '@/constants/splashMessages';
 import { SplashLoadingIndicator } from '@/features/auth/components/SplashLoadingIndicator';
+import { SplashWordmark } from '@/features/auth/components/SplashWordmark';
 import { cn } from '@/lib/cn';
 
 // 스플래쉬. 시안 `1318:13032`(기본) · `1372:6186`(로딩 지연, 프레임 이름은 「후보2」).
+// 다크 시안은 `1502:91763`(기본) · `1502:91801`(로딩 지연).
 //
 // 화면 ID가 없다. 기능명세서 FN-B01-03이 스플래쉬를 로그인(B-01)의 구성 요소로 정의한다.
 // 트리거는 앱 콜드 스타트이고, 세션을 확인하는 동안 이 화면이 떠 있다가 유효하면 홈(B-03),
@@ -19,7 +21,11 @@ import { cn } from '@/lib/cn';
 //
 // ⚠️ 배경이 시안에서 `surface-primary`에 묶여 있는데 그 토큰의 값은 #fafafa(거의 흰색)다.
 //    실제 채움값 #ff5f66과 맞는 토큰은 `surface-brand`라 이름이 아니라 값을 따랐다. 검색
-//    필터 칩(#63)·카드 테두리에서도 같은 오바인딩이 있었다.
+//    필터 칩(#63)·카드 테두리에서도 같은 오바인딩이 있었다. 다크 값(#ff7378)도 `surface-brand`와 맞는다.
+//
+// 다크 모드에서 달라지는 것은 워드마크 · 문구 색뿐이다(#99). 시안이 둘 다 `background/default`로
+// 칠해 라이트는 흰색, 다크는 #1a1a1a다. 코랄 바탕 위 글자에 배경 토큰을 쓰는 게 어색해 보여도 시안
+// 바인딩 그대로 옮겼다. 라이트 값이 흰색이라 라이트 화면은 전과 같다. 마스코트는 두 모드가 같은 그림이다.
 
 /** 시안 폭 393 · 높이 852 기준으로 잰 값들. 화면 높이가 달라져도 비율이 아니라 이 관계를 지킨다. */
 const LAYOUT = {
@@ -50,16 +56,15 @@ export function SplashScreen({ variant = 'default' }: SplashScreenProps) {
 
   return (
     <div className="max-w-mobile bg-surface-brand relative mx-auto flex min-h-svh w-full flex-col items-center justify-center overflow-hidden">
-      {/* 시안: 워드마크와 문구 사이 12. */}
-      <div className={cn('flex flex-col items-center gap-3', LAYOUT.wordmarkLift[variant])}>
-        <Image
-          alt={SPLASH_MESSAGES.wordmarkAlt}
-          height={66}
-          priority
-          src={SPLASH_ASSETS.wordmark}
-          width={144}
-        />
-        <p className="text-label-16 text-content-oncolor">{SPLASH_MESSAGES.tagline}</p>
+      {/* 시안: 워드마크와 문구 사이 12. 둘 다 `background/default` 색이다(파일 머리 주석). */}
+      <div
+        className={cn(
+          'text-background-default flex flex-col items-center gap-3',
+          LAYOUT.wordmarkLift[variant],
+        )}
+      >
+        <SplashWordmark />
+        <p className="text-label-16">{SPLASH_MESSAGES.tagline}</p>
       </div>
 
       {isLoading ? (

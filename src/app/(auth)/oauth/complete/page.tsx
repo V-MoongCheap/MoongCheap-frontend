@@ -1,3 +1,5 @@
+import { Suspense } from 'react';
+
 import type { Metadata } from 'next';
 
 import { SocialSignupCompletion } from '../../_components/SocialSignupCompletion';
@@ -9,5 +11,10 @@ export const metadata: Metadata = {
 // 소셜 최초 로그인 완료 경로(#18). 콜백이 `?status=incomplete`(약관 미동의=최초 유저)를 여기로 보낸다.
 // 약관 동의 + 닉네임을 받아 가입을 확정한다. 상세는 SocialSignupCompletion 참고.
 export default function OAuthCompletePage() {
-  return <SocialSignupCompletion />;
+  // SocialSignupCompletion이 useSearchParams(완료 플래그 읽기)를 쓰므로 Suspense 경계로 감싼다(빌드 요건).
+  return (
+    <Suspense fallback={null}>
+      <SocialSignupCompletion />
+    </Suspense>
+  );
 }

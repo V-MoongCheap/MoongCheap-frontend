@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm, useWatch } from 'react-hook-form';
 
 import { AlertDialog } from '@/components/ui/AlertDialog';
@@ -12,6 +12,7 @@ import { checkNicknameAvailability, completeSocialSignup } from '@/lib/authApi';
 import { signupNicknameSchema } from '@/schemas/auth';
 
 import { ScreenColumn } from './ScreenColumn';
+import { SignupCompleteScreen } from './SignupCompleteScreen';
 import { StepField, type FieldStatus } from './StepField';
 import { StepFooter } from './StepFooter';
 import {
@@ -29,14 +30,21 @@ import {
 // 백엔드가 요구하는 최소 2스텝(약관 동의 → 닉네임)만 진행한다. 약관 동의 화면·문구·하단 버튼은
 // 회원가입과 동일 컴포넌트(TermsAgreementStep·StepFooter)를 재사용한다.
 //
-// 스텝이 2개뿐이라 URL 쿼리 대신 로컬 상태로 관리한다(딥링크 가드가 필요한 긴 위저드가 아님).
+// 스텝이 짧아 URL 쿼리 대신 로컬 상태로 관리한다(딥링크 가드가 필요한 긴 위저드가 아님).
+// 가입 확정 후에는 축하 완료 화면(complete)을 거쳐 홈으로 들어간다(로컬 위저드와 공용 화면 공유).
 
-type CompletionStep = 'terms' | 'nickname';
+type CompletionStep = 'terms' | 'nickname' | 'complete';
 
 export function SocialSignupCompletion() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const [step, setStep] = useState<CompletionStep>('terms');
+  // 가입 확정 후의 완료 화면은 URL 플래그(?done=1)로 표시한다. 이렇게 해야 완료 화면에서
+  // 새로고침해도 약관·닉네임 스텝으로 되돌아가 이미 가입된 유저가 completeSocialSignup을
+  // 재호출하는 일이 없다(/oauth/complete 페이지 자체엔 완료 여부 가드가 없다).
+  const [step, setStep] = useState<CompletionStep>(
+    searchParams.get('done') === '1' ? 'complete' : 'terms',
+  );
   const [agreements, setAgreements] = useState<TermsAgreements>(EMPTY_AGREEMENTS);
 
   const { register, control, setValue, setFocus } = useForm<{ nickname: string }>({
@@ -105,8 +113,11 @@ export function SocialSignupCompletion() {
         ageVerified: agreements.age14,
         nickname: nicknameValue.trim(),
       });
-      // 가입 완료 = 로그인 성립. 홈으로 넘기고 히스토리를 남기지 않는다(뒤로가기로 완료화면 재진입 방지).
-      router.replace('/');
+      // 가입 완료 = 로그인 성립. 축하 완료 화면을 보여주고, 거기 CTA로 홈에 진입한다.
+      // URL에 완료 플래그를 남겨 이 화면에서 새로고침해도 스텝이 처음으로 돌아가지 않게 한다.
+      setIsSubmitting(false);
+      router.replace('/oauth/complete?done=1');
+      setStep('complete');
     } catch (error) {
       setIsSubmitting(false);
       // 세션 만료(401)면 다시 로그인부터. 그 외는 일반 안내 후 재시도하게 둔다.
@@ -118,6 +129,12 @@ export function SocialSignupCompletion() {
       setDialogMessage('가입 처리 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.');
     }
   };
+
+  if (step === 'complete') {
+    // 이 시점엔 이미 세션이 발급돼 있으므로(가입 확정 완료) 로그인 화면이 아니라 홈으로 들어간다.
+    // 뒤로가기로 완료 화면에 재진입하지 않도록 replace로 이동한다.
+    return <SignupCompleteScreen ctaLabel="뭉치 시작하기" ctaHref="/" replace />;
+  }
 
   if (step === 'terms') {
     return (

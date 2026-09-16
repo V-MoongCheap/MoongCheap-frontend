@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 
-import { DIALOG_BUTTON_CLASS } from '@/components/ui/dialog';
+import { Dialog, DIALOG_BUTTON_CLASS, type DialogHandle } from '@/components/ui/Dialog';
 import { useToast } from '@/components/ui/Toast';
 import { AUTH_ERROR_MESSAGES, AUTH_SUCCESS_MESSAGES } from '@/constants/authMessages';
 import { useSession, useUpdateNickname } from '@/features/auth/session';
@@ -16,7 +16,7 @@ import { signupNicknameSchema } from '@/schemas/auth';
 // 흐름: 입력 → 중복확인 → 변경 → PATCH /api/members/me → 모달 닫히며 프로필 카드에 반영.
 //
 // 화면(라우트)이 아니라 모달인 이유는 입력 1개짜리 단발 동작이기 때문이다. AlertDialog는 메시지
-// 전용(입력칸 슬롯이 없다)이라, 같은 네이티브 <dialog> 패턴으로 입력형 다이얼로그를 여기 둔다.
+// 전용(입력칸 슬롯이 없다)이라, 같은 공용 프리미티브(Dialog, #102)로 입력형 다이얼로그를 여기 둔다.
 // 닉네임 규칙·중복확인·성공/오류 문구는 회원가입 닉네임 스텝과 동일 모듈(schemas/auth·authMessages·
 // checkNicknameAvailability)을 재사용해 규칙이 바뀌면 한곳만 고치면 된다.
 //
@@ -51,7 +51,7 @@ type NicknameCheck = {
 };
 
 function NicknameEditDialog({ onClose }: { onClose: () => void }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const dialogRef = useRef<DialogHandle>(null);
   // 중복확인 진행 여부. state가 아니라 ref인 이유는 같은 렌더에서 발생한 두 트리거(버튼 클릭 +
   // Enter)가 각각 렌더 시점의 check.state를 보고 둘 다 통과해 요청이 두 번 나가는 것을 막기 위함이다
   // (ref는 즉시 반영돼 동기 이중 호출을 차단한다).
@@ -66,11 +66,9 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
 
   const [nickname, setNickname] = useState('');
   const [check, setCheck] = useState<NicknameCheck>({ state: 'idle', forValue: '' });
-
-  // 마운트 시 모달로 연다. showModal()이라야 백드롭·포커스 트랩·Esc 닫힘이 브라우저 기본으로 붙는다.
-  useEffect(() => {
-    dialogRef.current?.showModal();
-  }, []);
+  // 일반 API 실패(중복확인·변경)를 모달 안 인라인 오류로 남긴다. 토스트만으론 실패 원인이 모달에
+  // 표시되지 않는다(#102 CodeRabbit). 입력 변경·재시도 시 초기화한다.
+  const [formError, setFormError] = useState<string | null>(null);
 
   const isPending = mutation.isPending;
   const formatValid = signupNicknameSchema.safeParse(nickname).success;
@@ -80,21 +78,10 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
 
   const status: 'default' | 'success' | 'error' =
     resolved === 'available' ? 'success' : resolved === 'taken' ? 'error' : 'default';
-  const helper =
-    status === 'success'
-      ? AUTH_SUCCESS_MESSAGES.confirmed
-      : status === 'error'
-        ? AUTH_ERROR_MESSAGES.nickname.taken
-        : undefined;
-
-  // 처리 중에는 닫기(취소·Esc·백드롭)를 막아 이중 실행·중도 이탈을 방지한다. close()로 닫아야
-  // 네이티브 dialog 닫힘 절차(트리거로 포커스 복원)가 실행된다 — 언마운트만으로는 복원되지 않는다.
-  // 닫힘은 <dialog onClose>가 받아 부모에 onClose로 전달한다.
-  const requestClose = () => {
-    if (!isPending) {
-      dialogRef.current?.close();
-    }
-  };
+  // 인라인 메시지: 일반 실패(formError)를 최우선으로, 없으면 중복확인 'taken'을 오류로 표시한다.
+  // 성공 문구는 오류가 없을 때만 노출한다.
+  const errorText = formError ?? (status === 'error' ? AUTH_ERROR_MESSAGES.nickname.taken : null);
+  const showSuccess = errorText === null && status === 'success';
 
   const handleCheck = async () => {
     const trimmed = nickname.trim();
@@ -105,18 +92,20 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
       setNickname(trimmed);
     }
     checkingRef.current = true;
+    setFormError(null);
     setCheck({ state: 'checking', forValue: trimmed });
     try {
       const available = await checkNicknameAvailability(trimmed);
       setCheck({ state: available ? 'available' : 'taken', forValue: trimmed });
     } catch (error) {
-      // 통과 상태로 두면 안 되므로 idle로 되돌리고 토스트로 알린다.
+      // 통과 상태로 두면 안 되므로 idle로 되돌린다. 401(세션 만료)은 재로그인 안내라 토스트로,
+      // 그 외 일반 실패는 모달 안 인라인 오류로 원인을 남긴다(#102 CodeRabbit).
       setCheck({ state: 'idle', forValue: '' });
-      showToast(
-        error instanceof ApiError && error.status === 401
-          ? SESSION_EXPIRED_MESSAGE
-          : NICKNAME_CHECK_FAILED_MESSAGE,
-      );
+      if (error instanceof ApiError && error.status === 401) {
+        showToast(SESSION_EXPIRED_MESSAGE);
+      } else {
+        setFormError(NICKNAME_CHECK_FAILED_MESSAGE);
+      }
     } finally {
       checkingRef.current = false;
     }
@@ -126,40 +115,41 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
     if (!passed || isPending) {
       return;
     }
+    setFormError(null);
     mutation.mutate(nickname.trim(), {
       onSuccess: () => {
-        // close()로 닫아 네이티브 닫힘 절차(포커스 복원)를 태운다. onClose는 <dialog onClose>가 받는다.
+        // close()로 닫아 네이티브 닫힘 절차(포커스 복원)를 태운다. onClose는 <Dialog onClose>가 받는다.
         dialogRef.current?.close();
         showToast(NICKNAME_CHANGED_MESSAGE);
       },
       onError: (error) => {
-        // 중복확인 뒤 제출 전에 다른 유저가 선점하면 409(USER_002). 인라인으로 "사용 중"을 다시
-        // 표시하고 모달은 열어 둔다(다른 닉네임으로 재시도). 그 외는 토스트로 알린다.
+        // 409(제출 직전 선점, USER_002)는 중복확인 'taken'으로 되돌려 인라인 표시. 401(세션 만료)은
+        // 재로그인 안내라 토스트. 그 외 일반 실패는 모달 안 인라인 오류로 남기고 모달은 열어 둔다
+        // (다른 닉네임으로 재시도, #102 CodeRabbit).
         if (error instanceof ApiError && error.status === 409) {
           setCheck({ state: 'taken', forValue: nickname.trim() });
           return;
         }
-        showToast(
-          error instanceof ApiError && error.status === 401
-            ? SESSION_EXPIRED_MESSAGE
-            : NICKNAME_FAILED_MESSAGE,
-        );
+        if (error instanceof ApiError && error.status === 401) {
+          showToast(SESSION_EXPIRED_MESSAGE);
+          return;
+        }
+        setFormError(NICKNAME_FAILED_MESSAGE);
       },
     });
   };
 
   return (
-    <dialog
-      ref={dialogRef}
+    // open 상수 true + 조건부 마운트: 열 때마다 입력·중복확인 상태를 새로 시작한다(부모가 마운트로 연다).
+    // 닫기는 취소 버튼·onSuccess의 ref.close()·백드롭 클릭으로 하며, busy 중에는 Dialog가 닫힘을 막는다.
+    // 입력형 모달이라 백드롭 클릭 닫기를 켠다(파괴적 확인인 AlertDialog는 기본 off 유지).
+    <Dialog
+      open
       onClose={onClose}
-      // Esc·백드롭으로 닫으려 할 때 처리 중이면 취소한다(닫힘 이벤트 자체를 막는다).
-      onCancel={(event) => {
-        if (isPending) {
-          event.preventDefault();
-        }
-      }}
+      busy={isPending}
+      dismissOnBackdropClick
+      ref={dialogRef}
       aria-labelledby={`${id}-title`}
-      className="bg-surface-primary rounded-32 m-auto w-[calc(100%-54px)] max-w-85 p-0 backdrop:bg-black/40"
     >
       <div className="flex flex-col gap-5 p-5">
         <div className="flex flex-col gap-2">
@@ -187,12 +177,16 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
               autoComplete="off"
               placeholder="새 닉네임을 입력해주세요."
               value={nickname}
-              aria-invalid={status === 'error'}
-              aria-describedby={helper !== undefined ? helperId : undefined}
+              // 변경 처리 중에는 폼을 잠근다. 열어 두면 제출값을 바꾼 뒤 이전 요청 실패가 새 입력에
+              // 인라인 오류(formError)로 남을 수 있다(#102 CodeRabbit). 변경·취소 버튼과 동일 잠금.
+              disabled={isPending}
+              aria-invalid={errorText !== null}
+              aria-describedby={errorText !== null || showSuccess ? helperId : undefined}
               onChange={(event) => {
                 setNickname(event.target.value);
-                // 값을 고치면 직전 중복확인 결과를 무효화한다(다시 확인해야 변경 가능).
+                // 값을 고치면 직전 중복확인 결과·오류를 무효화한다(다시 확인해야 변경 가능).
                 setCheck({ state: 'idle', forValue: '' });
+                setFormError(null);
               }}
               onKeyDown={(event) => {
                 // IME 조합 확정(한글)의 Enter는 무시. 통과면 변경, 아니면 중복확인으로 흘린다.
@@ -208,10 +202,10 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
               }}
               className={cn(
                 'placeholder:text-content-quinary rounded-8 text-body-14 h-14 w-full border pr-28 pl-4 outline-none',
-                status === 'success'
-                  ? 'border-border-success'
-                  : status === 'error'
-                    ? 'border-border-error'
+                errorText !== null
+                  ? 'border-border-error'
+                  : showSuccess
+                    ? 'border-border-success'
                     : nickname.length > 0
                       ? 'border-border-primary'
                       : 'border-border-subtle focus:border-border-primary',
@@ -221,7 +215,7 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
               <button
                 type="button"
                 onClick={handleCheck}
-                disabled={!formatValid || check.state === 'checking'}
+                disabled={isPending || !formatValid || check.state === 'checking'}
                 className="bg-surface-button-secondary-default hover:bg-surface-button-secondary-hover active:bg-surface-button-secondary-pressed text-content-brand focus-visible:ring-effect-focus-ring-primary rounded-8 text-button-14 px-3 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:opacity-40"
               >
                 {check.state === 'checking' ? '확인 중' : '중복확인'}
@@ -229,25 +223,24 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
-          {helper !== undefined && (
-            <p
-              id={helperId}
-              role={status === 'error' ? 'alert' : undefined}
-              className={cn(
-                'text-caption-12',
-                status === 'success' ? 'text-content-success' : 'text-content-error',
-              )}
-            >
-              {helper}
+          {errorText !== null ? (
+            <p id={helperId} role="alert" className="text-content-error text-caption-12">
+              {errorText}
             </p>
-          )}
+          ) : showSuccess ? (
+            <p id={helperId} className="text-content-success text-caption-12">
+              {AUTH_SUCCESS_MESSAGES.confirmed}
+            </p>
+          ) : null}
         </div>
 
         <div className="flex gap-2">
+          {/* Dialog.close()가 네이티브 닫힘 절차(트리거로 포커스 복원)를 태우고 busy 중엔 무시한다.
+              닫힘은 <Dialog onClose>가 받아 부모에 전달한다(언마운트만으로는 포커스가 복원되지 않음). */}
           <button
             className={`${DIALOG_BUTTON_CLASS} border-border-button-quarternary bg-background-default hover:bg-surface-button-quarternary-hover active:bg-surface-button-quarternary-pressed text-content-primary border`}
             disabled={isPending}
-            onClick={requestClose}
+            onClick={() => dialogRef.current?.close()}
             type="button"
           >
             취소
@@ -262,6 +255,6 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
           </button>
         </div>
       </div>
-    </dialog>
+    </Dialog>
   );
 }

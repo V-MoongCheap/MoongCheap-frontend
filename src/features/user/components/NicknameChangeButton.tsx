@@ -141,8 +141,16 @@ function NicknameEditDialog({ onClose }: { onClose: () => void }) {
 
   return (
     // open 상수 true + 조건부 마운트: 열 때마다 입력·중복확인 상태를 새로 시작한다(부모가 마운트로 연다).
-    // 닫기는 취소 버튼·onSuccess의 ref.close()로 하며, busy 중에는 Dialog가 닫힘을 막는다.
-    <Dialog open onClose={onClose} busy={isPending} ref={dialogRef} aria-labelledby={`${id}-title`}>
+    // 닫기는 취소 버튼·onSuccess의 ref.close()·백드롭 클릭으로 하며, busy 중에는 Dialog가 닫힘을 막는다.
+    // 입력형 모달이라 백드롭 클릭 닫기를 켠다(파괴적 확인인 AlertDialog는 기본 off 유지).
+    <Dialog
+      open
+      onClose={onClose}
+      busy={isPending}
+      dismissOnBackdropClick
+      ref={dialogRef}
+      aria-labelledby={`${id}-title`}
+    >
       <div className="flex flex-col gap-5 p-5">
         <div className="flex flex-col gap-2">
           <p className="text-title-17 text-content-primary" id={`${id}-title`}>

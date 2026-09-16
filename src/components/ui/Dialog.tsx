@@ -46,6 +46,12 @@ interface DialogProps {
   busy?: boolean;
   /** 시맨틱 역할. 확인 모달은 'alertdialog', 입력 모달은 기본(native dialog 역할). */
   role?: 'alertdialog';
+  /**
+   * 백드롭 클릭으로 닫을지(기본 false). 네이티브 <dialog>는 백드롭 클릭으로 닫히지 않는 게 기본이고,
+   * 파괴적 확인(alertdialog)은 명시적 조작을 요구하는 게 표준이라 기본을 꺼 둔다. 입력형 모달처럼
+   * 백드롭 dismiss가 자연스러운 곳에서만 켠다. busy 중에는 무시한다(onCancel·버튼 disabled와 동일).
+   */
+  dismissOnBackdropClick?: boolean;
   /** 모달의 접근성 이름을 가리키는 요소 id. children 내부의 제목·메시지 id를 넘긴다. */
   'aria-labelledby'?: string;
   /** 보조 설명 요소 id(선택). */
@@ -66,12 +72,16 @@ export function Dialog({
   onClose,
   busy = false,
   role,
+  dismissOnBackdropClick = false,
   'aria-labelledby': ariaLabelledBy,
   'aria-describedby': ariaDescribedBy,
   ref,
   children,
 }: DialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  // 백드롭 클릭 판정용. mousedown이 백드롭(=dialog 요소 자신)에서 시작했는지 기록해, 콘텐츠에서
+  // 드래그(예: 입력 텍스트 선택)하다 백드롭에서 손을 떼는 경우의 오작동 닫힘을 막는다.
+  const pointerDownOnBackdropRef = useRef(false);
 
   useImperativeHandle(
     ref,
@@ -106,6 +116,24 @@ export function Dialog({
           event.preventDefault();
         }
       }}
+      // 백드롭 클릭 닫기(옵트인). 콘텐츠는 dialog를 꽉 채우므로(p-0) target이 dialog 자신일 때만
+      // 백드롭이다. mousedown·click 모두 백드롭에서 일어난 경우에만 닫아 드래그 오작동을 막는다.
+      onMouseDown={
+        dismissOnBackdropClick
+          ? (event) => {
+              pointerDownOnBackdropRef.current = event.target === dialogRef.current;
+            }
+          : undefined
+      }
+      onClick={
+        dismissOnBackdropClick
+          ? (event) => {
+              if (!busy && event.target === dialogRef.current && pointerDownOnBackdropRef.current) {
+                dialogRef.current?.close();
+              }
+            }
+          : undefined
+      }
       role={role}
       aria-labelledby={ariaLabelledBy}
       aria-describedby={ariaDescribedBy}

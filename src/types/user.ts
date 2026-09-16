@@ -19,16 +19,13 @@ export type ActiveRole = 'buyer' | 'seller';
 /**
  * 마이페이지 "진행중인 주문내역"의 진행 단계.
  *
- * `PAYMENT_PENDING`은 2026-08-27 구조 변경(주문 생성이 결제보다 앞섬)으로 추가했다.
- * 시안에는 없지만 실제로는 가장 많은 주문이 머무는 단계다. 백엔드 코드 확정 시 맞춘다.
+ * `PAYMENT_PENDING`(결제대기)은 2026-08-27 구조 변경 때 잠정 포함했으나, 2026-09-15 Figma 최종본이
+ * 결제완료부터 5단계로 확정돼 요약에서 제외한다. 주문 레코드는 여전히 낙찰 시점에 PAYMENT_PENDING으로
+ * 생성되지만(가장 많은 주문이 머무는 단계), 이 마이페이지 요약(B-26)에는 노출하지 않는다 — 주문목록
+ * (B-21) '진행중' 탭은 별개로 결제대기를 계속 포함한다(`constants/orderStatus.ts` ORDER_LIST_TABS).
  */
 export type OrderProgressStatus =
-  | 'PAYMENT_PENDING'
-  | 'PAYMENT_COMPLETED'
-  | 'DELIVERY_REQUESTED'
-  | 'PREPARING'
-  | 'SHIPPING'
-  | 'DELIVERED';
+  'PAYMENT_COMPLETED' | 'DELIVERY_REQUESTED' | 'PREPARING' | 'SHIPPING' | 'DELIVERED';
 
 /** 단계별 주문 건수. 0건도 자리를 차지하므로 전 단계를 채운다. */
 export type OrderProgressCounts = Record<OrderProgressStatus, number>;

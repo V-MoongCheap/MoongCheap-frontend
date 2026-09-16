@@ -14,6 +14,9 @@ export const metadata: Metadata = {
 
 // B-26 마이페이지(구매자). 하위 화면 전부의 진입점이다. `User-01`.
 //
+// 하단 탭바(홈·대기·MY)의 목적지이자 탭 루트라 `(hub)` 그룹에 두어 탭바 셸(../(hub)/layout)을 입는다.
+// 상세 화면(프로필 설정·배송지 등)은 이 그룹 밖에 있어 탭바가 붙지 않는다.
+//
 // 페이지는 서버 컴포넌트다. 미구현 진입점의 '준비 중' 토스트는 `ComingSoonButton` 리프에서만
 // 클라이언트 경계를 만든다.
 //
@@ -23,7 +26,7 @@ export default async function MyPage() {
   const overview = await mockGetMyPageOverview();
 
   return (
-    <main className="flex w-full flex-col pb-6">
+    <main className="flex w-full flex-col">
       <header className="flex w-full flex-col gap-1 p-4">
         <h1 className="text-heading-24 text-content-primary w-full">마이페이지</h1>
       </header>

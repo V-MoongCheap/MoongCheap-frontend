@@ -17,16 +17,18 @@ interface LinkButtonProps {
   href?: string;
 }
 
-const BUTTON_CLASS =
+/** quarternary 링크 버튼의 생김새. 같은 행에 놓이는 액션 버튼(NicknameChangeButton)이 모양을
+ *  맞추도록 내보낸다. */
+export const LINK_BUTTON_CLASS =
   'bg-surface-button-quarternary-default border-border-button-quarternary text-button-14 text-content-primary rounded-8 active:bg-surface-button-quarternary-pressed flex h-11 w-full flex-1 items-center justify-center border px-3 text-center';
 
 export function LinkButton({ label, href }: LinkButtonProps) {
   if (href === undefined) {
-    return <ComingSoonButton className={BUTTON_CLASS}>{label}</ComingSoonButton>;
+    return <ComingSoonButton className={LINK_BUTTON_CLASS}>{label}</ComingSoonButton>;
   }
 
   return (
-    <Link className={BUTTON_CLASS} href={href}>
+    <Link className={LINK_BUTTON_CLASS} href={href}>
       {label}
     </Link>
   );

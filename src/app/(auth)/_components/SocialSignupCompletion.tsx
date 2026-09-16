@@ -1,14 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useForm, useWatch } from 'react-hook-form';
 
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { AUTH_ERROR_MESSAGES, AUTH_SUCCESS_MESSAGES } from '@/constants/authMessages';
 import { ApiError } from '@/lib/api';
-import { checkNicknameAvailability, completeSocialSignup } from '@/lib/authApi';
+import { checkNicknameAvailability, completeSocialSignup, getMe } from '@/lib/authApi';
 import { signupNicknameSchema } from '@/schemas/auth';
 
 import { ScreenColumn } from './ScreenColumn';
@@ -31,21 +31,53 @@ import {
 // 회원가입과 동일 컴포넌트(TermsAgreementStep·StepFooter)를 재사용한다.
 //
 // 스텝이 짧아 URL 쿼리 대신 로컬 상태로 관리한다(딥링크 가드가 필요한 긴 위저드가 아님).
-// 가입 확정 후에는 축하 완료 화면(complete)을 거쳐 홈으로 들어간다(로컬 위저드와 공용 화면 공유).
+// 완료 화면(complete)은 이 세션에서 방금 가입을 확정한 순간에만 띄우는 일시 상태다. URL로
+// 표현하지 않으므로 새로고침·재방문으로는 다시 뜨지 않는다(완료 화면 재노출은 UX 오류).
+//
+// 진입 가드: 이 화면은 "약관 미동의(=미완료) 소셜 유저"만 밟아야 한다. 그래서 마운트 시 getMe로
+// 서버가 판정한 완료 여부를 확인한다 — 이미 완료된 유저(새로고침·재방문·딥링크)는 홈으로 보내고,
+// 미완료(또는 미로그인)만 약관 스텝을 시작한다. URL 값이 아니라 서버 상태로 판정하므로 완료 화면을
+// 위조로 띄울 수 없다(CodeRabbit 지적 대응). 완료 직후 경로는 handleComplete가 setStep으로 직접
+// 넘겨 이 getMe를 타지 않는다(방금 서버가 확정했으니 재확인 불필요).
+// ⚠️ 전제: IncompleteSignupFilter가 미완료 유저의 GET /api/members/me도 막아 getMe가 null을 준다.
+//    (백엔드 실측 확인 필요 — 미완료에도 프로필을 준다면 완료 판정 신호를 보강해야 한다.)
 
-type CompletionStep = 'terms' | 'nickname' | 'complete';
+type CompletionStep = 'verifying' | 'terms' | 'nickname' | 'complete';
 
 export function SocialSignupCompletion() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
-  // 가입 확정 후의 완료 화면은 URL 플래그(?done=1)로 표시한다. 이렇게 해야 완료 화면에서
-  // 새로고침해도 약관·닉네임 스텝으로 되돌아가 이미 가입된 유저가 completeSocialSignup을
-  // 재호출하는 일이 없다(/oauth/complete 페이지 자체엔 완료 여부 가드가 없다).
-  const [step, setStep] = useState<CompletionStep>(
-    searchParams.get('done') === '1' ? 'complete' : 'terms',
-  );
+  // 서버 완료 여부를 확인하기 전까진 어떤 스텝도 확정하지 않는다(가짜 완료 화면·잘못된 약관 노출 방지).
+  const [step, setStep] = useState<CompletionStep>('verifying');
   const [agreements, setAgreements] = useState<TermsAgreements>(EMPTY_AGREEMENTS);
+
+  // 마운트 1회: 서버가 판정한 가입 완료 여부로 이 화면 노출을 가드한다(위 주석 참고).
+  useEffect(() => {
+    let active = true;
+    getMe()
+      .then((user) => {
+        if (!active) {
+          return;
+        }
+        // 이미 완료된 유저는 이 화면에 있을 이유가 없다 → 홈으로(뒤로가기 방지 replace).
+        // 미완료(또는 미로그인) 소셜 유저만 약관 동의부터 시작한다.
+        if (user !== null) {
+          router.replace('/');
+        } else {
+          setStep('terms');
+        }
+      })
+      .catch(() => {
+        // getMe가 던지는 경우(미완료를 401 외 상태로 막거나 네트워크 오류). 완료로 볼 수 없으므로
+        // 안전하게 약관 스텝으로 진입시킨다(완료 확정은 completeSocialSignup 성공으로만 이뤄진다).
+        if (active) {
+          setStep('terms');
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [router]);
 
   const { register, control, setValue, setFocus } = useForm<{ nickname: string }>({
     mode: 'onChange',
@@ -113,10 +145,9 @@ export function SocialSignupCompletion() {
         ageVerified: agreements.age14,
         nickname: nicknameValue.trim(),
       });
-      // 가입 완료 = 로그인 성립. 축하 완료 화면을 보여주고, 거기 CTA로 홈에 진입한다.
-      // URL에 완료 플래그를 남겨 이 화면에서 새로고침해도 스텝이 처음으로 돌아가지 않게 한다.
+      // 가입 완료 = 로그인 성립. 축하 완료 화면을 잠깐 보여주고, 거기 CTA로 홈에 진입한다.
+      // 완료 화면은 이 세션 상태로만 띄운다(새로고침 시엔 위 getMe 가드가 홈으로 보낸다).
       setIsSubmitting(false);
-      router.replace('/oauth/complete?done=1');
       setStep('complete');
     } catch (error) {
       setIsSubmitting(false);
@@ -129,6 +160,11 @@ export function SocialSignupCompletion() {
       setDialogMessage('가입 처리 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.');
     }
   };
+
+  if (step === 'verifying') {
+    // 서버 완료 여부 확인 중(찰나). 잘못된 화면이 깜빡이지 않도록 아무것도 그리지 않는다.
+    return null;
+  }
 
   if (step === 'complete') {
     // 이 시점엔 이미 세션이 발급돼 있으므로(가입 확정 완료) 로그인 화면이 아니라 홈으로 들어간다.

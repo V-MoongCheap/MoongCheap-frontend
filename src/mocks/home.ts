@@ -8,6 +8,10 @@ import type { HomeBanner, HomeBrand, HomeBrandDeal, HomeProductCard } from '@/ty
  *
  * 문구는 전부 시안 `981:19122`(배너 프로토타입 11장)에서 읽은 그대로다.
  * 이미지 경로는 반입 이슈(#60)가 정한 이름을 그대로 쓴다.
+ *
+ * `imagePosition`은 시안 프로토타입(`1153:80631`)의 배너별 이미지 배치값을 옮긴 것이다. 원본 비율이
+ * 배너마다 달라(세로형 · 아주 넓은 형 등) 전부 가운데로 맞추면 시안과 다른 부분이 보인다. 시안이
+ * 기본 `object-cover`를 쓰는 배너는 값을 넣지 않는다.
  */
 const mockBanners: readonly HomeBanner[] = [
   {
@@ -15,6 +19,8 @@ const mockBanners: readonly HomeBanner[] = [
     imageUrl: '/images/main-home/banner-carousel/banner-1.webp',
     title: '라라스윗 아이스크림 공구',
     description: '저당 아이스크림의 권위자! 공구떴다.',
+    // 시안: 높이 110.91% · top -10.75% → 세로 넘침의 98.5% 지점이라 사실상 아래 정렬.
+    imagePosition: 'bottom',
   },
   {
     id: 'banner-2',
@@ -35,6 +41,8 @@ const mockBanners: readonly HomeBanner[] = [
     // 인쇄된 문구를 대체 텍스트로 옮긴다. 시안 이미지에서 읽은 값이라 디자인 확인 대상이다
     // (원문 표기는 `辛라면 블랙`).
     imageAltText: '깊고 진한 신라면 블랙',
+    // 시안: 폭 228.99% · left -49.68% → 가로 넘침의 38% 지점.
+    imagePosition: 'horizontal38',
   },
   {
     id: 'banner-5',
@@ -47,6 +55,8 @@ const mockBanners: readonly HomeBanner[] = [
     id: 'banner-6',
     imageUrl: '/images/main-home/banner-carousel/banner-6.webp',
     imageAltText: '새로워진 비비고 세계를 더 맛있게',
+    // 시안: 폭 135.46% · left 0.13% → 왼쪽 정렬.
+    imagePosition: 'left',
   },
   {
     id: 'banner-7',
@@ -59,12 +69,16 @@ const mockBanners: readonly HomeBanner[] = [
     imageUrl: '/images/main-home/banner-carousel/banner-8.webp',
     title: '지금 현재 인기 과자 조리퐁',
     description: '크라운제과 기획전 공구를 만나보세요!',
+    // 시안: 높이 171.56% · top -56.13% → 세로 넘침의 78% 지점.
+    imagePosition: 'lower78',
   },
   {
     id: 'banner-9',
     imageUrl: '/images/main-home/banner-carousel/banner-9.webp',
     title: '콘칩 공구 기획전',
     description: '24개입 1박스가 5천원대 이하?!',
+    // 시안: 높이 171.56% · top -71.53% → 세로 넘침의 끝(99.96%)이라 아래 정렬.
+    imagePosition: 'bottom',
   },
   {
     id: 'banner-10',

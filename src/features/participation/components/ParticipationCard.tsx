@@ -8,7 +8,7 @@ import type { ParticipationItem } from '@/types/participation';
 //  [썸네일 + 상태배지 오버레이]  [D-N 배지 · N명 참여 배지]
 //                               상품명(볼드)
 //                               카테고리 | 수량 : N개
-//  희망가격대
+//  가격 라벨(상태별: 완료=낙찰가, 그 외=희망가격대)
 //  가격(볼드)
 //  [상태별 액션 버튼(선택)]
 //
@@ -60,7 +60,7 @@ export function ParticipationCard({ item, onOpenDetail, action }: ParticipationC
       </div>
 
       <div className="flex flex-col">
-        <p className="text-caption-10 text-content-quarternary">희망가격대</p>
+        <p className="text-caption-10 text-content-quarternary">{meta.priceHeading}</p>
         <p className="text-heading-18 text-content-primary">{item.priceLabel}</p>
       </div>
     </>

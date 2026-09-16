@@ -17,9 +17,16 @@ import type { HomeProductCard } from '@/types/home';
 // 카드 전체가 상품 상세(B-08, /products/[id])로 가는 링크다. 찜 버튼은 카드 안에 겹쳐
 // 있지만 별개 동작이라, 링크와의 중첩(HTML 위반)을 피하려고 형제로 두고 절대 배치했다.
 
-/** 시안: 흰 배경 80% + 테두리 #e6e6e6, radius 4. D-day와 카운트다운이 같은 자리를 쓴다. */
+/**
+ * 시안: 흰 배경 80% + 테두리 #e6e6e6, radius 4. D-day와 카운트다운이 같은 자리를 쓴다.
+ *
+ * 색은 전부 모드와 무관한 토큰으로 고정한다(#98). 글자를 시맨틱 `content-primary`로 두면 다크에서
+ * 흰색으로 바뀌어, 흰 바탕 위에서 글자가 사라지고 회색 네모만 남는다. 다크 시안도 같은 조합이라
+ * 다크용 배지 설계가 없어, 두 모드 모두 라이트 모양을 쓰기로 했다. 바탕은 시안 변수
+ * `badge/surface/white-A100` 그대로다.
+ */
 const TIME_BADGE_CLASS =
-  'border-border-subtle rounded-4 text-label-10 text-content-primary bg-normal-1 border px-1 py-0.5 opacity-80';
+  'border-coolgray-200 rounded-4 text-label-10 text-coolgray-950 bg-badge-surface-white-a100 border px-1 py-0.5 opacity-80';
 
 /** 시안: `badge/surface/sky` = 하늘색 20%. */
 const PERSONNEL_BADGE_CLASS = 'rounded-4 text-label-10 text-content-primary bg-sky-a20 px-1 py-0.5';

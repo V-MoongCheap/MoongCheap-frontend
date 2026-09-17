@@ -23,6 +23,11 @@ export interface ParticipationStatusMeta {
   readonly emptyTitle: string;
   /** 오버레이 배지 색 클래스(bg + text). */
   readonly badgeClass: string;
+  /**
+   * 카드 가격 섹션의 라벨. 낙찰 전(모이는 중·배정완료·확인필요)은 '희망가격대',
+   * 낙찰이 종결된 '완료'만 '낙찰가'로 표기한다(B-17 시안 확정, 2026-09-16).
+   */
+  readonly priceHeading: string;
 }
 
 export const PARTICIPATION_STATUS = {
@@ -32,6 +37,7 @@ export const PARTICIPATION_STATUS = {
     badgeLabel: '모이는 중',
     emptyTitle: '모이는 중인 수요가 없어요',
     badgeClass: 'bg-surface-brand text-content-oncolor',
+    priceHeading: '희망가격대',
   },
   /** 배정완료 — 낙찰 배정됨(참여자 낙찰 취소 가능). */
   ALLOCATED: {
@@ -39,6 +45,7 @@ export const PARTICIPATION_STATUS = {
     badgeLabel: '배정완료',
     emptyTitle: '배정된 내 물품이 없어요',
     badgeClass: 'bg-surface-visibility text-content-visibility',
+    priceHeading: '희망가격대',
   },
   /** 확인필요 — 참여자 조치 필요(대체상품 확인 등 → B-16). */
   ACTION_REQUIRED: {
@@ -46,6 +53,7 @@ export const PARTICIPATION_STATUS = {
     badgeLabel: '확인 필요',
     emptyTitle: '확인이 필요한 내역이 없어요',
     badgeClass: 'bg-surface-danger text-content-oncolor',
+    priceHeading: '희망가격대',
   },
   /** 완료 — 참여 종결. */
   DONE: {
@@ -53,6 +61,7 @@ export const PARTICIPATION_STATUS = {
     badgeLabel: '완료',
     emptyTitle: '완료된 참여가 없어요',
     badgeClass: 'bg-surface-tertiary text-content-tertiary',
+    priceHeading: '낙찰가',
   },
 } as const satisfies Record<string, ParticipationStatusMeta>;
 

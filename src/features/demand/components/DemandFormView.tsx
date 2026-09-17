@@ -33,7 +33,12 @@ const EMPTY_VALUES: DemandFormValues = {
   easyPayProvider: null,
   substituteAgreed: null,
   substituteNote: '',
-  consents: { autoPayment: false, privacy: false, pgTerms: false },
+  consents: {
+    autoPayment: false,
+    privacyCollection: false,
+    privacyThirdParty: false,
+    pgTerms: false,
+  },
 };
 
 /**
@@ -69,11 +74,16 @@ export function DemandFormView({ product, backHref }: DemandFormViewProps) {
     setValues((previous) => ({ ...previous, [key]: value }));
   }
 
-  // 필수 약관 3개가 모두 켜져야 참여할 수 있다. 시안에서도 그 전까지 버튼이 회색이다.
+  // 필수 약관 전부 + 희망 가격대가 정해져야 참여할 수 있다. 시안에서도 그 전까지 버튼이 회색이다.
   //
-  // ⚠️ 지금은 약관만 본다. 배송지·희망가격·결제수단까지 골라야 하는지는 기능명세서에 없어서
-  //    조건을 임의로 늘리지 않았다. 규격이 나오면 이 식만 고친다.
-  const canSubmit = DEMAND_FORM_CONSENTS.every(({ key }) => values.consents[key]);
+  // 가격대를 조건에 넣는 이유: 백엔드 등록 바디가 `desiredPriceMin`/`Max`를 필수로 받고
+  // (`toDemandCreateRequest`도 구간 미선택이면 던진다), 가격대 없는 수요는 성립하지 않는다. 버튼
+  // 활성 조건과 매핑의 전제를 일치시켜, 배선 후 가격대 없이 눌러 예외가 나는 일을 막는다.
+  //
+  // ⚠️ 결제수단 선택까지 조건에 넣을지는 별도 UX 결정 대상이다(payMethodId는 폼 선택이 아니라
+  //    결제수단 조회 API에서 온다). 규격이 나오면 이 식에 더한다.
+  const canSubmit =
+    values.priceBand !== null && DEMAND_FORM_CONSENTS.every(({ key }) => values.consents[key]);
 
   /**
    * 수요 등록 제출(#112).
@@ -87,6 +97,10 @@ export function DemandFormView({ product, backHref }: DemandFormViewProps) {
    *   const demandId = await createDemand(request); // 409(DEMAND_001)·404(PAY_001) 분기
    *
    * 그 전까지는 조용히 실패하거나 성공한 척하지 않고 준비중임을 명시한다.
+   *
+   * 버튼을 비활성으로 잠그지 않고 활성 상태에서 탭 시 안내하는 것은 이 저장소의 규칙이다 —
+   * 기능정의서 머리말 "미구현 기능 진입점은 노출하되 탭 시 토스트"(`ComingSoonButton`과 같은 방침).
+   * 문구는 일반 '준비 중' 대신, 기능은 있으나 결제 연동만 대기 중임을 밝히는 전용 문구를 쓴다.
    */
   function handleSubmit() {
     showToast(DEMAND_FORM_MESSAGES.submitPending);

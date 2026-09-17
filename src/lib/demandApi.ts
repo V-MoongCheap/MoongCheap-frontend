@@ -1,4 +1,5 @@
 import { PRICE_BANDS } from '@/constants/businessRules';
+import type { IdResponse } from '@/types/api/common';
 import type { DemandFormValues } from '@/types/demandForm';
 
 import { apiFetch } from './api';
@@ -19,11 +20,6 @@ import { apiFetch } from './api';
  *    `payMethodId`를 얻을 방법이 없다. 그래서 이 모듈(요청/매핑/호출)은 완성해 두되, 실제 제출은
  *    결제수단 조회 API가 생긴 뒤 화면에서 연결한다. 그 전까지 `DemandFormView`는 준비중을 알린다.
  */
-
-/** 등록 응답의 유일한 필드. 백엔드 공통 `IdResponse` 스키마다. */
-interface IdResponse {
-  id: number;
-}
 
 /**
  * `POST /api/members/me/demand` 요청 바디. 백엔드 `DemandCreateRequestDto`(record)와 필드가 일치한다.
@@ -66,12 +62,13 @@ export const DEMAND_ERROR_CODE = {
  * - **가격**: 폼은 구간(`priceBand`) 하나를 고르고, 백엔드는 min·max를 받는다. `PRICE_BANDS`의
  *   경계값을 그대로 보낸다(최상위 `over_100k`의 max는 내부 상한 999,999로, 화면엔 노출하지 않지만
  *   저장값으로는 그대로 쓴다 — `businessRules.ts` 주석). 구간 미선택은 등록 불가라 방어적으로 던진다.
- * - **추가 요청사항**: 폼의 대체상품 가능 범위(`substituteNote`)를 그대로 옮긴다. 별도의 자유 요청
- *   입력이 폼에 없어 이 값이 유일한 자연어 필드다. 빈 값이면 생략한다.
- * - ⚠️ **동의 3→4 매핑**: 폼은 개인정보 동의를 1개(`privacy`)로 받는데 백엔드는 수집·이용과
- *   제3자 제공을 나눠 2개(`privacyCollectionAgreed`·`privacyThirdPartyAgreed`)로 받는다. 지금은
- *   폼의 단일 동의를 두 필드에 함께 매핑한다. 별도 동의로 분리할지는 디자인/법무 확인 대상이며,
- *   확정되면 폼(동의 목록)과 이 매핑을 함께 고친다.
+ * - **추가 요청사항**: 폼의 대체상품 가능 범위(`substituteNote`)를 옮긴다. 별도의 자유 요청 입력이
+ *   폼에 없어 이 값이 유일한 자연어 필드다. 단, 이 노트는 대체상품에 **동의했을 때만** 의미가 있으므로
+ *   `isSubstitutable`이 참이고 값이 있을 때만 보낸다. 동의 안 함으로 되돌리면(노트 상태는 남는다)
+ *   과거 노트가 딸려 가지 않도록 한다.
+ * - **동의 4종 1:1 매핑**: 백엔드가 개인정보 수집·이용(`privacyCollectionAgreed`)과 제3자 제공
+ *   (`privacyThirdPartyAgreed`)을 나눠 받으므로, 폼도 두 동의를 따로 받아 각각 그대로 옮긴다. 하나의
+ *   동의를 두 필드에 함께 넣어 받지 않은 동의를 참으로 꾸미지 않는다(동의 무결성).
  */
 export function toDemandCreateRequest(
   values: DemandFormValues,
@@ -82,6 +79,7 @@ export function toDemandCreateRequest(
     throw new Error('희망 가격대를 선택해야 수요를 등록할 수 있습니다.');
   }
 
+  const isSubstitutable = values.substituteAgreed ?? false;
   const note = values.substituteNote.trim();
 
   return {
@@ -90,11 +88,11 @@ export function toDemandCreateRequest(
     desiredPriceMin: band.min,
     desiredPriceMax: band.max,
     quantity: values.quantity,
-    extraRequirement: note === '' ? undefined : note,
-    isSubstitutable: values.substituteAgreed ?? false,
+    extraRequirement: isSubstitutable && note !== '' ? note : undefined,
+    isSubstitutable,
     autoPaymentAgreed: values.consents.autoPayment,
-    privacyCollectionAgreed: values.consents.privacy,
-    privacyThirdPartyAgreed: values.consents.privacy,
+    privacyCollectionAgreed: values.consents.privacyCollection,
+    privacyThirdPartyAgreed: values.consents.privacyThirdParty,
     paymentAgencyTermsAgreed: values.consents.pgTerms,
   };
 }

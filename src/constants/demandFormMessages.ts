@@ -62,6 +62,14 @@ export const DEMAND_FORM_MESSAGES = {
 
   /** 하단 고정 버튼. 필수 동의 3개가 모두 켜져야 활성화된다. */
   submit: '뭉치 참여하기',
+
+  /**
+   * 제출 시 안내(#112). 수요 등록 API·매핑(`lib/demandApi`)은 준비됐지만, 필수값 `payMethodId`를
+   * 얻을 결제수단(토스 브랜드페이) 조회 API가 백엔드에 아직 없어 실제 등록을 붙일 수 없다. 그래서
+   * 조용히 실패하거나 성공한 척하지 않고, 준비중임을 명시한다. 결제수단 API가 생기면 이 문구 대신
+   * 실제 `createDemand` 호출로 교체한다.
+   */
+  submitPending: '결제수단 연동 준비 중이라 아직 참여할 수 없어요.',
 } as const;
 
 /**
@@ -103,15 +111,21 @@ export const DEMAND_EASY_PAY_PROVIDERS = [
 export type DemandEasyPayProviderKey = (typeof DEMAND_EASY_PAY_PROVIDERS)[number]['key'];
 
 /**
- * 약관 동의 목록. 셋 다 필수라 하나라도 빠지면 참여 버튼이 잠긴다.
+ * 약관 동의 목록. 전부 필수라 하나라도 빠지면 참여 버튼이 잠긴다.
  *
- * ⚠️ 첫 프레임(`1153:71238`)은 첫 줄이 `기본 배송지로 설정`인데, 뒤에 만든 두 프레임
- *    (`1153:71479` · `1153:71709`)은 `[필수] 자동결제 동의`다. 늦은 쪽 둘이 서로 일치하고
- *    약관 목록에 배송지 설정이 섞이는 것도 어색해 뒤쪽을 따랐다. 디자인 확인 대상.
+ * 백엔드 `DemandCreateRequestDto`가 동의를 4개(`autoPaymentAgreed`·`privacyCollectionAgreed`·
+ * `privacyThirdPartyAgreed`·`paymentAgencyTermsAgreed`)로 나눠 받으므로(전부 `@AssertTrue`),
+ * 폼도 같은 4개를 각각 받아 `lib/demandApi.toDemandCreateRequest`에서 1:1로 옮긴다. 하나의 동의를
+ * 여러 필드에 함께 넣어 받지 않은 동의를 참으로 꾸미지 않기 위해서다.
+ *
+ * ⚠️ 시안(`1153:71238`·`1153:71479`·`1153:71709`)은 개인정보 동의가 1줄이라 이 목록과 개수가
+ *    다르다. `제3자 제공` 줄과 각 문구는 **디자인/법무 확인 대상**이다(백엔드 규격에 맞춰 먼저 넣어
+ *    둔 것). 확정되면 라벨·구성을 이 목록에서 조정한다.
  */
 export const DEMAND_FORM_CONSENTS = [
   { key: 'autoPayment', label: '[필수] 자동결제 동의' },
-  { key: 'privacy', label: '[필수] 개인정보 수집 • 이용동의' },
+  { key: 'privacyCollection', label: '[필수] 개인정보 수집 • 이용동의' },
+  { key: 'privacyThirdParty', label: '[필수] 개인정보 제3자 제공 동의' },
   { key: 'pgTerms', label: '[필수] 결제대행 서비스 이용약관 동의' },
 ] as const;
 

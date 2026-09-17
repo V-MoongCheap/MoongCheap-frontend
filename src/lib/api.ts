@@ -128,6 +128,34 @@ async function toApiError(response: Response): Promise<ApiError> {
 }
 
 /**
+ * 생성 계열 엔드포인트의 응답에서 id를 읽어 화면이 필요로 하는 문자열로 돌려준다.
+ *
+ * 백엔드 공통 응답은 `Map<String, Long>`이 아니라 `{ "id": 123 }` 단일 필드 객체다. 배송지 등록·
+ * 수요 등록 등 생성 엔드포인트가 모두 이 모양을 돌려준다. 응답을 `unknown`으로 받아 여기서
+ * 검증하므로, 백엔드 응답을 그대로 옮긴 타입을 화면 계층(`types`)에 두지 않는다. 200이어도
+ * 숫자 id가 없으면 규격 위반이라 실패로 올린다.
+ */
+export async function parseCreatedId(response: Response): Promise<string> {
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    throw new ApiError('생성 응답 본문을 읽지 못했습니다.', response.status);
+  }
+
+  if (typeof body === 'object' && body !== null) {
+    const { id } = body as Record<string, unknown>;
+    // 백엔드 Long은 2^63까지지만 JSON.parse는 2^53(MAX_SAFE_INTEGER) 초과분을 반올림한다.
+    // isFinite는 반올림된 값도 통과시켜 실제 ID와 다른 문자열을 돌려주므로 isSafeInteger로 막는다.
+    // 전 범위가 필요해지면 백엔드가 id를 문자열로 주도록 계약을 바꿔야 한다.
+    if (typeof id === 'number' && Number.isSafeInteger(id)) {
+      return String(id);
+    }
+  }
+  throw new ApiError('생성 응답에서 id를 찾지 못했습니다.', response.status);
+}
+
+/**
  * 베이스 URL을 붙이고 세션 쿠키를 실어 fetch한다. 비 2xx면 ApiError를 던진다.
  * 응답 파싱은 엔드포인트마다 모양이 달라 여기서 하지 않고 Response를 그대로 돌려준다(호출부가 파싱).
  */

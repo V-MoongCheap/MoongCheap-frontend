@@ -6,7 +6,7 @@ import type {
   ShippingAddressResponseDto,
 } from '@/types/api/address';
 
-import { apiFetch } from './api';
+import { apiFetch, parseCreatedId } from './api';
 
 /**
  * 배송지(B-30) 백엔드 호출.
@@ -19,11 +19,6 @@ import { apiFetch } from './api';
  * 실패는 `ApiError`로 올라온다. 배송지 고유 코드는 `types/api/address.ts`의 `ADDRESS_ERROR_CODE`에
  * 모아 뒀다(`SHIP_002` 상한 5개 등). 화면이 `error.code`로 분기한다.
  */
-
-/** `Map<String, Long>`이 아니라 `IdResponse` 스키마다. 등록 응답의 유일한 필드. */
-interface IdResponse {
-  id: number;
-}
 
 /**
  * 응답 DTO를 화면용 타입으로 옮긴다.
@@ -111,8 +106,7 @@ export async function createAddress(values: AddressFormValues): Promise<string> 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(toCreateRequestDto(values)),
   });
-  const data = (await response.json()) as IdResponse;
-  return String(data.id);
+  return parseCreatedId(response);
 }
 
 /**

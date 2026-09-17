@@ -1,0 +1,44 @@
+# 도커 빌드 컨텍스트에서 제외할 것. `.gitignore`와 같은 기준에 이미지에 들어갈 이유가 없는 것을 더했다.
+# 빌드는 컨텍스트를 통째로 데몬에 보내므로, 여기서 걸러야 전송량과 캐시 무효화가 줄어든다.
+
+# 의존성 (이미지 안에서 npm ci로 다시 받는다. 호스트가 arm64라 섞이면 네이티브 모듈이 깨진다)
+node_modules
+.pnp
+.pnp.*
+
+# 빌드 / 실행 결과물 (호스트 결과물이 섞이면 캐시가 어긋난다)
+.next
+out
+build
+dist
+*.tsbuildinfo
+
+# 환경변수 (빌드 인자로 받는다. 이미지에 파일로 넣지 않는다)
+.env
+.env.*
+
+# git · CI · 문서
+.git
+.github
+.gitignore
+docs
+design
+*.md
+
+# 에이전트 · 에디터 · 도구 설정
+.agents
+.claude
+.codex
+.omc
+.husky
+.vscode
+.idea
+.eslintcache
+
+# 로그 · 커버리지
+coverage
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

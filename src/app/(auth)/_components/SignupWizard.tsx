@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useForm, useWatch } from 'react-hook-form';
 
@@ -23,6 +22,7 @@ import {
 import { ModeSelectStep } from './ModeSelectStep';
 import { PhoneVerificationStep } from './PhoneVerificationStep';
 import { ScreenColumn } from './ScreenColumn';
+import { SignupCompleteScreen } from './SignupCompleteScreen';
 import { StepField, type FieldStatus } from './StepField';
 import {
   EMPTY_AGREEMENTS,
@@ -42,7 +42,8 @@ import {
 // 여기서 상태·내비게이션만 넘긴다.
 //
 // 입력 상호작용(포커스 시 키보드 오버레이, 유효 시 CTA 활성)은 모바일 네이티브 키보드 동작이라
-// 웹에선 OS가 처리한다. 하단 버튼을 키보드 위로 항상 보이게 고정하는 처리는 후속(visualViewport).
+// 웹에선 OS가 처리한다. 하단 버튼은 키보드가 올라오면 그 높이만큼 위로 고정한다(useKeyboardHeight
+// = visualViewport 기반 → footerRef transform, 아래 참고).
 //
 // 팔레트는 시맨틱 토큰(#15) 머지에 맞춰 교체 완료. 버튼 변형은 MoongCheap_DS Button 컴포넌트
 //   기준이다: 검정 CTA(다음·중복확인·로그인하러가기)=tertiary, 이전(아웃라인)=quarternary,
@@ -305,7 +306,8 @@ export function SignupWizard() {
   };
 
   if (step === 'complete') {
-    return <CompleteScreen />;
+    // 로컬 가입은 자동로그인을 하지 않으므로 완료 후 로그인 화면으로 보낸다([[security-baseline]] 회피).
+    return <SignupCompleteScreen ctaLabel="로그인하러가기" ctaHref="/login" />;
   }
 
   // 모드 선택·개인정보 동의는 입력칸 화면과 UI가 달라 전용 컴포넌트로 그린다.
@@ -626,32 +628,5 @@ export function SignupWizard() {
         onClose={() => setDialogMessage(null)}
       />
     </>
-  );
-}
-
-function CompleteScreen() {
-  // 앞 스텝(이메일·아이디·비밀번호)과 동일하게 제목·일러스트는 상단, CTA는 하단 고정(Figma 10).
-  // 스텝 간 버튼 위치가 튀지 않도록 같은 ScreenColumn + mt-auto 패턴을 쓴다.
-  return (
-    <ScreenColumn>
-      <div className="flex flex-col gap-8">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-heading-20">가입이 완료되었습니다!</h1>
-          <p className="text-content-quarternary text-body-14">뭉치와 함께 알뜰한 쇼핑하세요</p>
-        </div>
-
-        {/* Figma: "추후에 여기에 일러스트나 아이콘 추가" 자리. 확정 전 플레이스홀더. */}
-        <div className="border-border-subtle text-content-quarternary rounded-8 text-body-14 flex h-56 items-center justify-center border border-dashed">
-          일러스트 자리
-        </div>
-      </div>
-
-      <Link
-        href="/login"
-        className="bg-surface-button-tertiary-default hover:bg-surface-button-tertiary-hover active:bg-surface-button-tertiary-pressed text-content-inverse focus-visible:ring-effect-focus-ring-primary rounded-8 text-button-15 mt-auto flex h-13 items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-      >
-        로그인하러가기
-      </Link>
-    </ScreenColumn>
   );
 }

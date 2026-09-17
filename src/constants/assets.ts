@@ -47,6 +47,24 @@ export const DEMAND_FORM_ASSETS = {
   kakaoPayLogo: '/images/demand-register/2-3.webp',
 } as const;
 
+/**
+ * 회원가입 완료(B-01 / 10.가입완료) 전용 일러스트. public/images/signup/.
+ *
+ * Figma 최종(08.27 로그인·회원가입) 확정 3D 일러스트(인물 카드 + 코랄 체크 + 반짝이).
+ * 편집자가 export/복사를 막아 벡터를 못 뽑아, 다크 시안(#1a1a1a 배경) 스크린샷에서 배경을
+ * flood-fill로 제거해 투명 WebP로 만든 것이다(흰 카드 ↔ 검정 배경 대비가 커 깔끔히 분리됨).
+ * 라이트 시안 스샷은 흰 카드가 흰 배경과 안 나뉘어 못 쓴다. 투명이라 라이트·다크 양쪽에서
+ * 그대로 쓴다(테마별 파일 스왑 불필요 — 이 앱 다크는 media/class 이중이라 Tailwind dark:
+ * 스왑이 OS-다크+data-theme 미설정에서 어긋난다). 원본 확정 벡터를 받으면 교체한다.
+ */
+export const SIGNUP_ASSETS = {
+  /**
+   * 가입 완료 축하 삽화. 공용 `SignupCompleteScreen`에서 사용하며, 로컬 회원가입 위저드(/signup)와
+   * 소셜 가입 완료(/oauth/complete) 양쪽 진입점이 이를 공유한다. 원본 379x322(투명).
+   */
+  complete: '/images/signup/complete.webp',
+} as const;
+
 /** 스플래쉬(B-01 세션 확인) 전용 에셋. public/images/splash/. */
 export const SPLASH_ASSETS = {
   // 워드마크 `뭉치`는 모드마다 색이 달라 파일이 아니라 인라인 SVG 컴포넌트다

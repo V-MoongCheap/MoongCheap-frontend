@@ -5,9 +5,8 @@ import type {
   ShippingAddressRequestDto,
   ShippingAddressResponseDto,
 } from '@/types/api/address';
-import type { IdResponse } from '@/types/api/common';
 
-import { apiFetch } from './api';
+import { apiFetch, parseCreatedId } from './api';
 
 /**
  * 배송지(B-30) 백엔드 호출.
@@ -107,8 +106,7 @@ export async function createAddress(values: AddressFormValues): Promise<string> 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(toCreateRequestDto(values)),
   });
-  const data = (await response.json()) as IdResponse;
-  return String(data.id);
+  return parseCreatedId(response);
 }
 
 /**

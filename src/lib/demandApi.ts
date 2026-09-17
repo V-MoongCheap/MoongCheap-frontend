@@ -1,8 +1,7 @@
 import { PRICE_BANDS } from '@/constants/businessRules';
-import type { IdResponse } from '@/types/api/common';
 import type { DemandFormValues } from '@/types/demandForm';
 
-import { apiFetch } from './api';
+import { apiFetch, parseCreatedId } from './api';
 
 /**
  * 수요 등록(B-09) 백엔드 호출.
@@ -111,6 +110,5 @@ export async function createDemand(payload: DemandCreateRequestDto): Promise<str
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  const data = (await response.json()) as IdResponse;
-  return String(data.id);
+  return parseCreatedId(response);
 }

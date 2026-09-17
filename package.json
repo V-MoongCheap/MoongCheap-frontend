@@ -26,6 +26,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-hook-form": "^7.85.0",
+    "sharp": "^0.35.4",
     "tailwind-merge": "^3.6.0",
     "zod": "^4.4.3"
   },
@@ -57,7 +58,6 @@
     "lint-staged": "^17.0.8",
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
-    "sharp": "^0.35.4",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

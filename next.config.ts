@@ -1,6 +1,26 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  /**
+   * 컨테이너 이미지용 최소 산출물. `next build`가 `.next/standalone`에 실행에 필요한 파일만
+   * 모아 주므로 런타임 단계에서 `npm install`을 하지 않는다.
+   *
+   * ⚠️ `public`과 `.next/static`은 자동으로 들어가지 않는다. 손으로 복사해야 `server.js`가
+   *    그 둘을 서빙한다(Next 문서 `output` 항목). 복사는 Dockerfile이 한다.
+   */
+  output: 'standalone',
+
+  /**
+   * sharp를 산출물에 강제로 포함한다.
+   *
+   * `next/image`의 자체 최적화는 sharp를 런타임에 불러오는데, 정적 분석으로는 그 의존이
+   * 잡히지 않아 standalone에서 빠질 수 있다. 빠지면 이미지 최적화가 런타임에 실패한다.
+   * Next 문서가 네이티브 자산의 공통 패턴으로 이 설정을 제시한다.
+   */
+  outputFileTracingIncludes: {
+    '/*': ['node_modules/sharp/**/*'],
+  },
+
   images: {
     /**
      * 변환할 이미지 폭을 실제 사용처로 좁힌다.

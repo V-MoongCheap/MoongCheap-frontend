@@ -39,6 +39,20 @@ export interface HomeProductCard extends ProductCatalogSummary {
   deadline?: string;
 }
 
+/**
+ * 배너 이미지에서 보여 줄 부분.
+ *
+ * 시안은 배너마다 이미지 확대율과 위치를 따로 준다(프로토타입 `1153:80631`의 각 변형). 전부
+ * 가운데로 맞추면 시안과 다른 부분이 보인다. 시안 배치값을 초점으로 옮긴 것이 아래 값이다.
+ *
+ *   `center`       시안이 `object-cover` 기본값을 쓰는 배너(2·3·5·7·10·11)
+ *   `bottom`       세로 넘침의 거의 끝까지 내린 배너(1은 98.5%, 9는 99.96%)
+ *   `lower78`      세로 넘침의 78% 지점(8번: 높이 171.56% · top -56.13%)
+ *   `left`         가로로 넘치는 이미지를 왼쪽에 붙인 배너(6번: 폭 135.46% · left 0.13%)
+ *   `horizontal38` 가로 넘침의 38% 지점(4번: 폭 228.99% · left -49.68%)
+ */
+export type HomeBannerImagePosition = 'center' | 'bottom' | 'lower78' | 'left' | 'horizontal38';
+
 /** 배너 캐러셀 한 장. */
 export interface HomeBanner {
   id: string;
@@ -54,6 +68,8 @@ export interface HomeBanner {
    * 곧 설명이므로 비워 두고, 인쇄형 배너만 채운다.
    */
   imageAltText?: string;
+  /** 이미지에서 보여 줄 부분. 없으면 가운데(`center`)다. */
+  imagePosition?: HomeBannerImagePosition;
 }
 
 /** 브랜드별 인기 공구 섹션의 브랜드 칩. */

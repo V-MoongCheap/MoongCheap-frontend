@@ -145,7 +145,10 @@ export async function parseCreatedId(response: Response): Promise<string> {
 
   if (typeof body === 'object' && body !== null) {
     const { id } = body as Record<string, unknown>;
-    if (typeof id === 'number' && Number.isFinite(id)) {
+    // 백엔드 Long은 2^63까지지만 JSON.parse는 2^53(MAX_SAFE_INTEGER) 초과분을 반올림한다.
+    // isFinite는 반올림된 값도 통과시켜 실제 ID와 다른 문자열을 돌려주므로 isSafeInteger로 막는다.
+    // 전 범위가 필요해지면 백엔드가 id를 문자열로 주도록 계약을 바꿔야 한다.
+    if (typeof id === 'number' && Number.isSafeInteger(id)) {
       return String(id);
     }
   }

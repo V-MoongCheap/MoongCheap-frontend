@@ -75,6 +75,23 @@ export function DemandFormView({ product, backHref }: DemandFormViewProps) {
   //    조건을 임의로 늘리지 않았다. 규격이 나오면 이 식만 고친다.
   const canSubmit = DEMAND_FORM_CONSENTS.every(({ key }) => values.consents[key]);
 
+  /**
+   * 수요 등록 제출(#112).
+   *
+   * 등록 API와 매핑은 `lib/demandApi`에 준비돼 있다(`createDemand`·`toDemandCreateRequest`). 그러나
+   * 필수값 `payMethodId`를 얻을 결제수단(토스 브랜드페이) 조회 API가 백엔드에 아직 없어, 지금은
+   * 실제 POST를 붙일 수 없다. 결제수단 조회 API가 생기면 이 자리에서 결제수단 id와 카탈로그 id를
+   * 받아 아래로 연결한다 —
+   *
+   *   const request = toDemandCreateRequest(values, { catalogId, payMethodId });
+   *   const demandId = await createDemand(request); // 409(DEMAND_001)·404(PAY_001) 분기
+   *
+   * 그 전까지는 조용히 실패하거나 성공한 척하지 않고 준비중임을 명시한다.
+   */
+  function handleSubmit() {
+    showToast(DEMAND_FORM_MESSAGES.submitPending);
+  }
+
   return (
     <div className="max-w-mobile bg-surface-primary mx-auto flex min-h-svh w-full flex-col">
       <AppBar backHref={backHref} title={DEMAND_FORM_MESSAGES.appBarTitle} />
@@ -131,6 +148,7 @@ export function DemandFormView({ product, backHref }: DemandFormViewProps) {
         <Button
           className="bg-surface-button-primary-default text-content-oncolor text-button-15 active:bg-surface-button-primary-pressed disabled:bg-surface-disabled-secondary disabled:text-content-disabled-secondary rounded-8 h-12 w-full"
           disabled={!canSubmit}
+          onClick={handleSubmit}
         >
           {DEMAND_FORM_MESSAGES.submit}
         </Button>

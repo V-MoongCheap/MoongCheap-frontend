@@ -44,14 +44,22 @@ export function useAddresses(): AddressesState {
     retry: shouldRetryQuery,
   });
 
+  // 재조회 중에는 직전 오류를 감춘다. Query는 새 결과가 올 때까지 error를 들고 있는데, 그대로
+  // 올리면 오류 화면이 그 자리에 남아 재시도 버튼이 먹통처럼 보인다. 감추면 목록이 아직 없는
+  // 상태라 호출부가 스켈레톤을 그린다(옮기기 전 동작과 같다).
+  const settledError = error !== null && !isFetching ? toApiError(error) : null;
+
   return {
-    addresses: data ?? null,
+    // 실패하면 null이다(JSDoc의 계약). Query는 재조회가 실패해도 직전 목록을 들고 있는데, 그것을
+    // 그대로 올리면 서버에서 지워진 배송지가 계속 보인다. `AddressSection`이 error를 읽지 않아
+    // 카드를 그대로 그리는 자리다(그 파일은 조회 실패를 '배송지 없음'으로 보기로 했다).
+    //
+    // 성공하는 재조회 중에는 직전 목록을 유지한다. 여기서 null로 만들면 등록 후 무효화·창 포커스
+    // 복귀마다 목록이 깜빡이고, `AddressCreateView`가 언마운트돼 입력 중인 폼 값이 사라진다.
+    addresses: settledError !== null ? null : (data ?? null),
     // 첫 조회만 로딩으로 본다. 이미 받아 둔 목록이 있으면 재조회 중에도 그것을 그대로 보여 준다.
     isLoading: isPending,
-    // 재조회 중에는 직전 오류를 감춘다. Query는 새 결과가 올 때까지 error를 들고 있는데, 그대로
-    // 올리면 오류 화면이 그 자리에 남아 재시도 버튼이 먹통처럼 보인다. 감추면 목록이 아직 없는
-    // 상태라 호출부가 스켈레톤을 그린다(옮기기 전 동작과 같다).
-    error: error === null || isFetching ? null : toApiError(error),
+    error: settledError,
     // 호출부는 반환값을 쓰지 않는다. 계약을 그대로 두려고 Promise를 삼킨다.
     refetch: () => {
       void refetch();

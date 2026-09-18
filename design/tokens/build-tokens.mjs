@@ -205,6 +205,26 @@ write();
 write('  /* 모바일 기준 디자인 폭 */');
 write(`  --container-mobile: ${responsive['responsive-size'].$value}px;`);
 write();
+// 아래 세 값만 raw가 아니라 생성기에 박습니다. responsive 내보내기에 `Mobile` 모드의
+// `responsive-size: 393` 하나뿐이고, 태블릿 834 · 웹 1440 · 컨테이너 1200은 디자인 파트에서
+// 문서로 전달받았습니다(Figma Variable에 Tablet/Web 모드가 아직 없습니다). 모드가 추가되면
+// 위 `--container-mobile`과 같은 방식으로 raw에서 읽도록 바꿉니다.
+//
+// 좌우 여백은 새 토큰을 만들지 않습니다. 전달값 16 · 32 · 120이 Tailwind 기본 스케일의
+// `px-4` · `px-8` · `px-30`으로 그대로 나옵니다.
+write('  /* 반응형 기준폭. Tailwind가 이 이름에서 tablet: · web: 변형을 만듭니다 */');
+write('  --breakpoint-tablet: 834px;');
+write('  --breakpoint-web: 1440px;');
+write();
+// ⚠️ `--container-mobile`과 뜻이 다릅니다. 모바일은 **화면 폭**(393)이라 `max-w-mobile`이 앱
+//    셸 전체를 가운데로 모으는 데 쓰이고, 웹은 **본문 폭**(1200)이라 배경은 화면 전체로 두고
+//    안쪽 본문 래퍼에만 씁니다. 이름이 나란해 보여도 적용 지점이 다릅니다.
+//
+//    태블릿 컨테이너 폭은 넣지 않았습니다. 전달받은 값이 화면 폭 834와 여백 32뿐이고 본문 폭은
+//    문서에 없습니다. 필요해지면 그때 디자인에 확인하고 한 줄 추가합니다.
+write('  /* 웹 본문 컨테이너 폭(화면 1440 - 좌우 여백 120씩) */');
+write('  --container-web: 1200px;');
+write();
 write('  /* font family. CDN이 제공하는 이름은 Pretendard Variable입니다 */');
 const family = typography['font-family/pretendard'].$value;
 write(`  --font-sans: '${family} Variable', ${family}, ${FONT_FALLBACK.join(', ')};`);

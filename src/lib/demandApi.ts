@@ -1,7 +1,11 @@
-import { PRICE_BANDS } from '@/constants/businessRules';
+import { LIST_PAGE_SIZE, PRICE_BANDS } from '@/constants/businessRules';
+import type { ParticipationStatus } from '@/constants/participationStatus';
+import type { DemandItemDto, DemandListDto, DemandStatusDto } from '@/types/api/demand';
 import type { DemandFormValues } from '@/types/demandForm';
+import type { ParticipationItem, ParticipationPage } from '@/types/participation';
 
 import { apiFetch, parseCreatedId } from './api';
+import { formatWon } from './formatPrice';
 
 /**
  * 수요 등록(B-09) 백엔드 호출.
@@ -111,4 +115,143 @@ export async function createDemand(payload: DemandCreateRequestDto): Promise<str
     body: JSON.stringify(payload),
   });
   return parseCreatedId(response);
+}
+
+/* ── 참여 목록 조회(B-17, FN-B17-01) ─────────────────────────────────────────── */
+
+/**
+ * 백엔드 상태 → 화면 상태 레지스트리 키(`constants/participationStatus.ts`).
+ *
+ * 낙찰 후 자동결제 대기(`PAYMENT_PENDING`)는 배정완료(`ALLOCATED`)로 합류시킨다(2026-09-17 결정).
+ * 터미널 4종(`FAILED`·`CANCELED`·`EXPIRED`·`DELETED`)은 탭이 없어 이 표에 넣지 않는다 —
+ * 애초에 조회 대상 statuses에서 빠지지만, 혹시 섞여 와도 아래 변환에서 걸러 그 항목만 버린다.
+ */
+const STATUS_FROM_DTO: Partial<Record<DemandStatusDto, ParticipationStatus>> = {
+  UNASSIGNED: 'GATHERING',
+  SUBSTITUTE_OFFERED: 'ACTION_REQUIRED',
+  ASSIGNED: 'ALLOCATED',
+  PAYMENT_PENDING: 'ALLOCATED',
+  CLOSED: 'DONE',
+};
+
+/** 응답 상태를 화면 키로 옮긴다. 표에 없으면 undefined(그 항목은 목록에서 제외). */
+function toParticipationStatus(value: DemandStatusDto): ParticipationStatus | undefined {
+  return Object.prototype.hasOwnProperty.call(STATUS_FROM_DTO, value)
+    ? STATUS_FROM_DTO[value]
+    : undefined;
+}
+
+/** `2026-08-10T13:24:00` → 시안 표기 `2026.08.10`. 모양이 다르면 받은 값을 그대로 쓴다. */
+function formatRequestedAt(iso: string | null): string {
+  if (iso === null) {
+    return '';
+  }
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (match === null) {
+    return iso;
+  }
+  const [, year, month, day] = match;
+  return `${year}.${month}.${day}`;
+}
+
+/**
+ * 마감(`desireEndAt`)까지 남은 일수. 오늘 자정 기준 달력일 차이로 세고, 지난 마감은 0으로 둔다.
+ * 시각까지 빼면 같은 날 오전·오후에 D-0/D-1이 갈려 표기가 흔들려서, 날짜만 비교한다.
+ */
+function computeDday(iso: string | null): number {
+  if (iso === null) {
+    return 0;
+  }
+  const end = new Date(iso);
+  if (Number.isNaN(end.getTime())) {
+    return 0;
+  }
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfEnd = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  const diffDays = Math.round((startOfEnd.getTime() - startOfToday.getTime()) / 86_400_000);
+  return Math.max(0, diffDays);
+}
+
+/** 가격 범위 표기. 단일값이면 한 개만, 범위면 `N원 ~ M원`. */
+function formatPriceRange(min: number, max: number): string {
+  return min === max ? formatWon(min) : `${formatWon(min)} ~ ${formatWon(max)}`;
+}
+
+/**
+ * 카드 가격 문구 = **희망 가격대**. 저장값(`desiredPriceMin/Max`)이 등록 시 고른 `PRICE_BANDS`
+ * 경계와 같으므로 해당 구간 라벨('3만원 이하')로 되돌린다. 구간과 맞지 않으면(구간 규칙이 바뀐
+ * 과거 데이터 등) 범위 그대로 표기한다.
+ *
+ * ⚠️ 완료(`DONE`) 카드의 헤더는 '낙찰가'지만, **참여 목록 응답(`DemandItemDto`)에는 낙찰가가 없다.**
+ *    `demandBoard.priceMin/priceMax`는 보드 형성 계획가(`FormationPlanRequestDto`)일 뿐 확정 낙찰가가
+ *    아니라(확정가는 낙찰 결과 API B-19·FN-B19-01에만 있음, `AwardingController`), 그 값을 낙찰가로
+ *    쓰면 잘못된 금액을 노출한다. 그래서 완료도 우선 희망 가격대를 표기한다. 실제 낙찰가는 목록 응답에
+ *    낙찰가 필드가 추가되거나 낙찰 결과를 함께 조회하도록 배선한 뒤 교체한다(후속).
+ */
+function formatPriceLabel(dto: DemandItemDto): string {
+  const { desiredPriceMin, desiredPriceMax } = dto;
+  if (desiredPriceMin === null || desiredPriceMax === null) {
+    return '';
+  }
+  const band = PRICE_BANDS.find((b) => b.min === desiredPriceMin && b.max === desiredPriceMax);
+  return band?.label ?? formatPriceRange(desiredPriceMin, desiredPriceMax);
+}
+
+/**
+ * 응답 한 건을 카드 모양으로 옮긴다. 상태가 화면 탭에 매핑되지 않으면 null(호출부가 걸러 낸다).
+ *
+ * ⚠️ 참여 인원(`demandBoard.participantCount`)은 보드가 배정된 뒤에만 있다. 방금 등록해 아직 보드가
+ *    없는 '모이는 중' 수요는 `demandBoard`가 통째로 null이라 배지를 생략한다(카드가 처리).
+ */
+function toParticipationItem(dto: DemandItemDto): ParticipationItem | null {
+  const status = toParticipationStatus(dto.status);
+  if (status === undefined) {
+    return null;
+  }
+  return {
+    id: String(dto.id),
+    productName: dto.catalog.name,
+    specSummary: dto.catalog.specSummary ?? undefined,
+    quantity: dto.quantity ?? 0,
+    priceLabel: formatPriceLabel(dto),
+    participantCount: dto.demandBoard?.participantCount,
+    dday: computeDday(dto.desireEndAt),
+    requestedAt: formatRequestedAt(dto.createdAt),
+    status,
+  };
+}
+
+/**
+ * 내 수요 참여 목록 한 페이지. 세션(SID httpOnly 쿠키)이 필요해 **브라우저에서만** 부른다
+ * (서버 컴포넌트에서 부르면 쿠키 없이 나가 401 — `lib/orderApi.ts`와 같은 이유).
+ *
+ * `statuses`는 **복수 파라미터**(`?statuses=UNASSIGNED&statuses=ASSIGNED`)로 나간다. 백엔드는
+ * `statuses` 미전달 시 진행중 4종만 주고 완료를 빼므로, 완료 포함 조회를 위해 호출부(`useMyDemands`)가
+ * 탭별로 항상 명시적으로 넣는다.
+ *
+ * `GET /api/members/me/demand?statuses=&page=&size=`
+ */
+export async function fetchMyDemands(
+  statuses: readonly DemandStatusDto[],
+  page: number,
+): Promise<ParticipationPage> {
+  const params = new URLSearchParams();
+  for (const status of statuses) {
+    params.append('statuses', status);
+  }
+  params.set('page', String(page));
+  params.set('size', String(LIST_PAGE_SIZE));
+
+  const response = await apiFetch(`/api/members/me/demand?${params.toString()}`);
+  const body = (await response.json()) as DemandListDto;
+
+  return {
+    items: body.demands.flatMap((dto) => {
+      const item = toParticipationItem(dto);
+      return item === null ? [] : [item];
+    }),
+    page: body.page,
+    hasNext: body.hasNext,
+  };
 }

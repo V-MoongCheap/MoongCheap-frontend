@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
 import { ChevronRight, Search } from 'lucide-react';
 import Link from 'next/link';
@@ -11,6 +11,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { ERROR_SCREEN_RETRY_LABEL } from '@/constants/commonMessages';
 import { ORDER_LIST_TABS, type OrderListTabKey } from '@/constants/orderStatus';
 import { useOrderList } from '@/features/order/hooks/useOrders';
+import { useInfiniteScrollSentinel } from '@/hooks/useInfiniteScrollSentinel';
 import { cn } from '@/lib/cn';
 
 import { OrderCard } from './OrderCard';
@@ -52,30 +53,11 @@ export function OrderList({ detailHrefBase }: OrderListProps) {
     isFetchNextPageError,
   } = useOrderList(tab);
 
-  // 목록 끝이 화면에 가까워지면 다음 20건을 받는다(`BR-B21-01-11`).
-  //
-  // 이어 받기가 실패하면 감지를 멈추고 목록 아래 재시도 버튼을 기다린다. 멈추지 않으면 표식이 화면에
-  // 걸려 있는 동안 실패한 요청을 되풀이한다.
-  const sentinelRef = useRef<HTMLDivElement>(null);
+  // 목록 끝이 화면에 가까워지면 다음 20건을 받는다(`BR-B21-01-11`). 이어 받기가 실패하면 감지를
+  // 멈추고 목록 아래 재시도 버튼을 기다린다. 감지 로직은 참여 목록과 공유한다
+  // (`useInfiniteScrollSentinel`).
   const canLoadMore = hasNextPage && !isFetchingNextPage && !isFetchNextPageError;
-
-  useEffect(() => {
-    const node = sentinelRef.current;
-    if (node === null || !canLoadMore) {
-      return;
-    }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          void fetchNextPage();
-        }
-      },
-      // 끝에 닿기 전에 미리 받아 빈 자리가 보이지 않게 한다.
-      { rootMargin: '200px' },
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [canLoadMore, fetchNextPage]);
+  const sentinelRef = useInfiniteScrollSentinel(canLoadMore, fetchNextPage);
 
   // 첫 조회 실패. 이어 받기 실패는 받은 목록을 지우지 않고 목록 아래에서 따로 알린다.
   if (data === undefined && isError) {

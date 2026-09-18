@@ -7,7 +7,7 @@ import type { ParticipationItem } from '@/types/participation';
 // B-17 내 뭉치 참여 카드 한 건. 시안 구성:
 //  [썸네일 + 상태배지 오버레이]  [D-N 배지 · N명 참여 배지]
 //                               상품명(볼드)
-//                               카테고리 | 수량 : N개
+//                               규격 요약 | 수량 : N개
 //  가격 라벨(상태별: 완료=낙찰가, 그 외=희망가격대)
 //  가격(볼드)
 //  [상태별 액션 버튼(선택)]
@@ -48,13 +48,22 @@ export function ParticipationCard({ item, onOpenDetail, action }: ParticipationC
         <div className="flex min-w-0 flex-1 flex-col gap-0.5 text-left">
           <div className="flex items-center gap-1.5">
             <span className="text-label-13 text-content-error">D-{item.dday}</span>
-            <span className="text-caption-10 bg-surface-visibility text-content-visibility rounded-round px-1.5 py-0.5">
-              {item.participantCount}명 참여
-            </span>
+            {/* 참여 인원은 보드가 배정된 뒤에만 있다. 아직 보드가 없는 '모이는 중' 수요는 배지 생략. */}
+            {item.participantCount !== undefined && (
+              <span className="text-caption-10 bg-surface-visibility text-content-visibility rounded-round px-1.5 py-0.5">
+                {item.participantCount.toLocaleString('ko-KR')}명 참여
+              </span>
+            )}
           </div>
           <p className="text-body-15 text-content-primary truncate">{item.productName}</p>
           <p className="text-caption-12 text-content-quarternary truncate">
-            {item.category} <span className="text-content-quinary">|</span> 수량 : {item.quantity}개
+            {/* 규격 요약이 없으면 수량만 보여 준다(구분자 없이). */}
+            {item.specSummary !== undefined && (
+              <>
+                {item.specSummary} <span className="text-content-quinary">|</span>{' '}
+              </>
+            )}
+            수량 : {item.quantity}개
           </p>
         </div>
       </div>

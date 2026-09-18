@@ -3,8 +3,8 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 
 import { PARTICIPATION_TAB_ALL, type ParticipationTab } from '@/constants/participationStatus';
-import { ApiError } from '@/lib/api';
 import { fetchMyDemands } from '@/lib/demandApi';
+import { shouldRetryQuery } from '@/lib/queryRetry';
 import type { DemandStatusDto } from '@/types/api/demand';
 
 // 내 수요 참여 목록 조회 캐시(B-17, FN-B17-01). 주문 목록(`features/order/hooks/useOrders.ts`)과
@@ -37,15 +37,6 @@ const STATUSES_BY_TAB: Record<ParticipationTab, readonly DemandStatusDto[]> = {
   DONE: ['CLOSED'],
 };
 
-/**
- * 재시도 판단. 서버가 거절한 4xx(미로그인 401 등)는 다시 보내도 같아 재시도하지 않는다.
- * 네트워크 끊김(0)과 5xx만 한 번 더 보낸다(`useOrders`와 동일).
- */
-function shouldRetry(failureCount: number, error: Error): boolean {
-  const rejected = error instanceof ApiError && error.status >= 400 && error.status < 500;
-  return !rejected && failureCount < 1;
-}
-
 /** 참여 목록. 20건씩 이어 붙인다(`BR-B17-01-11`). 페이지 번호는 0부터다. */
 export function useMyDemands(tab: ParticipationTab) {
   return useInfiniteQuery({
@@ -53,6 +44,6 @@ export function useMyDemands(tab: ParticipationTab) {
     queryFn: ({ pageParam }) => fetchMyDemands(STATUSES_BY_TAB[tab], pageParam),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => (lastPage.hasNext ? lastPage.page + 1 : undefined),
-    retry: shouldRetry,
+    retry: shouldRetryQuery,
   });
 }

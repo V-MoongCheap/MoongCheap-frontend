@@ -5,6 +5,7 @@ import type { DemandFormValues } from '@/types/demandForm';
 import type { ParticipationItem, ParticipationPage } from '@/types/participation';
 
 import { apiFetch, parseCreatedId } from './api';
+import { formatWon } from './formatPrice';
 
 /**
  * 수요 등록(B-09) 백엔드 호출.
@@ -172,30 +173,23 @@ function computeDday(iso: string | null): number {
   return Math.max(0, diffDays);
 }
 
-function formatWon(amount: number): string {
-  return `${amount.toLocaleString('ko-KR')}원`;
-}
-
 /** 가격 범위 표기. 단일값이면 한 개만, 범위면 `N원 ~ M원`. */
 function formatPriceRange(min: number, max: number): string {
   return min === max ? formatWon(min) : `${formatWon(min)} ~ ${formatWon(max)}`;
 }
 
 /**
- * 카드 가격 문구.
+ * 카드 가격 문구 = **희망 가격대**. 저장값(`desiredPriceMin/Max`)이 등록 시 고른 `PRICE_BANDS`
+ * 경계와 같으므로 해당 구간 라벨('3만원 이하')로 되돌린다. 구간과 맞지 않으면(구간 규칙이 바뀐
+ * 과거 데이터 등) 범위 그대로 표기한다.
  *
- * - 낙찰 전(모이는 중·배정완료·확인필요)은 **희망 가격대**를 보여 준다. 저장값(`desiredPriceMin/Max`)이
- *   등록 시 고른 `PRICE_BANDS` 경계와 같으므로 해당 구간 라벨('3만원 이하')로 되돌린다. 구간과
- *   맞지 않으면(구간 규칙이 바뀐 과거 데이터 등) 범위 그대로 표기한다.
- * - 완료(`DONE`)는 헤더가 '낙찰가'라 희망 구간이 아니라 **보드 확정가**를 보여 준다. 보드가 없거나
- *   확정가가 비면 희망 가격대로 되돌린다(드문 데이터 결손).
+ * ⚠️ 완료(`DONE`) 카드의 헤더는 '낙찰가'지만, **참여 목록 응답(`DemandItemDto`)에는 낙찰가가 없다.**
+ *    `demandBoard.priceMin/priceMax`는 보드 형성 계획가(`FormationPlanRequestDto`)일 뿐 확정 낙찰가가
+ *    아니라(확정가는 낙찰 결과 API B-19·FN-B19-01에만 있음, `AwardingController`), 그 값을 낙찰가로
+ *    쓰면 잘못된 금액을 노출한다. 그래서 완료도 우선 희망 가격대를 표기한다. 실제 낙찰가는 목록 응답에
+ *    낙찰가 필드가 추가되거나 낙찰 결과를 함께 조회하도록 배선한 뒤 교체한다(후속).
  */
-function formatPriceLabel(dto: DemandItemDto, status: ParticipationStatus): string {
-  const board = dto.demandBoard;
-  if (status === 'DONE' && board !== null && board.priceMin !== null && board.priceMax !== null) {
-    return formatPriceRange(board.priceMin, board.priceMax);
-  }
-
+function formatPriceLabel(dto: DemandItemDto): string {
   const { desiredPriceMin, desiredPriceMax } = dto;
   if (desiredPriceMin === null || desiredPriceMax === null) {
     return '';
@@ -220,7 +214,7 @@ function toParticipationItem(dto: DemandItemDto): ParticipationItem | null {
     productName: dto.catalog.name,
     specSummary: dto.catalog.specSummary ?? undefined,
     quantity: dto.quantity ?? 0,
-    priceLabel: formatPriceLabel(dto, status),
+    priceLabel: formatPriceLabel(dto),
     participantCount: dto.demandBoard?.participantCount,
     dday: computeDday(dto.desireEndAt),
     requestedAt: formatRequestedAt(dto.createdAt),

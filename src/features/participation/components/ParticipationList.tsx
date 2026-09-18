@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { PackageOpen, SearchX } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -22,6 +22,7 @@ import {
 } from '@/constants/participationStatus';
 import { ParticipationCard } from '@/features/participation/components/ParticipationCard';
 import { useMyDemands } from '@/features/participation/hooks/useMyDemands';
+import { useInfiniteScrollSentinel } from '@/hooks/useInfiniteScrollSentinel';
 import type { ParticipationItem } from '@/types/participation';
 
 // B-17 내 뭉치 참여 목록의 상호작용 셸(client). 탭(=상태 필터)마다 실API를 따로 조회하고
@@ -91,26 +92,9 @@ export function ParticipationList({ awardResultHref }: ParticipationListProps) {
   } = useMyDemands(tab);
 
   // 목록 끝이 가까워지면 다음 20건을 받는다(`BR-B17-01-11`). 이어 받기가 실패하면 감지를 멈추고
-  // 아래 재시도 버튼을 기다린다(`OrderList`와 동일).
-  const sentinelRef = useRef<HTMLDivElement>(null);
+  // 아래 재시도 버튼을 기다린다. 감지 로직은 주문 목록과 공유한다(`useInfiniteScrollSentinel`).
   const canLoadMore = hasNextPage && !isFetchingNextPage && !isFetchNextPageError;
-
-  useEffect(() => {
-    const node = sentinelRef.current;
-    if (node === null || !canLoadMore) {
-      return;
-    }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          void fetchNextPage();
-        }
-      },
-      { rootMargin: '200px' },
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [canLoadMore, fetchNextPage]);
+  const sentinelRef = useInfiniteScrollSentinel(canLoadMore, fetchNextPage);
 
   // 카드 본문 탭 → 상세. 배정완료(낙찰됨)는 낙찰 결과(B-19)로 보낸다. 그 외 상태의 상세는
   // 수요 상세(B-12)인데 라우트 부재라 '준비 중' 토스트로 둔다.
@@ -143,49 +127,11 @@ export function ParticipationList({ awardResultHref }: ParticipationListProps) {
   // 시안: 액션 버튼은 해당 상태 필터 탭에서만 노출('전체' 제외).
   const inFilteredTab = tab !== PARTICIPATION_TAB_ALL;
 
-  const list = (
-    <div className="flex w-full flex-col">
-      {groups.map((group, index) => (
-        <section key={group.date} className="flex w-full flex-col">
-          {/* 날짜 그룹 사이 회색 구분 밴드(첫 그룹 제외). */}
-          {index > 0 && <div aria-hidden className="bg-surface-secondary h-2 w-full" />}
-          <h2 className="text-heading-18 text-content-primary px-4 pt-4 pb-2">{group.date}</h2>
-          <ul className="flex w-full flex-col gap-3 px-4 pb-2">
-            {group.items.map((item) => (
-              <li key={item.id}>
-                <ParticipationCard
-                  action={renderAction(item, inFilteredTab, {
-                    onSubstitute: showComingSoon,
-                    onCancel: () => setCancelTarget(item),
-                  })}
-                  item={item}
-                  onOpenDetail={() => openDetail(item)}
-                />
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
-
-      {isFetchingNextPage && (
-        <div aria-busy className="px-4 pt-3" role="status">
-          <span className="sr-only">참여 목록을 불러오는 중</span>
-          <Skeleton className="rounded-16 h-32 w-full" />
-        </div>
-      )}
-
-      {isFetchNextPageError && <ErrorState onRetry={() => void fetchNextPage()} />}
-
-      {/* 다음 페이지 감지용 표식. 높이가 없어 보이지 않는다. */}
-      <div aria-hidden ref={sentinelRef} />
-    </div>
-  );
-
   // 본문은 네 상태로 갈린다: 첫 조회 실패 → 전체화면 오류, 첫 조회 중 → 스켈레톤, 결과 없음 → 빈 상태,
   // 그 외 → 목록. SegmentControl(탭)과 취소 다이얼로그는 어느 상태에서나 유지한다.
   let content;
   if (data === undefined && isError) {
-    // 첫 조회 실패. 이어 받기 실패는 받은 목록을 지우지 않고 목록 아래에서 따로 알린다(list 안).
+    // 첫 조회 실패. 이어 받기 실패는 받은 목록을 지우지 않고 목록 아래에서 따로 알린다(목록 안).
     content = (
       <ErrorScreen>
         <button className={ERROR_ACTION_CLASS} onClick={() => void refetch()} type="button">
@@ -223,7 +169,47 @@ export function ParticipationList({ awardResultHref }: ParticipationListProps) {
         />
       );
   } else {
-    content = list;
+    // 목록. 실제 목록을 그릴 때만 트리를 만든다.
+    content = (
+      <div className="flex w-full flex-col">
+        {groups.map((group, index) => (
+          <section key={group.date} className="flex w-full flex-col">
+            {/* 날짜 그룹 사이 회색 구분 밴드(첫 그룹 제외). */}
+            {index > 0 && <div aria-hidden className="bg-surface-secondary h-2 w-full" />}
+            {/* createdAt이 비어 date가 ''인 방어적 경우엔 빈 헤더를 그리지 않는다. */}
+            {group.date !== '' && (
+              <h2 className="text-heading-18 text-content-primary px-4 pt-4 pb-2">{group.date}</h2>
+            )}
+            <ul className="flex w-full flex-col gap-3 px-4 pb-2">
+              {group.items.map((item) => (
+                <li key={item.id}>
+                  <ParticipationCard
+                    action={renderAction(item, inFilteredTab, {
+                      onSubstitute: showComingSoon,
+                      onCancel: () => setCancelTarget(item),
+                    })}
+                    item={item}
+                    onOpenDetail={() => openDetail(item)}
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+
+        {isFetchingNextPage && (
+          <div aria-busy className="px-4 pt-3" role="status">
+            <span className="sr-only">참여 목록을 불러오는 중</span>
+            <Skeleton className="rounded-16 h-32 w-full" />
+          </div>
+        )}
+
+        {isFetchNextPageError && <ErrorState onRetry={() => void fetchNextPage()} />}
+
+        {/* 다음 페이지 감지용 표식. 높이가 없어 보이지 않는다. */}
+        <div aria-hidden ref={sentinelRef} />
+      </div>
+    );
   }
 
   return (

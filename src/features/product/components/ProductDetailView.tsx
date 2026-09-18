@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 import { Accordion } from '@/components/ui/Accordion';
 import { ComingSoonButton } from '@/components/ui/ComingSoonButton';
@@ -27,7 +28,7 @@ import type { ProductDetail } from '@/types/product';
 // 브랜드·실시간 열람수·퀵참여딜·비슷한상품·정보 아코디언은 BE 규격이 없어 계속 mock이다.
 //
 // 미구현 진입점은 노출하되 탭 시 '준비 중' 토스트다(ComingSoonButton).
-//  - 비슷한 상품(Full) · 찜(시안 전용) · 퀵 참여 딜 카드→수요 상세(B-12) · CTA→수요 참여(B-09)
+//  - 비슷한 상품(Full) · 찜(시안 전용) · 퀵 참여 딜 카드→수요 상세(B-12)
 
 /** 상품설명 접힘 높이(px). 이보다 길면 자세히 보기 버튼과 하단 페이드를 노출한다. */
 const DESCRIPTION_COLLAPSED_MAX = 240;
@@ -254,11 +255,16 @@ export function ProductDetailView({ product: initialProduct }: ProductDetailView
         </section>
       </div>
 
-      {/* 하단 고정 CTA. 수요 참여(B-09)가 아직 없어 '준비 중' 토스트. */}
+      {/* 하단 고정 CTA → 수요 등록·참여(B-09). 수요 등록 화면은 상품 하나에서 출발하므로 경로가
+          이 상품 아래에 있다(`app/products/[productId]/demand`). 두 화면이 같은 조회를 쓰기 때문에
+          여기서 그린 상품이면 그쪽에서도 같은 상품이 나온다. */}
       <footer className="bg-background-default sticky bottom-0 w-full p-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
-        <ComingSoonButton className="bg-surface-button-primary-default text-content-oncolor text-button-15 active:bg-surface-button-primary-pressed rounded-8 flex h-12 w-full items-center justify-center">
+        <Link
+          className="bg-surface-button-primary-default text-content-oncolor text-button-15 active:bg-surface-button-primary-pressed rounded-8 flex h-12 w-full items-center justify-center"
+          href={`/products/${encodeURIComponent(product.id)}/demand`}
+        >
           {PRODUCT_DETAIL.participateCta}
-        </ComingSoonButton>
+        </Link>
       </footer>
     </>
   );

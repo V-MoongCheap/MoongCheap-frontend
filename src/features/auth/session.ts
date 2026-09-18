@@ -60,8 +60,18 @@ function useSessionClearingMutation(mutationFn: () => Promise<void>) {
       await queryClient.cancelQueries({ queryKey: SESSION_QUERY_KEY });
     },
     onSuccess: () => {
+      // 🔒 세션이 끝나면 **모든** 조회 캐시를 버린다. QueryClient는 앱 루트(`app/providers.tsx`)에
+      // 한 번 만들어져 클라이언트 이동 내내 살아 있고, 로그아웃은 문서를 다시 로드하지 않는다.
+      // 세션만 null로 바꾸면 배송지(주소·받는 사람·공동현관 출입번호)·주문 같은 개인 정보가
+      // 캐시에 그대로 남아, 로그아웃 뒤나 같은 기기에서 다른 계정으로 들어갔을 때 이전 사용자의
+      // 데이터가 잠깐 그려진다.
+      //
+      // 키를 하나씩 지우지 않는 이유는 조회가 늘 때마다 여기에 추가하는 것을 잊기 때문이다.
+      // 통째로 버리고 세션만 다시 세운다.
+      queryClient.clear();
       // 세션을 null로 바꿔 전역 상태를 미로그인으로 만든다. 재요청(invalidate)이 아니라 직접
       // 세팅하는 이유는, 쿠키가 이미 폐기돼 재조회해도 결과가 null이라 왕복이 불필요하기 때문이다.
+      // `clear()` 뒤에 세팅해야 한다. 순서를 바꾸면 방금 세운 null까지 함께 지워진다.
       queryClient.setQueryData(SESSION_QUERY_KEY, null);
     },
   });

@@ -24,5 +24,7 @@ export function shouldRetryQuery(failureCount: number, error: Error): boolean {
   if (!(error instanceof ApiError)) {
     return false;
   }
-  return error.status === 0 || error.status >= 500;
+  // 상한을 둔다. `status`는 범위 제한이 없는 number라 표준 밖의 코드(예: 999)도 들어올 수 있다.
+  // 뜻을 모르는 코드는 재시도해도 결과를 기대할 수 없으므로 바로 실패로 보낸다.
+  return error.status === 0 || (error.status >= 500 && error.status <= 599);
 }

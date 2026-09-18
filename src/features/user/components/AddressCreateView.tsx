@@ -1,7 +1,9 @@
 'use client';
 
+import { useQueryClient } from '@tanstack/react-query';
+
 import { AddressForm } from '@/features/user/components/AddressForm';
-import { useAddresses } from '@/features/user/hooks/useAddresses';
+import { ADDRESS_QUERY_KEYS, useAddresses } from '@/features/user/hooks/useAddresses';
 import { createAddress } from '@/lib/addressApi';
 import type { AddressFormValues } from '@/schemas/address';
 
@@ -21,6 +23,7 @@ interface AddressCreateViewProps {
 
 export function AddressCreateView({ successHref }: AddressCreateViewProps) {
   const { addresses, isLoading, error } = useAddresses();
+  const queryClient = useQueryClient();
 
   // 개수를 모르는 채 폼을 그리면 잠금 상태가 응답 후 바뀐다. 사용자가 그 사이에 체크를
   // 건드리면 값이 튄다. 조회가 끝난 뒤에 한 번만 그린다.
@@ -33,8 +36,14 @@ export function AddressCreateView({ successHref }: AddressCreateViewProps) {
 
   const lockDefault = error === null && addresses !== null && addresses.length === 0;
 
+  // 등록 후 목록 캐시를 버린다. 이것이 없으면 방금 등록한 배송지가 목록에 바로 보이지 않는다.
+  //
+  // `AddressForm`이 저장을 마치고 `router.refresh()`를 부르지만, 그것은 서버 캐시(RSC 페이로드)만
+  // 버린다. 목록은 이 훅의 Query 캐시에서 나오므로 신선도 시간(전역 60초) 안에는 옛 목록이 그대로
+  // 그려진다. 무효화를 기다린 뒤에 폼이 이동하도록 await로 둔다.
   async function handleSave(values: AddressFormValues) {
     await createAddress(values);
+    await queryClient.invalidateQueries({ queryKey: ADDRESS_QUERY_KEYS.list });
   }
 
   return <AddressForm lockDefault={lockDefault} onSave={handleSave} successHref={successHref} />;

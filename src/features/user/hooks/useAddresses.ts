@@ -1,9 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 import { getAddresses } from '@/lib/addressApi';
 import { ApiError } from '@/lib/api';
+import { shouldRetryQuery } from '@/lib/queryRetry';
 import type { Address } from '@/types/address';
 
 /**
@@ -13,19 +14,14 @@ import type { Address } from '@/types/address';
  * 자동으로 실어 보내는데, Next 서버에는 그 쿠키 저장소가 없다. 서버 컴포넌트에서 호출하면
  * 쿠키 없이 나가 401이 된다.
  *
- * ⚠️ 이 훅은 임시 형태다. #70에서 TanStack Query 도입이 결정되면 `useQuery`로 옮긴다.
- * 그때 호출부(`addresses`·`isLoading`·`error`·`refetch`)는 그대로 두고 본문만 바꾼다.
- * 캐시·중복 요청 제거·포커스 재검증이 없으므로 사용처가 늘기 전에 옮기는 것이 좋다.
+ * 소비처가 셋이다(배송지 목록 B-30 · 배송지 등록 · 수요 등록 폼 B-09의 배송지 섹션). 같은
+ * 화면에 둘이 함께 뜨는 경우가 있어, Query가 키로 요청을 병합하고 캐시를 공유한다.
  */
 
-/**
- * 세 상태를 하나로 묶는다. 따로 두면 effect 본문에서 로딩 플래그를 동기로 세워야 하는데,
- * React Compiler가 그 패턴을 막는다(연쇄 렌더). 로딩 전환은 최초값과 `refetch`에서만 일어난다.
- */
-type AddressesQueryState =
-  | { status: 'loading' }
-  | { status: 'success'; addresses: Address[] }
-  | { status: 'error'; error: ApiError };
+/** 배송지 캐시 키. 등록·수정 후 무효화할 때도 이 키를 쓴다(`useOrders`의 키 표와 같은 방식). */
+export const ADDRESS_QUERY_KEYS = {
+  list: ['addresses', 'list'] as const,
+};
 
 export interface AddressesState {
   /** 조회 전·실패 시 null. 성공하면 배열(0건이면 빈 배열)이다. */
@@ -42,40 +38,23 @@ function toApiError(caught: unknown): ApiError {
 }
 
 export function useAddresses(): AddressesState {
-  const [state, setState] = useState<AddressesQueryState>({ status: 'loading' });
-  // 값이 바뀔 때마다 effect를 다시 돌려 재조회한다.
-  const [attempt, setAttempt] = useState(0);
-
-  const refetch = useCallback(() => {
-    setState({ status: 'loading' });
-    setAttempt((previous) => previous + 1);
-  }, []);
-
-  useEffect(() => {
-    // 응답이 늦게 도착한 요청이 최신 결과를 덮어쓰지 않도록 막는다(언마운트 후 setState도 방지).
-    let active = true;
-
-    getAddresses()
-      .then((addresses) => {
-        if (active) {
-          setState({ status: 'success', addresses });
-        }
-      })
-      .catch((caught: unknown) => {
-        if (active) {
-          setState({ status: 'error', error: toApiError(caught) });
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [attempt]);
+  const { data, isPending, isFetching, error, refetch } = useQuery({
+    queryKey: ADDRESS_QUERY_KEYS.list,
+    queryFn: getAddresses,
+    retry: shouldRetryQuery,
+  });
 
   return {
-    addresses: state.status === 'success' ? state.addresses : null,
-    isLoading: state.status === 'loading',
-    error: state.status === 'error' ? state.error : null,
-    refetch,
+    addresses: data ?? null,
+    // 첫 조회만 로딩으로 본다. 이미 받아 둔 목록이 있으면 재조회 중에도 그것을 그대로 보여 준다.
+    isLoading: isPending,
+    // 재조회 중에는 직전 오류를 감춘다. Query는 새 결과가 올 때까지 error를 들고 있는데, 그대로
+    // 올리면 오류 화면이 그 자리에 남아 재시도 버튼이 먹통처럼 보인다. 감추면 목록이 아직 없는
+    // 상태라 호출부가 스켈레톤을 그린다(옮기기 전 동작과 같다).
+    error: error === null || isFetching ? null : toApiError(error),
+    // 호출부는 반환값을 쓰지 않는다. 계약을 그대로 두려고 Promise를 삼킨다.
+    refetch: () => {
+      void refetch();
+    },
   };
 }

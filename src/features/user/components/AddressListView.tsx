@@ -131,6 +131,10 @@ export function AddressListView({ createHref }: AddressListViewProps) {
 
   const isEmpty = addresses.length === 0;
   const isFull = addresses.length >= ADDRESS_MAX;
+  // 뮤테이션이 도는 동안 목록 전체의 액션을 잠근다. 카드별로만 잠그면, 진행 중에 다른 카드의
+  // 기본 지정/삭제를 눌러 병렬 요청이 나가고, 뮤테이션의 `variables`가 새 id로 바뀌며 앞 카드가
+  // 다시 열린다. 그래서 카드 단위가 아니라 목록 단위로 직렬화한다(중복·병렬 요청 방지).
+  const isBusy = setDefault.isPending || deleteMutation.isPending;
 
   return (
     <div className="flex w-full flex-col gap-5 px-4 pt-5">
@@ -157,27 +161,20 @@ export function AddressListView({ createHref }: AddressListViewProps) {
 
       {!isEmpty && (
         <ul className="flex w-full flex-col gap-5">
-          {addresses.map((address) => {
-            // 이 카드에 대한 뮤테이션이 진행 중이면 액션을 잠근다(이중 요청·중복 클릭 방지).
-            const isBusy =
-              (setDefault.isPending && setDefault.variables === address.id) ||
-              (deleteMutation.isPending && deleteTarget?.id === address.id);
-
-            return (
-              // `editHref`를 넘기지 않아 '수정'은 그려지기만 한다. 수정 저장이 배선되기 전에 링크를
-              // 살리면, 폼을 채우고 확인을 눌러도 저장 없이 목록으로 돌아가 저장된 것처럼 보인다
-              // (조회 응답에 원본 전화번호가 없어 아직 못 붙인다). 기본 지정·삭제는 #129에서 배선했다.
-              <AddressCard
-                address={address}
-                isBusy={isBusy}
-                key={address.id}
-                onDefaultFocused={() => setFocusDefaultId(null)}
-                onDelete={() => setDeleteTarget(address)}
-                onSetDefault={() => handleSetDefault(address.id)}
-                shouldFocusOnDefault={focusDefaultId === address.id}
-              />
-            );
-          })}
+          {addresses.map((address) => (
+            // `editHref`를 넘기지 않아 '수정'은 그려지기만 한다. 수정 저장이 배선되기 전에 링크를
+            // 살리면, 폼을 채우고 확인을 눌러도 저장 없이 목록으로 돌아가 저장된 것처럼 보인다
+            // (조회 응답에 원본 전화번호가 없어 아직 못 붙인다). 기본 지정·삭제는 #129에서 배선했다.
+            <AddressCard
+              address={address}
+              isBusy={isBusy}
+              key={address.id}
+              onDefaultFocused={() => setFocusDefaultId(null)}
+              onDelete={() => setDeleteTarget(address)}
+              onSetDefault={() => handleSetDefault(address.id)}
+              shouldFocusOnDefault={focusDefaultId === address.id}
+            />
+          ))}
         </ul>
       )}
 

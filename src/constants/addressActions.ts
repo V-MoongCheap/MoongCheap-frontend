@@ -23,16 +23,12 @@ export const DELETE_ADDRESS_DIALOG = {
 
 /** 기본 지정·삭제 결과 토스트. */
 export const ADDRESS_ACTION_TOAST = {
-  /** 기본 배송지 지정 성공. */
   defaultSet: '기본 배송지로 설정했어요',
   /** 기본 지정 동시 변경 충돌(409 SHIP_004) — 재시도 안내. */
   defaultConflict: '기본 배송지가 방금 변경됐어요. 다시 시도해주세요.',
-  /** 기본 지정 일반 실패. */
   defaultFailed: '기본 배송지 설정에 실패했어요. 잠시 후 다시 시도해주세요.',
-  /** 삭제 성공. */
   deleted: '배송지를 삭제했어요',
   /** 이미 삭제된 배송지를 다시 지우려 한 경우(404 SHIP_001). 재조회로 목록을 맞춘다. */
   deleteAlreadyGone: '이미 삭제된 배송지예요',
-  /** 삭제 일반 실패. */
   deleteFailed: '배송지 삭제에 실패했어요. 잠시 후 다시 시도해주세요.',
 } as const;

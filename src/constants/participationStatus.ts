@@ -24,10 +24,9 @@ export interface ParticipationStatusMeta {
   /** 오버레이 배지 색 클래스(bg + text). */
   readonly badgeClass: string;
   /**
-   * 카드 가격 섹션의 라벨. 시안상 낙찰이 종결된 '완료'는 '낙찰가', 그 외는 '희망가격대'다
-   * (B-17 시안 확정, 2026-09-16). 다만 참여 목록 응답에는 실낙찰가 필드가 없어(확정가는 낙찰
-   * 결과 API B-19에만 존재) 완료 카드도 현재는 희망 가격대 값을 표기한다 → 값과 라벨을 맞추기
-   * 위해 완료도 '희망가격대'로 둔다. 실낙찰가가 목록에 붙으면 '낙찰가'로 되돌린다(`demandApi.ts` 참고).
+   * 카드 가격 섹션의 라벨. 낙찰이 종결된 '완료'는 '낙찰가'(값: `product.unitPrice`), 그 외(낙찰 전)는
+   * '희망가격대'(값: `desiredPrice*`)다(B-17 시안 확정, 2026-09-16). 참여 목록 응답에 낙찰가 필드
+   * (`product`)가 추가되어(2026-09-21) 완료 카드가 실낙찰가를 표기한다. 값 산출은 `lib/demandApi.ts`.
    */
   readonly priceHeading: string;
 }
@@ -63,7 +62,7 @@ export const PARTICIPATION_STATUS = {
     badgeLabel: '완료',
     emptyTitle: '완료된 참여가 없어요',
     badgeClass: 'bg-surface-tertiary text-content-tertiary',
-    priceHeading: '희망가격대',
+    priceHeading: '낙찰가',
   },
 } as const satisfies Record<string, ParticipationStatusMeta>;
 

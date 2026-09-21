@@ -56,12 +56,25 @@ export interface DemandBoardDto {
   catalog: CatalogDto | null;
 }
 
+/**
+ * 낙찰된 상품(`DemandListDto.ProductDto`). **낙찰 이후 상태(`PAYMENT_PENDING`·`CLOSED`)에서만** 채워지고,
+ * 그 전(`UNASSIGNED`·`SUBSTITUTE_OFFERED`·`ASSIGNED`)에는 null이다(백엔드 develop, 2026-09-21 추가).
+ *
+ * `unitPrice`가 **확정 낙찰 단가(원)** — 완료 카드 '낙찰가' 표기의 출처다. `id`는 낙찰된 상품 id.
+ */
+export interface ProductDto {
+  id: number;
+  unitPrice: number;
+}
+
 /** 참여 목록의 한 건(`DemandListDto.DemandItemDto`). */
 export interface DemandItemDto {
   id: number;
   status: DemandStatusDto;
   desiredPriceMin: number | null;
   desiredPriceMax: number | null;
+  /** 낙찰 상품(낙찰 이후 상태에서만, 그 전엔 null). 완료 카드 낙찰가 출처. */
+  product: ProductDto | null;
   /** 수요 마감 시각(`LocalDateTime`, 등록 시 now+2일). 항상 채워진다. D-day 산출 기준. */
   desireEndAt: string | null;
   quantity: number | null;

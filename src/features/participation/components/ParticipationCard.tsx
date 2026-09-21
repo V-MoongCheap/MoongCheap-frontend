@@ -8,7 +8,7 @@ import type { ParticipationItem } from '@/types/participation';
 //  [썸네일 + 상태배지 오버레이]  [D-N 배지 · N명 참여 배지]
 //                               상품명(볼드)
 //                               규격 요약 | 수량 : N개
-//  가격 라벨(상태별 priceHeading — 실낙찰가 부재로 현재는 전 상태 '희망가격대')
+//  가격 라벨(상태별 priceHeading — 완료='낙찰가', 그 외='희망가격대')
 //  가격(볼드)
 //  [상태별 액션 버튼(선택)]
 //

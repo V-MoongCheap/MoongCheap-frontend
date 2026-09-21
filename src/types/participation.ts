@@ -16,8 +16,8 @@ export interface ParticipationItem {
   /** 참여 수량(개). 출처: `quantity`. DTO상 null 허용이라 미확정이면 undefined(수량 문구 생략). */
   readonly quantity?: number;
   /**
-   * 가격 라벨. 낙찰 전(모이는 중·배정완료·확인필요)은 희망 가격대(`PRICE_BANDS` 라벨).
-   * 완료도 현재는 실낙찰가 부재로 희망 가격대를 표기한다(산출·경위는 `lib/demandApi.ts`).
+   * 가격 라벨. 낙찰 전(모이는 중·배정완료·확인필요)은 희망 가격대(`PRICE_BANDS` 라벨),
+   * 완료는 확정 낙찰가(`product.unitPrice`)를 표기한다(산출은 `lib/demandApi.ts`).
    */
   readonly priceLabel: string;
   /**

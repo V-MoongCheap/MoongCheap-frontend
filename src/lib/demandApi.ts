@@ -179,17 +179,19 @@ function formatPriceRange(min: number, max: number): string {
 }
 
 /**
- * 카드 가격 문구 = **희망 가격대**. 저장값(`desiredPriceMin/Max`)이 등록 시 고른 `PRICE_BANDS`
- * 경계와 같으므로 해당 구간 라벨('3만원 이하')로 되돌린다. 구간과 맞지 않으면(구간 규칙이 바뀐
- * 과거 데이터 등) 범위 그대로 표기한다.
+ * 카드 가격 문구. 상태에 따라 두 갈래다.
  *
- * ⚠️ 완료(`DONE`) 카드의 헤더는 '낙찰가'지만, **참여 목록 응답(`DemandItemDto`)에는 낙찰가가 없다.**
- *    `demandBoard.priceMin/priceMax`는 보드 형성 계획가(`FormationPlanRequestDto`)일 뿐 확정 낙찰가가
- *    아니라(확정가는 낙찰 결과 API B-19·FN-B19-01에만 있음, `AwardingController`), 그 값을 낙찰가로
- *    쓰면 잘못된 금액을 노출한다. 그래서 완료도 우선 희망 가격대를 표기한다. 실제 낙찰가는 목록 응답에
- *    낙찰가 필드가 추가되거나 낙찰 결과를 함께 조회하도록 배선한 뒤 교체한다(후속).
+ * - **완료(`DONE`)** = **확정 낙찰가**(단일 금액). 낙찰 이후 상태에서만 채워지는 `product.unitPrice`
+ *   (백엔드 develop 2026-09-21 추가, `AwardingController` 확정가)를 그대로 표기한다. 낙찰 상품 정보가
+ *   없으면(비정상 CLOSED) 빈 문자열로 두어 희망가를 낙찰가로 오표기하지 않는다.
+ * - **그 외(낙찰 전)** = **희망 가격대**. 저장값(`desiredPriceMin/Max`)이 등록 시 고른 `PRICE_BANDS`
+ *   경계와 같으므로 해당 구간 라벨('3만원 이하')로 되돌린다. 구간과 맞지 않으면(구간 규칙이 바뀐
+ *   과거 데이터 등) 범위 그대로 표기한다.
  */
-function formatPriceLabel(dto: DemandItemDto): string {
+function formatPriceLabel(dto: DemandItemDto, status: ParticipationStatus): string {
+  if (status === 'DONE') {
+    return dto.product === null ? '' : formatWon(dto.product.unitPrice);
+  }
   const { desiredPriceMin, desiredPriceMax } = dto;
   if (desiredPriceMin === null || desiredPriceMax === null) {
     return '';
@@ -214,7 +216,7 @@ function toParticipationItem(dto: DemandItemDto): ParticipationItem | null {
     productName: dto.catalog.name,
     specSummary: dto.catalog.specSummary ?? undefined,
     quantity: dto.quantity ?? undefined,
-    priceLabel: formatPriceLabel(dto),
+    priceLabel: formatPriceLabel(dto, status),
     participantCount: dto.demandBoard?.participantCount,
     dday: computeDday(dto.desireEndAt),
     requestedAt: formatRequestedAt(dto.createdAt),

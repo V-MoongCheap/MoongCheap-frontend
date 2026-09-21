@@ -557,6 +557,13 @@
   /* 모바일 기준 디자인 폭 */
   --container-mobile: 393px;
 
+  /* 반응형 기준폭. Tailwind가 이 이름에서 tablet: · web: 변형을 만듭니다 */
+  --breakpoint-tablet: 834px;
+  --breakpoint-web: 1440px;
+
+  /* 웹 본문 컨테이너 폭(화면 1440 - 좌우 여백 120씩) */
+  --container-web: 1200px;
+
   /* font family. CDN이 제공하는 이름은 Pretendard Variable입니다 */
   --font-sans:
     'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto,

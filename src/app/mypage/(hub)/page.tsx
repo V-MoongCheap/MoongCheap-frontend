@@ -57,6 +57,10 @@ export default async function MyPage() {
             <SettingsRow comingSoon label="결제수단 등록 • 변경" />
             <SettingsRow href="/mypage/addresses" label="배송지 관리" />
             <SettingsRow href="/mypage/notifications/settings" label="알림설정" />
+            {/* 찜은 시안의 마이페이지 목록에 없는 항목이다. 화면도 시안이 없어 경로만 만들어 두고
+                그 화면 안에서 준비 중임을 알린다. 라벨은 확정 문구가 아니라 임의로 정한 것이라
+                디자인·PM 확인 후 바꾼다. */}
+            <SettingsRow href="/mypage/wishlist" label="찜한 상품" />
             {/* 고객센터·1:1 문의는 기능 명세서에 요구사항이 없다. 디자인팀이 임의로 넣은 항목이라
                 화면만 그리고 탭하면 준비 중 토스트를 띄운다. PM 확인 후 경로를 넣는다. */}
             <SettingsRow comingSoon label="고객센터" />

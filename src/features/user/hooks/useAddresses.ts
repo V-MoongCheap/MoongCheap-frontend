@@ -1,8 +1,8 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { getAddresses } from '@/lib/addressApi';
+import { deleteAddress, getAddresses, setDefaultAddress } from '@/lib/addressApi';
 import { ApiError } from '@/lib/api';
 import { shouldRetryQuery } from '@/lib/queryRetry';
 import type { Address } from '@/types/address';
@@ -65,4 +65,41 @@ export function useAddresses(): AddressesState {
       void refetch();
     },
   };
+}
+
+/**
+ * 기본 배송지 지정 뮤테이션(#129). `PATCH /api/shipping-addresses/{id}/default`.
+ *
+ * 성공 시 목록 캐시를 무효화해 다시 받는다. 낙관적 업데이트를 쓰지 않는 이유는, 기본 해제·지정이
+ * 서버에서 한 트랜잭션이라 두 카드의 `isDefault`가 동시에 바뀌기 때문이다. 프론트에서 흉내 내면
+ * 실패 시 되돌릴 상태가 복잡해지고, 재조회 한 번이면 정렬(기본 우선)까지 서버 기준으로 맞는다.
+ *
+ * `variables`(지정 대상 id)로 어느 카드가 처리 중인지 호출부가 구분한다.
+ */
+export function useSetDefaultAddress() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => setDefaultAddress(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ADDRESS_QUERY_KEYS.list });
+    },
+  });
+}
+
+/**
+ * 배송지 삭제 뮤테이션(#129). `DELETE /api/shipping-addresses/{id}`.
+ *
+ * 성공 시 목록 캐시를 무효화한다. 지운 것이 기본이었고 다른 배송지가 남으면 백엔드가 자동 승격하므로
+ * (`addressApi.ts` 참고), 낙관적으로 카드만 지우면 승격된 새 기본이 반영되지 않는다. 재조회로 맞춘다.
+ */
+export function useDeleteAddress() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => deleteAddress(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ADDRESS_QUERY_KEYS.list });
+    },
+  });
 }

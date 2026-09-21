@@ -1,13 +1,25 @@
 'use client';
 
+import { useState } from 'react';
+
 import Link from 'next/link';
 
+import { AlertDialog } from '@/components/ui/AlertDialog';
 import { ERROR_ACTION_CLASS, ErrorScreen } from '@/components/ui/ErrorScreen';
+import { useToast } from '@/components/ui/Toast';
+import { ADDRESS_ACTION_TOAST, DELETE_ADDRESS_DIALOG } from '@/constants/addressActions';
 import { ADDRESS_MAX } from '@/constants/businessRules';
 import { ERROR_SCREEN_RETRY_LABEL } from '@/constants/commonMessages';
 import { AddressCard } from '@/features/user/components/AddressCard';
 import { AddressListSkeleton } from '@/features/user/components/AddressListSkeleton';
-import { useAddresses } from '@/features/user/hooks/useAddresses';
+import {
+  useAddresses,
+  useDeleteAddress,
+  useSetDefaultAddress,
+} from '@/features/user/hooks/useAddresses';
+import { ApiError } from '@/lib/api';
+import type { Address } from '@/types/address';
+import { ADDRESS_ERROR_CODE } from '@/types/api/address';
 
 // B-30 배송지 목록 본문. 페이지(서버 컴포넌트)는 앱바만 조립하고 데이터는 여기서 가져온다.
 //
@@ -33,6 +45,41 @@ interface AddressListViewProps {
 
 export function AddressListView({ createHref }: AddressListViewProps) {
   const { addresses, isLoading, error, refetch } = useAddresses();
+  const { showToast } = useToast();
+  const setDefault = useSetDefaultAddress();
+  const deleteMutation = useDeleteAddress();
+  // 삭제 확인 다이얼로그 대상. null이면 닫힘(ParticipationList의 낙찰취소와 같은 방식).
+  const [deleteTarget, setDeleteTarget] = useState<Address | null>(null);
+
+  // 기본 지정은 확인 없이 바로 실행한다(파괴적이지 않음). 성공/실패는 토스트로 알린다.
+  // 동시 변경 충돌(409 SHIP_004)만 재시도 문구로 구분하고, 그 외 실패는 일반 문구로 묶는다.
+  function handleSetDefault(id: string) {
+    setDefault.mutate(id, {
+      onSuccess: () => showToast(ADDRESS_ACTION_TOAST.defaultSet),
+      onError: (caught) => {
+        const isConflict =
+          caught instanceof ApiError && caught.code === ADDRESS_ERROR_CODE.defaultConflict;
+        showToast(
+          isConflict ? ADDRESS_ACTION_TOAST.defaultConflict : ADDRESS_ACTION_TOAST.defaultFailed,
+        );
+      },
+    });
+  }
+
+  // 삭제 확정. 성공하면 다이얼로그를 닫고 토스트, 실패하면 다이얼로그를 열어 둔 채 토스트로 알려
+  // 바로 재시도할 수 있게 한다(닉네임 변경 모달과 같은 방침).
+  function handleConfirmDelete() {
+    if (deleteTarget === null) {
+      return;
+    }
+    deleteMutation.mutate(deleteTarget.id, {
+      onSuccess: () => {
+        setDeleteTarget(null);
+        showToast(ADDRESS_ACTION_TOAST.deleted);
+      },
+      onError: () => showToast(ADDRESS_ACTION_TOAST.deleteFailed),
+    });
+  }
 
   if (error !== null) {
     return (
@@ -79,14 +126,38 @@ export function AddressListView({ createHref }: AddressListViewProps) {
 
       {!isEmpty && (
         <ul className="flex w-full flex-col gap-5">
-          {addresses.map((address) => (
-            // `editHref`를 넘기지 않아 '수정'은 삭제와 같이 그려지기만 한다. 수정 저장이
-            // 배선되기 전에 링크를 살리면, 폼을 채우고 확인을 눌러도 저장 없이 목록으로
-            // 돌아가 저장된 것처럼 보인다(조회 응답에 원본 전화번호가 없어 아직 못 붙인다).
-            <AddressCard address={address} key={address.id} />
-          ))}
+          {addresses.map((address) => {
+            // 이 카드에 대한 뮤테이션이 진행 중이면 액션을 잠근다(이중 요청·중복 클릭 방지).
+            const isBusy =
+              (setDefault.isPending && setDefault.variables === address.id) ||
+              (deleteMutation.isPending && deleteTarget?.id === address.id);
+
+            return (
+              // `editHref`를 넘기지 않아 '수정'은 그려지기만 한다. 수정 저장이 배선되기 전에 링크를
+              // 살리면, 폼을 채우고 확인을 눌러도 저장 없이 목록으로 돌아가 저장된 것처럼 보인다
+              // (조회 응답에 원본 전화번호가 없어 아직 못 붙인다). 기본 지정·삭제는 #129에서 배선했다.
+              <AddressCard
+                address={address}
+                isBusy={isBusy}
+                key={address.id}
+                onDelete={() => setDeleteTarget(address)}
+                onSetDefault={() => handleSetDefault(address.id)}
+              />
+            );
+          })}
         </ul>
       )}
+
+      <AlertDialog
+        cancelLabel={DELETE_ADDRESS_DIALOG.cancelLabel}
+        confirmLabel={DELETE_ADDRESS_DIALOG.confirmLabel}
+        isOpen={deleteTarget !== null}
+        isProcessing={deleteMutation.isPending}
+        message={DELETE_ADDRESS_DIALOG.message}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+        title={DELETE_ADDRESS_DIALOG.title}
+      />
     </div>
   );
 }

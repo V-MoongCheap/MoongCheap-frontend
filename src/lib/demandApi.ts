@@ -183,14 +183,16 @@ function formatPriceRange(min: number, max: number): string {
  *
  * - **완료(`DONE`)** = **확정 낙찰가**(단일 금액). 낙찰 이후 상태에서만 채워지는 `product.unitPrice`
  *   (백엔드 develop 2026-09-21 추가, `AwardingController` 확정가)를 그대로 표기한다. 낙찰 상품 정보가
- *   없으면(비정상 CLOSED) 빈 문자열로 두어 희망가를 낙찰가로 오표기하지 않는다.
+ *   없으면(비정상 CLOSED, 또는 서버가 `product` 키를 생략해 `undefined`로 온 경우) 빈 문자열로 두어
+ *   희망가를 낙찰가로 오표기하거나 `.unitPrice` 접근에서 터지지 않게 한다.
  * - **그 외(낙찰 전)** = **희망 가격대**. 저장값(`desiredPriceMin/Max`)이 등록 시 고른 `PRICE_BANDS`
  *   경계와 같으므로 해당 구간 라벨('3만원 이하')로 되돌린다. 구간과 맞지 않으면(구간 규칙이 바뀐
  *   과거 데이터 등) 범위 그대로 표기한다.
  */
 function formatPriceLabel(dto: DemandItemDto, status: ParticipationStatus): string {
   if (status === 'DONE') {
-    return dto.product === null ? '' : formatWon(dto.product.unitPrice);
+    // `== null`로 null·undefined를 함께 막는다(=== null은 키 생략 시 undefined를 놓쳐 .unitPrice에서 예외).
+    return dto.product == null ? '' : formatWon(dto.product.unitPrice);
   }
   const { desiredPriceMin, desiredPriceMax } = dto;
   if (desiredPriceMin === null || desiredPriceMax === null) {

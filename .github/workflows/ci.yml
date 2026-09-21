@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   ci:
-    name: Lint · Type · Format
+    name: Lint · Type · Format · Build
     runs-on: ubuntu-latest
 
     steps:
@@ -36,3 +36,11 @@ jobs:
 
       - name: Prettier
         run: npm run format:check
+
+      # 타입 검사가 잡지 못하는 실패를 여기서 잡는다. App Router가 빌드 중에 만드는 타입
+      # (PageProps·LayoutProps)이나 프리렌더 단계의 오류가 그렇다.
+      #
+      # NEXT_PUBLIC_API_BASE_URL은 주지 않는다. getApiBaseUrl()이 미설정 시 null을 돌려주고
+      # 예외를 던지지 않아 빌드가 통과한다(Dockerfile도 ARG 기본값을 빈 문자열로 둔다).
+      - name: Build
+        run: npm run build

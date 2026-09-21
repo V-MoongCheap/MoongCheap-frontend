@@ -149,8 +149,10 @@ export function ParticipationList({ awardResultHref }: ParticipationListProps) {
         ))}
       </div>
     );
-  } else if (groups.length === 0) {
+  } else if (groups.length === 0 && !hasNextPage) {
     // 결과 없음. '전체' 탭이 비면 참여 이력 자체가 없는 것(콜드스타트), 특정 탭이 비면 그 탭 결과 없음.
+    // ⚠️ 다음 페이지가 남아 있으면(예: 낙찰취소 mock으로 현재 페이지 항목이 전부 숨겨진 경우) 빈 상태로
+    //    끊지 않고 아래 목록 분기로 떨어뜨려 sentinel을 그려 이어받기를 계속한다.
     // 아이콘은 exception 일러스트(#60) 병합 전까지 lucide placeholder를 쓴다.
     content =
       tab === PARTICIPATION_TAB_ALL ? (

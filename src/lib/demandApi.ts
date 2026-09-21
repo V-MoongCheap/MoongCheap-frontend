@@ -213,7 +213,7 @@ function toParticipationItem(dto: DemandItemDto): ParticipationItem | null {
     id: String(dto.id),
     productName: dto.catalog.name,
     specSummary: dto.catalog.specSummary ?? undefined,
-    quantity: dto.quantity ?? 0,
+    quantity: dto.quantity ?? undefined,
     priceLabel: formatPriceLabel(dto),
     participantCount: dto.demandBoard?.participantCount,
     dday: computeDday(dto.desireEndAt),

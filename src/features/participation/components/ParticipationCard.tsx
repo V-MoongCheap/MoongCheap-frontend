@@ -8,7 +8,7 @@ import type { ParticipationItem } from '@/types/participation';
 //  [썸네일 + 상태배지 오버레이]  [D-N 배지 · N명 참여 배지]
 //                               상품명(볼드)
 //                               규격 요약 | 수량 : N개
-//  가격 라벨(상태별: 완료=낙찰가, 그 외=희망가격대)
+//  가격 라벨(상태별 priceHeading — 실낙찰가 부재로 현재는 전 상태 '희망가격대')
 //  가격(볼드)
 //  [상태별 액션 버튼(선택)]
 //
@@ -56,15 +56,19 @@ export function ParticipationCard({ item, onOpenDetail, action }: ParticipationC
             )}
           </div>
           <p className="text-body-15 text-content-primary truncate">{item.productName}</p>
-          <p className="text-caption-12 text-content-quarternary truncate">
-            {/* 규격 요약이 없으면 수량만 보여 준다(구분자 없이). */}
-            {item.specSummary !== undefined && (
-              <>
-                {item.specSummary} <span className="text-content-quinary">|</span>{' '}
-              </>
-            )}
-            수량 : {item.quantity}개
-          </p>
+          {/* 규격 요약·수량 부제. 둘 중 있는 것만, 둘 다 있으면 구분자로 잇는다. 둘 다 없으면 생략. */}
+          {(item.specSummary !== undefined || item.quantity !== undefined) && (
+            <p className="text-caption-12 text-content-quarternary truncate">
+              {item.specSummary !== undefined && item.specSummary}
+              {item.specSummary !== undefined && item.quantity !== undefined && (
+                <>
+                  {' '}
+                  <span className="text-content-quinary">|</span>{' '}
+                </>
+              )}
+              {item.quantity !== undefined && `수량 : ${item.quantity}개`}
+            </p>
+          )}
         </div>
       </div>
 

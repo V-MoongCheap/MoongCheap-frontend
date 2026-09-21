@@ -14,6 +14,12 @@ export const COMING_SOON_MESSAGE = '준비 중인 기능이에요';
 /** 조회 실패 등 일반 오류 상태 문구. 출처: FN-B03-01 홈 피드 오류 상태. */
 export const ERROR_STATE_MESSAGE = '잠시 후 다시 시도해 주세요';
 
+/**
+ * 세션 만료(401) 안내 토스트. 로그인 후 동작(변경·삭제 등)이 401로 실패하면 원인이 재로그인임을
+ * 알린다. `NicknameChangeButton`이 로컬로 쓰던 같은 문구를 공용으로 올렸다(2곳 이상 사용).
+ */
+export const SESSION_EXPIRED_MESSAGE = '세션이 만료되었어요. 다시 로그인해 주세요.';
+
 /** 오류 상태의 재시도 버튼 라벨. 출처: FN-B03-01 "[새로고침] 버튼". */
 export const RETRY_LABEL = '새로고침';
 

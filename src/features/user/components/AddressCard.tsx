@@ -1,3 +1,7 @@
+'use client';
+
+import { useEffect, useRef } from 'react';
+
 import Link from 'next/link';
 
 import { formatPhone } from '@/lib/formatPhone';
@@ -22,6 +26,14 @@ interface AddressCardProps {
   onDelete?: () => void;
   /** 이 카드에 대한 뮤테이션 진행 중. 액션 버튼을 잠가 이중 요청을 막는다. */
   isBusy?: boolean;
+  /**
+   * 기본 지정 성공 직후 이 카드로 포커스를 옮길지. 지정에 성공하면 '기본 지정' 버튼이 사라져
+   * 키보드 포커스가 body로 떨어지는데, 그때 이 카드로 포커스를 되돌린다. 실제 이동은 이 카드가
+   * 기본(`isDefault`)이 된 뒤에만 하고, 이동 후 `onDefaultFocused`로 부모에게 한 번만 알린다.
+   */
+  shouldFocusOnDefault?: boolean;
+  /** 포커스 이관을 마쳤음을 부모에 알린다(부모가 요청 플래그를 내린다). */
+  onDefaultFocused?: () => void;
 }
 
 const ACTION_CLASS =
@@ -33,12 +45,28 @@ export function AddressCard({
   onSetDefault,
   onDelete,
   isBusy,
+  shouldFocusOnDefault,
+  onDefaultFocused,
 }: AddressCardProps) {
   const { name, isDefault, postalCode, address: street, addressDetail } = address;
   const { entranceCode, recipient, phone } = address;
+  const cardRef = useRef<HTMLLIElement>(null);
+
+  // 기본 지정 성공(→ 재조회로 isDefault=true) 후, 사라진 버튼 대신 이 카드로 포커스를 옮긴다.
+  // 마우스 클릭 뒤엔 :focus-visible이 링을 숨겨 시안을 해치지 않고, 키보드일 때만 링이 보인다.
+  useEffect(() => {
+    if (shouldFocusOnDefault === true && isDefault) {
+      cardRef.current?.focus();
+      onDefaultFocused?.();
+    }
+  }, [shouldFocusOnDefault, isDefault, onDefaultFocused]);
 
   return (
-    <li className="border-border-quarternary rounded-12 flex w-full flex-col border px-4">
+    <li
+      className="border-border-quarternary rounded-12 focus-visible:ring-effect-focus-ring-primary flex w-full flex-col border px-4 outline-none focus-visible:ring-2"
+      ref={cardRef}
+      tabIndex={-1}
+    >
       <div className="border-border-quarternary flex w-full flex-col gap-3 border-b py-3">
         <div className="flex items-center gap-3">
           <p className="text-label-16 text-content-primary">{name}</p>

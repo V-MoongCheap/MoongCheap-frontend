@@ -9,7 +9,7 @@ import { ERROR_ACTION_CLASS, ErrorScreen } from '@/components/ui/ErrorScreen';
 import { useToast } from '@/components/ui/Toast';
 import { ADDRESS_ACTION_TOAST, DELETE_ADDRESS_DIALOG } from '@/constants/addressActions';
 import { ADDRESS_MAX } from '@/constants/businessRules';
-import { ERROR_SCREEN_RETRY_LABEL } from '@/constants/commonMessages';
+import { ERROR_SCREEN_RETRY_LABEL, SESSION_EXPIRED_MESSAGE } from '@/constants/commonMessages';
 import { AddressCard } from '@/features/user/components/AddressCard';
 import { AddressListSkeleton } from '@/features/user/components/AddressListSkeleton';
 import {
@@ -43,6 +43,21 @@ interface AddressListViewProps {
   createHref: string;
 }
 
+/**
+ * 기본 지정 실패 토스트 문구를 고른다.
+ * 401(세션 만료)은 재로그인 안내로, 409(SHIP_004 동시 변경 충돌)는 재시도 안내로 구분하고,
+ * 그 외는 일반 실패로 묶는다(NicknameChangeButton이 401을 별도 안내하는 것과 같은 방침).
+ */
+function setDefaultErrorMessage(caught: unknown): string {
+  if (caught instanceof ApiError && caught.status === 401) {
+    return SESSION_EXPIRED_MESSAGE;
+  }
+  if (caught instanceof ApiError && caught.code === ADDRESS_ERROR_CODE.defaultConflict) {
+    return ADDRESS_ACTION_TOAST.defaultConflict;
+  }
+  return ADDRESS_ACTION_TOAST.defaultFailed;
+}
+
 export function AddressListView({ createHref }: AddressListViewProps) {
   const { addresses, isLoading, error, refetch } = useAddresses();
   const { showToast } = useToast();
@@ -50,24 +65,23 @@ export function AddressListView({ createHref }: AddressListViewProps) {
   const deleteMutation = useDeleteAddress();
   // 삭제 확인 다이얼로그 대상. null이면 닫힘(ParticipationList의 낙찰취소와 같은 방식).
   const [deleteTarget, setDeleteTarget] = useState<Address | null>(null);
+  // 방금 기본으로 지정한 배송지 id. 지정 성공 후 그 카드로 포커스를 옮기기 위해 둔다(아래 주석).
+  const [focusDefaultId, setFocusDefaultId] = useState<string | null>(null);
 
   // 기본 지정은 확인 없이 바로 실행한다(파괴적이지 않음). 성공/실패는 토스트로 알린다.
-  // 동시 변경 충돌(409 SHIP_004)만 재시도 문구로 구분하고, 그 외 실패는 일반 문구로 묶는다.
   function handleSetDefault(id: string) {
     setDefault.mutate(id, {
-      onSuccess: () => showToast(ADDRESS_ACTION_TOAST.defaultSet),
-      onError: (caught) => {
-        const isConflict =
-          caught instanceof ApiError && caught.code === ADDRESS_ERROR_CODE.defaultConflict;
-        showToast(
-          isConflict ? ADDRESS_ACTION_TOAST.defaultConflict : ADDRESS_ACTION_TOAST.defaultFailed,
-        );
+      onSuccess: () => {
+        // 지정된 카드가 기본이 되면 '기본 지정' 버튼이 사라진다(뱃지로 대체). 재조회 후 그 카드로
+        // 포커스를 옮겨 키보드 포커스가 body로 떨어지지 않게 한다(포커스 이관은 AddressCard가 수행).
+        setFocusDefaultId(id);
+        showToast(ADDRESS_ACTION_TOAST.defaultSet);
       },
+      onError: (caught) => showToast(setDefaultErrorMessage(caught)),
     });
   }
 
-  // 삭제 확정. 성공하면 다이얼로그를 닫고 토스트, 실패하면 다이얼로그를 열어 둔 채 토스트로 알려
-  // 바로 재시도할 수 있게 한다(닉네임 변경 모달과 같은 방침).
+  // 삭제 확정. 성공하면 다이얼로그를 닫고 토스트. 실패는 원인별로 갈린다.
   function handleConfirmDelete() {
     if (deleteTarget === null) {
       return;
@@ -77,7 +91,24 @@ export function AddressListView({ createHref }: AddressListViewProps) {
         setDeleteTarget(null);
         showToast(ADDRESS_ACTION_TOAST.deleted);
       },
-      onError: () => showToast(ADDRESS_ACTION_TOAST.deleteFailed),
+      onError: (caught) => {
+        // 401(세션 만료): 재시도해도 실패하므로 닫고 재로그인 안내만 한다.
+        if (caught instanceof ApiError && caught.status === 401) {
+          setDeleteTarget(null);
+          showToast(SESSION_EXPIRED_MESSAGE);
+          return;
+        }
+        // 404(SHIP_001, 이미 삭제됨): 대상이 이미 없으므로 닫고 목록을 다시 받아 맞춘 뒤 안내한다.
+        // (그대로 두면 사용자가 없는 대상을 계속 재시도하며 실패만 반복한다.)
+        if (caught instanceof ApiError && caught.code === ADDRESS_ERROR_CODE.notFound) {
+          setDeleteTarget(null);
+          refetch();
+          showToast(ADDRESS_ACTION_TOAST.deleteAlreadyGone);
+          return;
+        }
+        // 그 외 일반 실패: 다이얼로그를 열어 둔 채 알려 바로 재시도할 수 있게 한다.
+        showToast(ADDRESS_ACTION_TOAST.deleteFailed);
+      },
     });
   }
 
@@ -140,8 +171,10 @@ export function AddressListView({ createHref }: AddressListViewProps) {
                 address={address}
                 isBusy={isBusy}
                 key={address.id}
+                onDefaultFocused={() => setFocusDefaultId(null)}
                 onDelete={() => setDeleteTarget(address)}
                 onSetDefault={() => handleSetDefault(address.id)}
+                shouldFocusOnDefault={focusDefaultId === address.id}
               />
             );
           })}
@@ -153,7 +186,12 @@ export function AddressListView({ createHref }: AddressListViewProps) {
         confirmLabel={DELETE_ADDRESS_DIALOG.confirmLabel}
         isOpen={deleteTarget !== null}
         isProcessing={deleteMutation.isPending}
-        message={DELETE_ADDRESS_DIALOG.message}
+        // 대상 배송지명을 문구에 넣어 오삭제를 막는다. 닫힘 상태(대상 null)에선 정적 문구로 둔다.
+        message={
+          deleteTarget !== null
+            ? DELETE_ADDRESS_DIALOG.messageFor(deleteTarget.name)
+            : DELETE_ADDRESS_DIALOG.message
+        }
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleConfirmDelete}
         title={DELETE_ADDRESS_DIALOG.title}

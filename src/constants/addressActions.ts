@@ -7,10 +7,16 @@
  * 디자인 결정이라 한곳에 모아 두고 UI 로직과 섞지 않는다.
  */
 
-/** 삭제 확인 다이얼로그(공용 AlertDialog). */
+/**
+ * 삭제 확인 다이얼로그(공용 AlertDialog).
+ *
+ * `messageFor`는 어떤 배송지를 지우는지 이름으로 못박아 오삭제를 막는다(목록에 여러 개일 때 필요).
+ * 대상이 없을 때(다이얼로그 닫힘)를 위한 정적 `message`도 둔다.
+ */
 export const DELETE_ADDRESS_DIALOG = {
   title: '배송지를 삭제하시겠어요?',
   message: '삭제한 배송지는 다시 되돌릴 수 없어요.',
+  messageFor: (name: string) => `'${name}' 배송지를 삭제하면 다시 되돌릴 수 없어요.`,
   confirmLabel: '삭제',
   cancelLabel: '돌아가기',
 } as const;
@@ -25,6 +31,8 @@ export const ADDRESS_ACTION_TOAST = {
   defaultFailed: '기본 배송지 설정에 실패했어요. 잠시 후 다시 시도해주세요.',
   /** 삭제 성공. */
   deleted: '배송지를 삭제했어요',
+  /** 이미 삭제된 배송지를 다시 지우려 한 경우(404 SHIP_001). 재조회로 목록을 맞춘다. */
+  deleteAlreadyGone: '이미 삭제된 배송지예요',
   /** 삭제 일반 실패. */
   deleteFailed: '배송지 삭제에 실패했어요. 잠시 후 다시 시도해주세요.',
 } as const;

@@ -1,22 +1,22 @@
 # 보류한 설정 (deferred setup)
 
-[menhering-app](https://github.com/MENHERING/menhering-app)에서 **가져오지 않기로 한** 항목과 재검토 시점을 기록합니다.
+지금 도입하지 않은 항목과 재검토 시점을 기록합니다.
 
 ## 왜 보류하는가
 
-멘헤링은 **Supabase가 곧 백엔드**인 PWA 프로젝트입니다. Next.js Route Handler(`app/api/**`)로 API를 직접 만들고 Supabase RPC를 호출하는 구조라, 응답 포맷·인증·쿼리 키 전부를 **프론트가 정의**했습니다.
+백엔드는 **별도 저장소**에서 REST API를 제공하고, 프론트는 그 규격을 **따라가는** 쪽입니다. 응답 포맷·인증 방식·에러 코드를 프론트가 정할 수 없습니다.
 
-MoongCheap은 반대입니다. 백엔드가 별도 저장소에서 REST API를 제공하고, 프론트는 그 규격을 **따라가는** 쪽입니다. 지금 멘헤링의 API 계층을 가져와도 백엔드 응답 포맷이 다르면 전부 다시 쓰게 됩니다.
+규격이 나오기 전에 API 계층이나 쿼리 키를 미리 만들면 실제 응답과 어긋나 전부 다시 쓰게 됩니다. 그래서 관련 코드를 **의도적으로 비워 두고**, 규격이 확정되는 시점을 재검토 시점으로 적어 둡니다.
 
 ## 보류 항목
 
-| 항목                                       | 가져오지 않는 이유                                                | 재검토 시점             |
-| ------------------------------------------ | ----------------------------------------------------------------- | ----------------------- |
-| `.agents/` 도메인·구조·Supabase·API 컨벤션 | 멘헤링 도메인(학습·아바타·오답노트)과 Supabase 전제에 맞춰진 문서 | 백엔드 API 규격 확정 후 |
-| `src/lib/query-keys.ts`                    | 도메인 키 구조가 멘헤링 기준(learning / avatar / wrongNote 등)    | 화면·API 확정 후        |
-| `docs/convention/` 중 도메인·구조 문서     | 위와 동일. 협업 규칙(브랜치·커밋·PR)만 발췌해 가져옴              | 코드가 쌓인 뒤          |
-| `.mcp.json`                                | 내용이 멘헤링 Supabase MCP 서버 URL 하나뿐. MoongCheap은 미사용   | 필요 시점에 개별 판단   |
-| `vercel.json`                              | 내용이 멘헤링 웹푸시 cron 설정 하나뿐                             | 배포 방식 확정 후       |
+| 항목                                   | 미루는 이유                                                     | 재검토 시점             |
+| -------------------------------------- | --------------------------------------------------------------- | ----------------------- |
+| `.agents/` 도메인·구조·API 컨벤션      | 도메인 모델과 백엔드 응답 규격이 정해져야 쓸 수 있는 문서       | 백엔드 API 규격 확정 후 |
+| `src/lib/query-keys.ts`                | 키 구조가 화면·엔드포인트 구성에 따라 갈린다                    | 화면·API 확정 후        |
+| `docs/convention/` 중 도메인·구조 문서 | 위와 동일. 협업 규칙(브랜치·커밋·PR)만 먼저 정리해 두었다       | 코드가 쌓인 뒤          |
+| `.mcp.json`                            | 이 저장소에서 공용으로 쓰는 MCP 서버가 없다                     | 필요 시점에 개별 판단   |
+| `vercel.json`                          | 배포는 Docker 이미지(ECR) 기준이라 Vercel 전용 설정이 필요 없다 | 배포 방식이 바뀌면      |
 
 ## 함께 미룬 의존성
 
@@ -48,7 +48,7 @@ TanStack Query 도입으로 `src/app/providers.tsx`(QueryClientProvider)·`src/f
 ## 결정된 사항
 
 - **인증 방식 = httpOnly 쿠키(SID)** — Authorization 헤더 미사용. 소셜/일반 로그인 동일 구조, 토큰을 JS로 저장/파싱하지 않음([`security-baseline.md`](./security-baseline.md) 요건 1).
-- **API 계층·응답 포맷·베이스 URL·에러 코드 확정**(2026-09-08 실측) — 멘헤링 래퍼 대신 최소 `src/lib/api.ts`(`apiFetch`, `credentials:'include'`) 자체 작성.
+- **API 계층·응답 포맷·베이스 URL·에러 코드 확정**(2026-09-08 실측) — 최소 구성의 `src/lib/api.ts`(`apiFetch`, `credentials:'include'`)를 자체 작성.
   - **베이스 URL**: 단일 `NEXT_PUBLIC_API_BASE_URL` 하나(도메인 A·B 구분 없음). 로컬 `http://localhost:8080`.
   - **성공 응답**: 래퍼 없는 **bare DTO** → `json() as DTO`.
   - **실패 응답**: `{ success:false, data:null, error:{ code, message, fieldErrors } }` 봉투 → `apiFetch`가 비2xx에서 throw.
@@ -65,20 +65,6 @@ TanStack Query 도입으로 `src/app/providers.tsx`(QueryClientProvider)·`src/f
   - **보류**: 로그인 후 "원래 가려던 페이지로 복귀"는 보호 라우트 가드 도입 시 프론트 `sessionStorage` 방식으로 추가 예정(백엔드 지원 불필요, 고정 URL로 충분).
 - **목(mock) 전략** — MSW 없이 async 함수가 `AuthResult`를 반환하는 방식으로 진행(뼈대 작성자 의도). 실제 연동 시 함수 본문만 API 호출로 교체하고 반환 타입은 유지([`src/mocks/auth.ts`](../src/mocks/auth.ts)).
 
-## 제거한 멘헤링 전용 의존성
+## PWA
 
-지시서상 제거 대상으로 명시됐던 항목의 실제 상태입니다.
-
-| 대상                                        | 멘헤링 실제 상태                      | 조치                                                                                            |
-| ------------------------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `pixi.js`, `@pixi/core`, `@pixi/display`    | 있음                                  | 가져오지 않음                                                                                   |
-| `pixi-live2d-display-lipsyncpatch` (Live2D) | 있음                                  | 가져오지 않음                                                                                   |
-| `howler`, `@types/howler`                   | 있음                                  | 가져오지 않음                                                                                   |
-| `@ducanh2912/next-pwa`                      | **멘헤링에 없음**                     | 해당 없음                                                                                       |
-| `serwist`                                   | **없음.** `@serwist/turbopack`만 존재 | 가져오지 않음                                                                                   |
-| `@supabase/ssr`, `@supabase/supabase-js`    | 있음                                  | 가져오지 않음                                                                                   |
-| `web-push`, `@types/web-push`               | 있음 (웹 푸시)                        | 가져오지 않음                                                                                   |
-| `motion`, `react-colorful`, `esbuild`       | 있음 (애니메이션·컬러픽커·에셋 가공)  | 가져오지 않음                                                                                   |
-| `sharp`                                     | 있음 (에셋 가공)                      | **이후 도입** — 이미지 최적화 스크립트·`next/image`용 devDep(#60). [도입 완료](#도입-완료) 참고 |
-
-**PWA 채택 여부는 미정입니다.** 현재 PWA 관련 의존성·설정은 하나도 없습니다. 채택하기로 하면 `@serwist/turbopack` + `src/app/serwist/` 라우트 + `manifest.ts`를 추가하게 됩니다.
+**채택 여부는 미정입니다.** 현재 PWA 관련 의존성·설정은 하나도 없습니다. 채택하기로 하면 `@serwist/turbopack` + `src/app/serwist/` 라우트 + `manifest.ts`를 추가하게 됩니다.

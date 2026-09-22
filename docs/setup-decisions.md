@@ -1,11 +1,11 @@
 # 설정 근거 (setup decisions)
 
-이 저장소의 도구 설정은 [menhering-app](https://github.com/MENHERING/menhering-app)에서 이식했습니다.
-**"이전 프로젝트에서 쓰던 것"은 기술 선택 근거가 아니므로**, 각 설정이 무엇을 하고 왜 필요한지를 여기에 남깁니다.
+이 저장소의 도구 설정은 초기 세팅 단계에서 한 번에 들여왔습니다.
+**"원래 그렇게 쓰던 것"은 기술 선택 근거가 아니므로**, 각 설정이 무엇을 하고 왜 필요한지를 여기에 남깁니다.
 
 근거가 불명확한 항목은 그럴듯한 이유를 지어내지 않고 **`⚠️ 근거 불명확 — 팀 확인 필요`**로 표시했습니다.
 
-가져오지 **않은** 것들과 그 이유는 [`deferred-setup.md`](./deferred-setup.md)에 있습니다.
+지금 도입하지 **않은** 것들과 그 이유는 [`deferred-setup.md`](./deferred-setup.md)에 있습니다.
 
 ---
 
@@ -25,7 +25,7 @@
 
 `semi: true`, `trailingComma: "all"`, `tabWidth: 2`, `endOfLine: "lf"`는 Prettier 3 기본값과 같습니다. 명시적으로 적어 둔 것뿐입니다.
 
-**`.prettierignore`** — `public/`(정적 에셋), lock 파일, 빌드 산출물을 포맷 검사에서 제외합니다. 멘헤링에 있던 Supabase 관련 제외 항목(`supabase/.temp/`, `src/types/database.types.ts`)은 제거했습니다.
+**`.prettierignore`** — `public/`(정적 에셋), lock 파일, 빌드 산출물을 포맷 검사에서 제외합니다.
 
 ---
 
@@ -60,7 +60,7 @@ builtin → external(react 최우선) → internal(@/) → parent/sibling
 - **막는 것**: `export default`.
 - **왜 켜는가**: named export는 import 쪽에서 이름을 마음대로 바꿀 수 없어 같은 심볼이 항상 같은 이름으로 불린다. IDE 자동 import·rename·전역 검색이 정확해진다.
 - **예외 처리**: Next.js App Router 예약 파일(`page.tsx`, `layout.tsx`, `error.tsx`, `loading.tsx`, `not-found.tsx`, `template.tsx`, `route.ts`, `manifest.ts`)과 설정 파일(`next.config.ts`, `postcss.config.mjs`, `tailwind.config.ts`, `eslint.config.mjs`, `commitlint.config.mjs`)은 프레임워크·툴이 default export를 요구하므로 룰을 끈다.
-- ⚠️ **예외 목록의 `route.ts`는 확인 필요** — Route Handler는 `GET`/`POST` 같은 named export를 쓰므로 default export 예외가 필요 없다. 멘헤링에서도 이 목록에 들어 있었으나 근거는 불명확하다. 어차피 이 저장소는 Route Handler를 두지 않을 예정이라 실질 영향은 없다.
+- ⚠️ **예외 목록의 `route.ts`는 확인 필요** — Route Handler는 `GET`/`POST` 같은 named export를 쓰므로 default export 예외가 필요 없다. 목록에 들어간 근거가 불명확하다. 어차피 이 저장소는 Route Handler를 두지 않을 예정이라 실질 영향은 없다.
 - ⚠️ **`tailwind.config.ts`도 확인 필요** — Tailwind v4는 CSS-first 설정(`@theme`)을 쓰고 이 저장소에 `tailwind.config.ts`가 없다. 남아 있어도 무해한 죽은 항목이다.
 
 #### `globalIgnores([..., 'public/**'])` — ✅ 근거 명확
@@ -77,7 +77,7 @@ builtin → external(react 최우선) → internal(@/) → parent/sibling
 
 **필요한 이유** — `strict: true`로 null/undefined 처리 누락을 컴파일 타임에 잡는다. `paths: { "@/*": ["./src/*"] }` 별칭으로 `../../../` 상대 경로 지옥을 피한다.
 
-**특기 사항** — 이 파일은 `create-next-app`이 생성한 것과 **내용이 완전히 동일**하다. 멘헤링에서 가져올 필요가 없었고, 실제로 덮어쓴 결과도 no-op이었다. 발표에서 "이식한 설정"으로 세지 않는 편이 정확하다.
+**특기 사항** — 이 파일은 `create-next-app`이 생성한 것과 **내용이 완전히 동일**하다. 우리가 손댄 부분이 없으므로 발표에서 "우리가 정한 설정"으로 세지 않는 편이 정확하다.
 
 `typecheck` 스크립트는 `tsc --noEmit --pretty false`다. `--pretty false`는 CI 로그에서 ANSI 색상 코드를 빼 로그를 읽기 쉽게 한다.
 
@@ -163,12 +163,11 @@ builtin → external(react 최우선) → internal(@/) → parent/sibling
 
 **필요한 이유** — `.env*`를 차단해 **비밀키가 커밋되는 사고를 구조적으로 막는다.** 이게 가장 큰 이유다. 나머지(빌드 산출물, 캐시, OS 파일)는 저장소를 깨끗이 유지하는 용도다.
 
-**멘헤링 대비 변경**
+**항목별 판단**
 
-- **제거**: Supabase CLI 관련(`supabase/.temp/`, `supabase/.branches/`, `supabase/.env`) — Supabase 미사용
-- **유지**: `!.env.local.example` 예외 — 소셜 로그인(#18)에서 `NEXT_PUBLIC_API_BASE_URL` 견본을 추가하며 되살림. `.env*` 전체 차단 중 견본만 예외로 추적
-- **유지**: `.claude/settings.local.json`, `.claude/launch.json`, `CLAUDE.local.md`, `.codex/` — 개발자 개인 설정은 저장소에 올리지 않음
-- **유지**: `checklist.md`, `context-notes.md` — AI 에이전트가 만드는 작업 메모
+- `!.env.local.example` 예외 — 소셜 로그인(#18)에서 `NEXT_PUBLIC_API_BASE_URL` 견본을 추가하며 되살림. `.env*` 전체 차단 중 견본만 예외로 추적
+- `.claude/settings.local.json`, `.claude/launch.json`, `CLAUDE.local.md`, `.codex/` — 개발자 개인 설정은 저장소에 올리지 않음
+- `checklist.md`, `context-notes.md` — AI 에이전트가 만드는 작업 메모
 
 `.claude/launch.json`은 이 저장소에서 **이미 추적 중이었으나** 새 `.gitignore` 정책에 맞춰 추적에서 제외했습니다(`git rm --cached`). 파일 자체는 로컬에 남아 있습니다.
 
@@ -188,9 +187,7 @@ builtin → external(react 최우선) → internal(@/) → parent/sibling
 | `ISSUE_TEMPLATE/docs.yml`       | 문서 작업     | `documentation`       |
 | `pull_request_template.md`      | PR            | —                     |
 
-**멘헤링 도메인 언급 여부** — 전수 확인 결과 **없음**. 템플릿 예시 문구가 전부 일반적인 내용(`로그인 버튼`, `다크 모드`)이라 일반화 작업이 필요 없었다.
-
-PR 템플릿의 체크리스트(동작 확인 / 콘솔 오류 / 라우팅 / 빌드)는 그대로 유지했다.
+PR 템플릿의 체크리스트는 **동작 확인 / 콘솔 오류 / 라우팅 / 빌드** 4항목이다. 화면 단위 PR에서 매번 확인해야 하는 것들이라 그대로 유지했다.
 
 ⚠️ **라벨은 GitHub 저장소에 실제로 존재해야 자동 적용된다.** `needs triage`, `refactor`는 기본 제공 라벨이 아니므로 저장소 설정에서 만들어야 한다.
 
@@ -216,7 +213,7 @@ PR 템플릿의 체크리스트(동작 확인 / 콘솔 오류 / 라우팅 / 빌�
 - `--omit=dev`로 개발 의존성은 제외(런타임에 배포되지 않음), `critical` 등급만 빌드를 실패시켜 노이즈를 줄인다
 - 주간 스케줄이 있는 이유: 코드를 안 건드려도 새 취약점은 발표된다
 
-**Supabase 환경변수 참조** — 전수 확인 결과 **없음**. 두 워크플로 모두 환경변수를 전혀 쓰지 않아 제거할 것이 없었다.
+두 워크플로 모두 환경변수를 쓰지 않는다. 시크릿을 주입할 필요가 없어 그만큼 관리 지점이 줄어든다.
 
 `develop` 브랜치가 실제 개발 기준선으로 운영 중이며, 모든 기능 PR이 `develop`을 base로 한다. 워크플로도 `develop` push/PR에서 정상 동작한다.
 

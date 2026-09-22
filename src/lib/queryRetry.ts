@@ -14,8 +14,9 @@ import { ApiError } from '@/lib/api';
  * `apiFetch` 밖에서 하므로 `ApiError`가 아닌 예외가 올라올 수 있다. 차단 목록으로 짜면 그것이
  * 재시도 대상으로 새어 들어가 쓸모없는 요청 한 번과 지연(기본 1초)이 붙는다.
  *
- * 주문(`features/order/hooks/useOrders`)과 배송지(`features/user/hooks/useAddresses`)가 같은
- * 규칙을 쓴다. 규칙이 갈릴 이유가 없어 한 곳에 둔다. 전역 기본값은 `app/providers.tsx`에 있다.
+ * 주문(`features/order/hooks/useOrders`)·배송지(`features/user/hooks/useAddresses`)·참여 목록
+ * (`features/participation/hooks/useMyDemands`)이 같은 규칙을 쓴다. 규칙이 갈릴 이유가 없어 한
+ * 곳에 둔다. 전역 기본값은 `app/providers.tsx`에 있다.
  */
 export function shouldRetryQuery(failureCount: number, error: Error): boolean {
   if (failureCount >= 1) {

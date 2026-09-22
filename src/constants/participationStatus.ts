@@ -24,8 +24,9 @@ export interface ParticipationStatusMeta {
   /** 오버레이 배지 색 클래스(bg + text). */
   readonly badgeClass: string;
   /**
-   * 카드 가격 섹션의 라벨. 낙찰 전(모이는 중·배정완료·확인필요)은 '희망가격대',
-   * 낙찰이 종결된 '완료'만 '낙찰가'로 표기한다(B-17 시안 확정, 2026-09-16).
+   * 카드 가격 섹션의 라벨. 낙찰이 종결된 '완료'는 '낙찰가'(값: `product.unitPrice`), 그 외(낙찰 전)는
+   * '희망가격대'(값: `desiredPrice*`)다(B-17 시안 확정, 2026-09-16). 참여 목록 응답에 낙찰가 필드
+   * (`product`)가 추가되어(2026-09-21) 완료 카드가 실낙찰가를 표기한다. 값 산출은 `lib/demandApi.ts`.
    */
   readonly priceHeading: string;
 }

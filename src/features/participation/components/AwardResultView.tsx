@@ -8,6 +8,7 @@ import { AlertDialog } from '@/components/ui/AlertDialog';
 import { useToast } from '@/components/ui/Toast';
 import { AWARD_RESULT_ASSETS } from '@/constants/assets';
 import { CANCEL_AWARD_DIALOG } from '@/constants/awardCancel';
+import { formatWon } from '@/lib/formatPrice';
 import type { AwardResult } from '@/types/awardResult';
 
 // B-19 낙찰 성공 정보. 낙찰 결과(축하 일러스트 + 상품·금액 요약) + 하단 CTA로 구성한다.
@@ -20,11 +21,6 @@ import type { AwardResult } from '@/types/awardResult';
 // 되면 이 문구를 값으로 바꾼다.
 const HEADLINE = '낙찰 되었어요!';
 const SUBHEAD = '48시간 후 등록된 결제수단으로 자동결제돼요.';
-
-/** 원 단위 금액 표기(예: 27300 → "27,300원"). */
-function formatWon(amount: number): string {
-  return `${amount.toLocaleString('ko-KR')}원`;
-}
 
 /** 요약 표 한 행. label은 좌측 회색, value는 우측. emphasized면 양쪽을 강조한다. */
 function SummaryRow({

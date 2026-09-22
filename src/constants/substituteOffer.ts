@@ -39,6 +39,17 @@ export const REJECT_SUBSTITUTE_DIALOG = {
   cancelLabel: '돌아가기',
 } as const;
 
+/**
+ * 수락 확인 다이얼로그. 수락은 공동구매 편입(→ 낙찰 시 자동결제 흐름, B-19)으로 이어지는 되돌리기
+ * 어려운 조치라, 거절과 대칭으로 확인 한 단계를 둔다(오탭 방지).
+ */
+export const ACCEPT_SUBSTITUTE_DIALOG = {
+  title: '이 상품으로 참여할까요?',
+  message: '수락하면 이 공동구매에 참여해요. 진행 상황은 배정완료 탭에서 확인할 수 있어요.',
+  confirmLabel: '수락하기',
+  cancelLabel: '돌아가기',
+} as const;
+
 /** 수락/거절 결과 토스트. */
 export const SUBSTITUTE_OFFER_TOAST = {
   acceptSuccess: '대체상품을 수락했어요',

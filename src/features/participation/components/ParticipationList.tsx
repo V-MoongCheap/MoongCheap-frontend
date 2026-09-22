@@ -30,7 +30,7 @@ import type { ParticipationItem } from '@/types/participation';
 // `lib/demandApi.ts` 주석 참고(SID httpOnly 쿠키는 브라우저만 갖고 있다).
 //
 // 상태별 카드 액션(시안): **해당 필터 탭에서만** 카드 아래 버튼이 뜬다('전체' 탭엔 없음).
-//  · 확인필요(ACTION_REQUIRED) — '대체상품 확인하기' → 대체상품 수락/거절(B-16, `substituteHref`).
+//  · 확인필요(ACTION_REQUIRED) — '대체상품 확인하기' → 대체상품 수락/거절(B-16, /demands/[id]/substitute).
 //  · 배정완료(ALLOCATED)   — '낙찰 취소하기' → 파괴적 확인 다이얼로그. 아직 mock(아래 주석).
 //
 // ⚠️ 첫 로딩·조회 실패·이어 받기·이어 받기 실패는 시안이 없다(명세 `🖌️ 디자인 필요`). 주문 목록
@@ -69,12 +69,9 @@ interface ParticipationListProps {
   /** 배정완료(낙찰) 카드 탭 시 이동할 낙찰 결과(B-19) 경로. 라우트 문자열은 페이지가 주입한다
    *  (features/ 컴포넌트는 경로를 직접 들지 않는다 — exitHref·editHref 등과 같은 방침). */
   awardResultHref: string;
-  /** 확인필요 카드의 '대체상품 확인하기' 탭 시 이동할 대체상품 수락/거절(B-16) 경로 빌더.
-   *  수요 id가 필요해 문자열이 아니라 함수로 받는다(라우트 지식은 페이지가 갖는다). */
-  substituteHref: (demandId: string) => string;
 }
 
-export function ParticipationList({ awardResultHref, substituteHref }: ParticipationListProps) {
+export function ParticipationList({ awardResultHref }: ParticipationListProps) {
   const [tab, setTab] = useState<ParticipationTab>(PARTICIPATION_TAB_ALL);
   const [cancelTarget, setCancelTarget] = useState<ParticipationItem | null>(null);
   // 낙찰 취소는 아직 mock이다(백엔드 DELETE는 "MVP 범위 X"·별도 이슈 후속). 확정 시 취소한 수요를
@@ -190,7 +187,8 @@ export function ParticipationList({ awardResultHref, substituteHref }: Participa
                 <li key={item.id}>
                   <ParticipationCard
                     action={renderAction(item, inFilteredTab, {
-                      onSubstitute: () => router.push(substituteHref(item.id)),
+                      onSubstitute: () =>
+                        router.push(`/demands/${encodeURIComponent(item.id)}/substitute`),
                       onCancel: () => setCancelTarget(item),
                     })}
                     item={item}

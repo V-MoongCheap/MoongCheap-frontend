@@ -38,6 +38,4 @@ export interface SubstituteOffer {
   readonly quantity?: number;
   /** 내 희망 가격대 라벨(`PRICE_BANDS` 라벨 또는 범위). 출처: `desiredPrice*`. */
   readonly desiredPriceLabel: string;
-  /** 대체 공구 현재 참여 인원. 출처: `demandBoard.participantCount`. 없으면 undefined. */
-  readonly participantCount?: number;
 }

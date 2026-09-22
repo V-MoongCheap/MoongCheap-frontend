@@ -311,7 +311,6 @@ function toSubstituteOffer(dto: DemandItemDto): SubstituteOffer {
     quantity: dto.quantity ?? undefined,
     // 낙찰 전 상태라 formatPriceLabel은 희망 가격대(구간 라벨/범위)를 돌려준다.
     desiredPriceLabel: formatPriceLabel(dto, 'ACTION_REQUIRED'),
-    participantCount: dto.demandBoard?.participantCount,
   };
 }
 

@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { useToast } from '@/components/ui/Toast';
 import { ERROR_SCREEN_RETRY_LABEL, SESSION_EXPIRED_MESSAGE } from '@/constants/commonMessages';
 import {
+  ACCEPT_SUBSTITUTE_DIALOG,
   REJECT_SUBSTITUTE_DIALOG,
   SUBSTITUTE_OFFER_COPY,
   SUBSTITUTE_OFFER_TOAST,
@@ -22,8 +23,18 @@ import {
   useSubstituteOffer,
 } from '@/features/participation/hooks/useSubstituteOffer';
 import { ApiError } from '@/lib/api';
+import { SUBSTITUTE_OFFER_ERROR_CODE } from '@/lib/demandApi';
 import { formatWon } from '@/lib/formatPrice';
 import type { SubstituteProductSummary } from '@/types/substituteOffer';
+
+// 수락/거절이 더는 유효하지 않음을 뜻하는 백엔드 비즈니스 코드(이미 처리·만료·권한·없음). 이 코드로
+// 오면 재시도가 무의미하니 '지난 제안'으로 안내하고 목록으로 돌려보낸다.
+const GONE_ERROR_CODES: readonly string[] = [
+  SUBSTITUTE_OFFER_ERROR_CODE.NOT_FOUND,
+  SUBSTITUTE_OFFER_ERROR_CODE.NOT_ALLOWED,
+  SUBSTITUTE_OFFER_ERROR_CODE.DESIRE_EXPIRED,
+  SUBSTITUTE_OFFER_ERROR_CODE.FORBIDDEN,
+];
 
 // B-16 대체상품 수락/거절. B-17 확인필요 탭의 대체상품 제안 카드 → 이 화면으로 진입한다.
 //
@@ -37,15 +48,22 @@ import type { SubstituteProductSummary } from '@/types/substituteOffer';
 //    `lib/demandApi.ts`/`constants/substituteOffer.ts` 주석. 화면은 성공 후 목록으로 돌아가고,
 //    무효화된 목록이 서버 기준 탭에 카드를 다시 그린다.
 
-/** 수락/거절 실패 토스트 문구를 고른다. 401은 재로그인, 그 밖의 4xx(이미 처리·만료·권한)는 '지난 제안'. */
+/**
+ * 수락/거절 실패 토스트 문구를 고른다. 401은 재로그인, 제안이 더는 유효하지 않은 비즈니스 코드
+ * (`GONE_ERROR_CODES`)는 '지난 제안', 그 밖(네트워크·서버·미상 코드)은 일반 실패다.
+ *
+ * status(400/404/403)가 아니라 `error.code`로 가르는 이유: 같은 400이라도 대체 오퍼 고유 코드
+ * (DEMAND_007/009 등)만 '지난 제안'으로 목록에 돌려보내고, 그 외 400(예: 일반 검증 오류)은 그 자리에
+ * 두어 재시도하게 한다(status만으로는 구분 불가 — `lib/api.ts` ApiError 주석과 같은 방침).
+ */
 function offerActionErrorMessage(caught: unknown): string {
-  if (caught instanceof ApiError && caught.status === 401) {
+  if (!(caught instanceof ApiError)) {
+    return SUBSTITUTE_OFFER_TOAST.failed;
+  }
+  if (caught.status === 401) {
     return SESSION_EXPIRED_MESSAGE;
   }
-  if (
-    caught instanceof ApiError &&
-    (caught.status === 404 || caught.status === 400 || caught.status === 403)
-  ) {
+  if (caught.code !== null && GONE_ERROR_CODES.includes(caught.code)) {
     return SUBSTITUTE_OFFER_TOAST.gone;
   }
   return SUBSTITUTE_OFFER_TOAST.failed;
@@ -90,6 +108,7 @@ interface SubstituteOfferViewProps {
 export function SubstituteOfferView({ demandId, listHref }: SubstituteOfferViewProps) {
   const router = useRouter();
   const { showToast } = useToast();
+  const [isAcceptOpen, setIsAcceptOpen] = useState(false);
   const [isRejectOpen, setIsRejectOpen] = useState(false);
 
   const { data, isPending, isError, refetch } = useSubstituteOffer(demandId);
@@ -115,7 +134,8 @@ export function SubstituteOfferView({ demandId, listHref }: SubstituteOfferViewP
     }
   }
 
-  function handleAccept() {
+  function handleConfirmAccept() {
+    setIsAcceptOpen(false);
     acceptMutation.mutate(undefined, {
       onSuccess: () => handleSettled(SUBSTITUTE_OFFER_TOAST.acceptSuccess),
       onError: handleError,
@@ -231,12 +251,23 @@ export function SubstituteOfferView({ demandId, listHref }: SubstituteOfferViewP
         <button
           type="button"
           disabled={isProcessing}
-          onClick={handleAccept}
+          onClick={() => setIsAcceptOpen(true)}
           className="bg-surface-button-primary-default text-content-oncolor text-button-15 active:bg-surface-button-primary-pressed focus-visible:ring-effect-focus-ring-primary rounded-16 flex h-13 flex-1 items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-60"
         >
           {SUBSTITUTE_OFFER_COPY.acceptCta}
         </button>
       </div>
+
+      <AlertDialog
+        cancelLabel={ACCEPT_SUBSTITUTE_DIALOG.cancelLabel}
+        confirmLabel={ACCEPT_SUBSTITUTE_DIALOG.confirmLabel}
+        isOpen={isAcceptOpen}
+        isProcessing={acceptMutation.isPending}
+        message={ACCEPT_SUBSTITUTE_DIALOG.message}
+        onClose={() => setIsAcceptOpen(false)}
+        onConfirm={handleConfirmAccept}
+        title={ACCEPT_SUBSTITUTE_DIALOG.title}
+      />
 
       <AlertDialog
         cancelLabel={REJECT_SUBSTITUTE_DIALOG.cancelLabel}

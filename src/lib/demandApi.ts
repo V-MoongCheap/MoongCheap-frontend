@@ -1,8 +1,9 @@
 import { LIST_PAGE_SIZE, PRICE_BANDS } from '@/constants/businessRules';
 import type { ParticipationStatus } from '@/constants/participationStatus';
-import type { DemandItemDto, DemandListDto, DemandStatusDto } from '@/types/api/demand';
+import type { CatalogDto, DemandItemDto, DemandListDto, DemandStatusDto } from '@/types/api/demand';
 import type { DemandFormValues } from '@/types/demandForm';
 import type { ParticipationItem, ParticipationPage } from '@/types/participation';
+import type { SubstituteOffer, SubstituteProductSummary } from '@/types/substituteOffer';
 
 import { apiFetch, parseCreatedId } from './api';
 import { formatWon } from './formatPrice';
@@ -258,4 +259,109 @@ export async function fetchMyDemands(
     page: body.page,
     hasNext: body.hasNext,
   };
+}
+
+/* ── 대체상품 제안 조회·수락·거절(B-16, FN-B16-01) ─────────────────────────────── */
+
+/**
+ * 대체 오퍼 수락/거절 시 화면이 분기하는 백엔드 에러 코드(`ApiError.code`). 출처: 백엔드 `ErrorCode`
+ * · `DemandService.acceptOffer`/`rejectOffer`(develop, 2026-09-22 확인).
+ *
+ * - `DEMAND_002`(404): 수요를 찾을 수 없음 — 이미 처리돼 `SUBSTITUTE_OFFERED`가 아니게 됐거나 없음.
+ * - `DEMAND_007`(400): 현재 상태에서는 수락/거절 불가(보드 미배정 등).
+ * - `DEMAND_009`(400): 수요 희망 기간 만료.
+ * - `DEMAND_003`(403): 본인 수요가 아님.
+ *
+ * 셋 다 화면에서는 '이미 처리되었거나 기간이 지난 제안'으로 묶어 안내한다(더 세분할 시안·규격 없음).
+ */
+export const SUBSTITUTE_OFFER_ERROR_CODE = {
+  NOT_FOUND: 'DEMAND_002',
+  NOT_ALLOWED: 'DEMAND_007',
+  DESIRE_EXPIRED: 'DEMAND_009',
+  FORBIDDEN: 'DEMAND_003',
+} as const;
+
+/** 카탈로그 DTO → 화면 상품 요약. null 원시필드는 undefined로 접는다(부제·정가 생략용). */
+function toSubstituteProductSummary(catalog: CatalogDto): SubstituteProductSummary {
+  return {
+    name: catalog.name,
+    specSummary: catalog.specSummary ?? undefined,
+    listPrice: catalog.listPrice ?? undefined,
+  };
+}
+
+/**
+ * 단건 수요 DTO → B-16 화면 타입.
+ *
+ * 대체상품(`demandBoard.catalog`)은 상태가 `SUBSTITUTE_OFFERED`일 때만 조인돼 채워진다(백엔드
+ * `DemandQueryRepositoryImpl`, `d.status = 'SUBSTITUTE_OFFERED'` 조건부 LEFT JOIN). 그 밖의 상태거나
+ * 대체상품이 비면 `isOffer=false`로 두어 화면이 '이미 처리된 제안'으로 빠지게 한다(직접 진입·재방문 방어).
+ *
+ * 희망 가격대는 참여 목록 카드와 같은 규칙으로 만든다(`formatPriceLabel`, 낙찰 전 분기 → 구간 라벨).
+ */
+function toSubstituteOffer(dto: DemandItemDto): SubstituteOffer {
+  const substituteCatalog =
+    dto.status === 'SUBSTITUTE_OFFERED' ? (dto.demandBoard?.catalog ?? null) : null;
+
+  return {
+    demandId: String(dto.id),
+    isOffer: substituteCatalog !== null,
+    requested: toSubstituteProductSummary(dto.catalog),
+    substitute: substituteCatalog === null ? null : toSubstituteProductSummary(substituteCatalog),
+    quantity: dto.quantity ?? undefined,
+    // 낙찰 전 상태라 formatPriceLabel은 희망 가격대(구간 라벨/범위)를 돌려준다.
+    desiredPriceLabel: formatPriceLabel(dto, 'ACTION_REQUIRED'),
+  };
+}
+
+/**
+ * 대체상품 제안 단건 조회. 세션(SID httpOnly 쿠키)이 필요해 **브라우저에서만** 부른다(목록과 같은 이유).
+ *
+ * `GET /api/members/me/demand/{demandId}` → 단건 `DemandItemDto`
+ */
+export async function fetchSubstituteOffer(demandId: string): Promise<SubstituteOffer> {
+  // demandId는 라우트 params(문자열)에서 검증 없이 올 수 있어 경로 세그먼트로 인코딩한다(예약문자 방어).
+  const response = await apiFetch(`/api/members/me/demand/${encodeURIComponent(demandId)}`);
+  const dto = (await response.json()) as DemandItemDto;
+  return toSubstituteOffer(dto);
+}
+
+/**
+ * 대체 오퍼 수락. 성공(204) 시 백엔드가 수요를 해당 공구에 편입(`ASSIGNED`)한다.
+ *
+ * ⚠️ 대상 공구가 더는 모집 중이 아니면 백엔드가 내부적으로 거절 처리(UNASSIGNED 복귀)하고도 204를
+ *    돌려줄 수 있다(`DemandService.acceptOffer`의 `increaseParticipantCountIfActive == 0` 분기).
+ *    204만으로는 편입(ASSIGNED)인지 되돌림(UNASSIGNED)인지 알 수 없어, 수락 직후 상태를 한 번 더
+ *    조회해 돌려준다. 화면은 이 값으로 완료 문구를 고른다(ASSIGNED면 '수락 완료', UNASSIGNED면 되돌림 안내).
+ *
+ * 후속 조회가 실패해도 수락 자체는 이미 성공했으므로 예외를 삼키고 `null`을 돌려준다(화면은 일반
+ * 완료 문구로 폴백). 참여 목록 무효화는 호출부(`useAcceptSubstituteOffer`)가 별도로 하므로 여기선 조회만.
+ *
+ * `PATCH /api/members/me/demand/{demandId}/accept` → 편입 후 상태
+ */
+export async function acceptSubstituteOffer(demandId: string): Promise<DemandStatusDto | null> {
+  const encodedDemandId = encodeURIComponent(demandId);
+  await apiFetch(`/api/members/me/demand/${encodedDemandId}/accept`, { method: 'PATCH' });
+  try {
+    const response = await apiFetch(`/api/members/me/demand/${encodedDemandId}`);
+    const dto = (await response.json()) as DemandItemDto;
+    return dto.status;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 대체 오퍼 거절. 성공(204) 시 백엔드가 거절 이력을 저장한다.
+ *
+ * ⚠️ 결과 상태: 백엔드 `DemandService.rejectOffer`는 수요를 **UNASSIGNED(모이는 중)로 되돌린다** —
+ *    이슈 #136 설명의 "요청 종료(EXPIRED)"와 다르다. 프론트는 성공 후 목록을 무효화하므로 카드는
+ *    확인필요 탭에서 빠져 서버가 정한 탭(모이는 중)으로 이동한다. 규격 합의 시 재검토(constants/substituteOffer.ts).
+ *
+ * `PATCH /api/members/me/demand/{demandId}/reject`
+ */
+export async function rejectSubstituteOffer(demandId: string): Promise<void> {
+  await apiFetch(`/api/members/me/demand/${encodeURIComponent(demandId)}/reject`, {
+    method: 'PATCH',
+  });
 }

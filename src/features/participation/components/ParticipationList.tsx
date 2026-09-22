@@ -30,7 +30,7 @@ import type { ParticipationItem } from '@/types/participation';
 // `lib/demandApi.ts` 주석 참고(SID httpOnly 쿠키는 브라우저만 갖고 있다).
 //
 // 상태별 카드 액션(시안): **해당 필터 탭에서만** 카드 아래 버튼이 뜬다('전체' 탭엔 없음).
-//  · 확인필요(ACTION_REQUIRED) — '대체상품 확인하기' → 대체상품 확인(B-16). 라우트 부재라 '준비 중' 토스트.
+//  · 확인필요(ACTION_REQUIRED) — '대체상품 확인하기' → 대체상품 수락/거절(B-16). AI 대체 제안에 응답하는 진입점.
 //  · 배정완료(ALLOCATED)   — '낙찰 취소하기' → 파괴적 확인 다이얼로그. 아직 mock(아래 주석).
 //
 // ⚠️ 첫 로딩·조회 실패·이어 받기·이어 받기 실패는 시안이 없다(명세 `🖌️ 디자인 필요`). 주문 목록
@@ -187,7 +187,12 @@ export function ParticipationList({ awardResultHref }: ParticipationListProps) {
                 <li key={item.id}>
                   <ParticipationCard
                     action={renderAction(item, inFilteredTab, {
-                      onSubstitute: showComingSoon,
+                      // B-16 경로는 여기서 직접 만든다(다른 href는 page가 주입하는 것과 다르게). 페이지
+                      // (서버 컴포넌트)는 경로 생성 '함수'를 클라이언트 컴포넌트로 넘길 수 없고(RSC 경계:
+                      // "Functions cannot be passed directly to Client Components"), 수요 id는 이 목록만
+                      // 안다. 동적 경로를 클라이언트에서 인라인 구성하는 ProductDetailView와 같은 방식이다.
+                      onSubstitute: () =>
+                        router.push(`/demands/${encodeURIComponent(item.id)}/substitute`),
                       onCancel: () => setCancelTarget(item),
                     })}
                     item={item}

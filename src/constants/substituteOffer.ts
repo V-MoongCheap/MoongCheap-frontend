@@ -11,7 +11,6 @@
  *    규격과 배포 BE가 합의되면 이 문구를 조정한다.
  */
 
-/** 화면 상단 안내. */
 export const SUBSTITUTE_OFFER_COPY = {
   title: '대체상품 제안',
   /** 화면 헤더 설명. */
@@ -45,7 +44,8 @@ export const REJECT_SUBSTITUTE_DIALOG = {
  */
 export const ACCEPT_SUBSTITUTE_DIALOG = {
   title: '이 상품으로 참여할까요?',
-  message: '수락하면 이 공동구매에 참여해요. 진행 상황은 배정완료 탭에서 확인할 수 있어요.',
+  // 마감 순간 수락이 되돌려질 수 있어(→ acceptReverted) '배정완료 탭'을 단정하지 않고 참여 목록으로 안내한다.
+  message: '수락하면 이 공동구매에 참여해요. 결과는 참여 목록에서 확인할 수 있어요.',
   confirmLabel: '수락하기',
   cancelLabel: '돌아가기',
 } as const;
@@ -58,6 +58,11 @@ export const SUBSTITUTE_OFFER_TOAST = {
    * UNASSIGNED). 배정완료를 단정하지 않고 사실만 알린다(`lib/demandApi.ts` acceptSubstituteOffer 주석).
    */
   acceptReverted: '이 공동구매가 마감돼 원래 수요로 다시 모으고 있어요',
+  /**
+   * 수락(PATCH)은 성공했으나 직후 상태 재조회가 실패해 편입 결과(ASSIGNED/UNASSIGNED)를 알 수 없는 경우
+   * (`acceptSubstituteOffer`가 null 반환). 배정완료를 단정하지 않고 처리됨만 알린다.
+   */
+  acceptStatusUnknown: '수락은 처리됐어요. 결과는 참여 목록에서 확인해 주세요',
   rejectSuccess: '대체상품 제안을 거절했어요',
   /** 이미 처리됐거나 기간이 지나 더 응답할 수 없을 때(404/400). */
   gone: '이미 처리되었거나 기간이 지난 제안이에요',

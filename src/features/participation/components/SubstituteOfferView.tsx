@@ -89,7 +89,6 @@ function ProductSummaryCard({ product }: { product: SubstituteProductSummary }) 
   );
 }
 
-/** 내 참여 조건 한 행. */
 function ConditionRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-3">
@@ -137,13 +136,15 @@ export function SubstituteOfferView({ demandId, listHref }: SubstituteOfferViewP
   function handleConfirmAccept() {
     setIsAcceptOpen(false);
     acceptMutation.mutate(undefined, {
-      // 수락 후 실제 상태로 완료 문구를 고른다. 편입 성공(ASSIGNED)이 아니라 되돌림(UNASSIGNED)이면
-      // 배정완료를 단정하지 않는 안내를 띄운다. 상태 미상(재조회 실패 → null)은 일반 완료로 폴백.
+      // 수락 후 실제 상태로 완료 문구를 고른다. 편입 성공(ASSIGNED)만 '수락 완료', 되돌림(UNASSIGNED)은
+      // 배정완료를 단정하지 않는 안내, 상태 미상(재조회 실패 → null)은 배정을 단정하지 않는 별도 안내.
       onSuccess: (status) =>
         handleSettled(
           status === 'UNASSIGNED'
             ? SUBSTITUTE_OFFER_TOAST.acceptReverted
-            : SUBSTITUTE_OFFER_TOAST.acceptSuccess,
+            : status === null
+              ? SUBSTITUTE_OFFER_TOAST.acceptStatusUnknown
+              : SUBSTITUTE_OFFER_TOAST.acceptSuccess,
         ),
       onError: handleError,
     });

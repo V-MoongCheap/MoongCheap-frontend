@@ -320,7 +320,8 @@ function toSubstituteOffer(dto: DemandItemDto): SubstituteOffer {
  * `GET /api/members/me/demand/{demandId}` → 단건 `DemandItemDto`
  */
 export async function fetchSubstituteOffer(demandId: string): Promise<SubstituteOffer> {
-  const response = await apiFetch(`/api/members/me/demand/${demandId}`);
+  // demandId는 라우트 params(문자열)에서 검증 없이 올 수 있어 경로 세그먼트로 인코딩한다(예약문자 방어).
+  const response = await apiFetch(`/api/members/me/demand/${encodeURIComponent(demandId)}`);
   const dto = (await response.json()) as DemandItemDto;
   return toSubstituteOffer(dto);
 }
@@ -339,9 +340,10 @@ export async function fetchSubstituteOffer(demandId: string): Promise<Substitute
  * `PATCH /api/members/me/demand/{demandId}/accept` → 편입 후 상태
  */
 export async function acceptSubstituteOffer(demandId: string): Promise<DemandStatusDto | null> {
-  await apiFetch(`/api/members/me/demand/${demandId}/accept`, { method: 'PATCH' });
+  const encodedDemandId = encodeURIComponent(demandId);
+  await apiFetch(`/api/members/me/demand/${encodedDemandId}/accept`, { method: 'PATCH' });
   try {
-    const response = await apiFetch(`/api/members/me/demand/${demandId}`);
+    const response = await apiFetch(`/api/members/me/demand/${encodedDemandId}`);
     const dto = (await response.json()) as DemandItemDto;
     return dto.status;
   } catch {
@@ -359,5 +361,7 @@ export async function acceptSubstituteOffer(demandId: string): Promise<DemandSta
  * `PATCH /api/members/me/demand/{demandId}/reject`
  */
 export async function rejectSubstituteOffer(demandId: string): Promise<void> {
-  await apiFetch(`/api/members/me/demand/${demandId}/reject`, { method: 'PATCH' });
+  await apiFetch(`/api/members/me/demand/${encodeURIComponent(demandId)}/reject`, {
+    method: 'PATCH',
+  });
 }

@@ -53,6 +53,11 @@ export const ACCEPT_SUBSTITUTE_DIALOG = {
 /** 수락/거절 결과 토스트. */
 export const SUBSTITUTE_OFFER_TOAST = {
   acceptSuccess: '대체상품을 수락했어요',
+  /**
+   * 수락은 됐지만 대상 공구가 그새 마감돼 편입되지 못하고 원래 수요로 되돌아간 경우(수락 후 상태가
+   * UNASSIGNED). 배정완료를 단정하지 않고 사실만 알린다(`lib/demandApi.ts` acceptSubstituteOffer 주석).
+   */
+  acceptReverted: '이 공동구매가 마감돼 원래 수요로 다시 모으고 있어요',
   rejectSuccess: '대체상품 제안을 거절했어요',
   /** 이미 처리됐거나 기간이 지나 더 응답할 수 없을 때(404/400). */
   gone: '이미 처리되었거나 기간이 지난 제안이에요',

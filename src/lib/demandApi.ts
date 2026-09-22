@@ -330,12 +330,23 @@ export async function fetchSubstituteOffer(demandId: string): Promise<Substitute
  *
  * ⚠️ 대상 공구가 더는 모집 중이 아니면 백엔드가 내부적으로 거절 처리(UNASSIGNED 복귀)하고도 204를
  *    돌려줄 수 있다(`DemandService.acceptOffer`의 `increaseParticipantCountIfActive == 0` 분기).
- *    프론트는 성공 후 목록을 무효화해 실제 상태를 다시 받으므로 화면은 서버 기준으로 맞는다.
+ *    204만으로는 편입(ASSIGNED)인지 되돌림(UNASSIGNED)인지 알 수 없어, 수락 직후 상태를 한 번 더
+ *    조회해 돌려준다. 화면은 이 값으로 완료 문구를 고른다(ASSIGNED면 '수락 완료', UNASSIGNED면 되돌림 안내).
  *
- * `PATCH /api/members/me/demand/{demandId}/accept`
+ * 후속 조회가 실패해도 수락 자체는 이미 성공했으므로 예외를 삼키고 `null`을 돌려준다(화면은 일반
+ * 완료 문구로 폴백). 참여 목록 무효화는 호출부(`useAcceptSubstituteOffer`)가 별도로 하므로 여기선 조회만.
+ *
+ * `PATCH /api/members/me/demand/{demandId}/accept` → 편입 후 상태
  */
-export async function acceptSubstituteOffer(demandId: string): Promise<void> {
+export async function acceptSubstituteOffer(demandId: string): Promise<DemandStatusDto | null> {
   await apiFetch(`/api/members/me/demand/${demandId}/accept`, { method: 'PATCH' });
+  try {
+    const response = await apiFetch(`/api/members/me/demand/${demandId}`);
+    const dto = (await response.json()) as DemandItemDto;
+    return dto.status;
+  } catch {
+    return null;
+  }
 }
 
 /**

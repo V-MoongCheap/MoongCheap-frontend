@@ -137,7 +137,14 @@ export function SubstituteOfferView({ demandId, listHref }: SubstituteOfferViewP
   function handleConfirmAccept() {
     setIsAcceptOpen(false);
     acceptMutation.mutate(undefined, {
-      onSuccess: () => handleSettled(SUBSTITUTE_OFFER_TOAST.acceptSuccess),
+      // 수락 후 실제 상태로 완료 문구를 고른다. 편입 성공(ASSIGNED)이 아니라 되돌림(UNASSIGNED)이면
+      // 배정완료를 단정하지 않는 안내를 띄운다. 상태 미상(재조회 실패 → null)은 일반 완료로 폴백.
+      onSuccess: (status) =>
+        handleSettled(
+          status === 'UNASSIGNED'
+            ? SUBSTITUTE_OFFER_TOAST.acceptReverted
+            : SUBSTITUTE_OFFER_TOAST.acceptSuccess,
+        ),
       onError: handleError,
     });
   }

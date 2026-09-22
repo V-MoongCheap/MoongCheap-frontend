@@ -13,6 +13,7 @@ import { PRODUCT_DETAIL } from '@/constants/productMessages';
 import { WishButton } from '@/features/home/components/WishButton';
 import { QuickDealCard } from '@/features/product/components/QuickDealCard';
 import { cn } from '@/lib/cn';
+import { isRenderableImageSrc } from '@/lib/imageSource';
 import { fetchProductCatalogDetail } from '@/lib/productApi';
 import type { ProductDetail } from '@/types/product';
 
@@ -97,7 +98,10 @@ export function ProductDetailView({ product: initialProduct }: ProductDetailView
             aria-hidden
             className="bg-background-default absolute inset-0 flex items-center justify-center p-8"
           >
-            {product.thumbnailUrl !== undefined && (
+            {/* 백엔드가 주는 주소는 외부 절대 URL이라 `next/image`가 거부하고 예외를 던진다.
+                이미지 한 장이 아니라 화면 전체가 오류로 바뀌므로 그릴 수 있는 경로만 통과시킨다
+                (`lib/imageSource`). 못 그리면 이 자리를 비워 둔다. */}
+            {isRenderableImageSrc(product.thumbnailUrl) && (
               <div className="relative size-full">
                 <Image
                   alt=""
@@ -132,7 +136,9 @@ export function ProductDetailView({ product: initialProduct }: ProductDetailView
                   index > 0 && '-ml-3.5',
                 )}
               >
-                <Image alt="" className="object-cover" fill sizes="30px" src={thumb} />
+                {isRenderableImageSrc(thumb) && (
+                  <Image alt="" className="object-cover" fill sizes="30px" src={thumb} />
+                )}
               </span>
             ))}
             <span className="bg-background-default border-border-subtle rounded-4 -ml-2 flex items-center gap-1 border px-2.5 py-1">
@@ -149,7 +155,7 @@ export function ProductDetailView({ product: initialProduct }: ProductDetailView
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1 py-1">
               <span className="bg-surface-tertiary relative size-6 shrink-0 overflow-hidden rounded-full">
-                {product.brandLogoUrl !== undefined && (
+                {isRenderableImageSrc(product.brandLogoUrl) && (
                   <Image
                     alt=""
                     className="object-cover"

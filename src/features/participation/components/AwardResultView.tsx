@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import Image from 'next/image';
 
@@ -8,6 +8,7 @@ import { AlertDialog } from '@/components/ui/AlertDialog';
 import { useToast } from '@/components/ui/Toast';
 import { AWARD_RESULT_ASSETS } from '@/constants/assets';
 import { CANCEL_AWARD_DIALOG } from '@/constants/awardCancel';
+import { fetchAuctionResult } from '@/lib/auctionResultApi';
 import { formatWon } from '@/lib/formatPrice';
 import type { AwardResult } from '@/types/awardResult';
 
@@ -57,12 +58,39 @@ function SummaryRow({
 }
 
 interface AwardResultViewProps {
+  /** 조회 대상 수요보드 id. 경로 파라미터를 페이지가 그대로 넘긴다. */
+  demandBoardId: string;
+  /** 서버에서 그려 둔 mock. 조회가 성공하면 응답에 있는 값만 덮는다. */
   result: AwardResult;
 }
 
-export function AwardResultView({ result }: AwardResultViewProps) {
+export function AwardResultView({ demandBoardId, result: initialResult }: AwardResultViewProps) {
+  const [result, setResult] = useState(initialResult);
   const [isCancelOpen, setIsCancelOpen] = useState(false);
   const { showToast } = useToast();
+
+  // 낙찰 결과를 실데이터로 덮는다. 실패(미로그인·미배선·네트워크·해당 보드에 내 수요 없음)면
+  // mock을 유지한다. `ProductDetailView`와 같은 방식이다.
+  //
+  // 응답에 없는 값은 키 자체가 오지 않아 mock이 그대로 남는다. 지금 그렇게 남는 것은
+  // **낙찰 날짜**·**최종 응찰 수**·**브랜드/카테고리** 셋이다(이슈 #137로 백엔드에 요청해 두었다).
+  useEffect(() => {
+    if (!/^\d+$/.test(demandBoardId)) {
+      return;
+    }
+    let active = true;
+    fetchAuctionResult(demandBoardId)
+      .then(({ patch }) => {
+        if (!active) return;
+        setResult((prev) => ({ ...prev, ...patch }));
+      })
+      .catch(() => {
+        // 조회 실패는 정상 경로(로그인 전·백엔드 미기동). mock 그대로 보여준다.
+      });
+    return () => {
+      active = false;
+    };
+  }, [demandBoardId]);
 
   // 낙찰 취소 확정(mock). 실제 서버 취소·화면 이탈은 BE 연동 시. 지금은 안내 토스트만 띄운다.
   function handleConfirmCancel() {

@@ -9,6 +9,12 @@ import type { ParticipationStatus } from '@/constants/participationStatus';
 export interface ParticipationItem {
   /** 수요 id(문자열화). 라우트 파라미터·리스트 key. */
   readonly id: string;
+  /**
+   * 수요보드 id. 낙찰 결과(B-19) 조회가 수요가 아니라 **보드** 기준이라
+   * (`GET /api/demand-boards/{id}/auction-result`) 카드가 이동 경로를 만들 때 쓴다.
+   * 보드 미배정(방금 등록한 모이는 중) 수요는 `demandBoard`가 null이라 undefined다.
+   */
+  readonly demandBoardId?: number;
   /** 상품명. 시안 카드 제목(볼드). 출처: `catalog.name`. */
   readonly productName: string;
   /** 규격 요약. 시안 카드 부제. 출처: `catalog.specSummary`. 없으면 undefined(부제 생략). */

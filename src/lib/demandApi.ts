@@ -216,6 +216,7 @@ function toParticipationItem(dto: DemandItemDto): ParticipationItem | null {
   }
   return {
     id: String(dto.id),
+    demandBoardId: dto.demandBoard?.id,
     productName: dto.catalog.name,
     specSummary: dto.catalog.specSummary ?? undefined,
     quantity: dto.quantity ?? undefined,

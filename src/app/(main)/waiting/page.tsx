@@ -18,7 +18,7 @@ export default function WaitingPage() {
   return (
     <main className="flex w-full flex-1 flex-col">
       <AppBar backHref="/" title="내 뭉치 참여 목록" />
-      <ParticipationList awardResultHref="/award-result" />
+      <ParticipationList awardResultBaseHref="/award-result" />
     </main>
   );
 }

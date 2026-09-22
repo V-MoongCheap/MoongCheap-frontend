@@ -66,12 +66,18 @@ function groupByDate(items: ParticipationItem[]): DateGroup[] {
 }
 
 interface ParticipationListProps {
-  /** 배정완료(낙찰) 카드 탭 시 이동할 낙찰 결과(B-19) 경로. 라우트 문자열은 페이지가 주입한다
-   *  (features/ 컴포넌트는 경로를 직접 들지 않는다 — exitHref·editHref 등과 같은 방침). */
-  awardResultHref: string;
+  /**
+   * 배정완료(낙찰) 카드 탭 시 이동할 낙찰 결과(B-19) 경로의 앞부분. 라우트 문자열은 페이지가
+   * 주입한다(features/ 컴포넌트는 경로를 직접 들지 않는다. exitHref·editHref 등과 같은 방침).
+   *
+   * 경로를 통째로 받지 않고 앞부분만 받는 이유는, 낙찰 결과 조회가 수요가 아니라 **보드** 기준이라
+   * (`GET /api/demand-boards/{id}/auction-result`) 카드마다 뒤에 붙는 id가 달라서다. 페이지는 서버
+   * 컴포넌트라 경로를 만드는 함수를 넘길 수 없다(함수는 client 경계를 넘지 못한다).
+   */
+  awardResultBaseHref: string;
 }
 
-export function ParticipationList({ awardResultHref }: ParticipationListProps) {
+export function ParticipationList({ awardResultBaseHref }: ParticipationListProps) {
   const [tab, setTab] = useState<ParticipationTab>(PARTICIPATION_TAB_ALL);
   const [cancelTarget, setCancelTarget] = useState<ParticipationItem | null>(null);
   // 낙찰 취소는 아직 mock이다(백엔드 DELETE는 "MVP 범위 X"·별도 이슈 후속). 확정 시 취소한 수요를
@@ -98,9 +104,12 @@ export function ParticipationList({ awardResultHref }: ParticipationListProps) {
 
   // 카드 본문 탭 → 상세. 배정완료(낙찰됨)는 낙찰 결과(B-19)로 보낸다. 그 외 상태의 상세는
   // 수요 상세(B-12)인데 라우트 부재라 '준비 중' 토스트로 둔다.
+  //
+  // 배정완료라면 보드가 배정돼 있어 `demandBoardId`가 있다. 그래도 없으면(응답이 보드를 생략한
+  // 비정상 데이터) id 없는 경로로 보내 404를 만들지 말고 '준비 중'으로 떨어뜨린다.
   function openDetail(item: ParticipationItem) {
-    if (item.status === 'ALLOCATED') {
-      router.push(awardResultHref);
+    if (item.status === 'ALLOCATED' && item.demandBoardId !== undefined) {
+      router.push(`${awardResultBaseHref}/${encodeURIComponent(item.demandBoardId)}`);
       return;
     }
     showComingSoon();

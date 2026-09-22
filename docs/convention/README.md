@@ -1,7 +1,6 @@
 # MoongCheap 협업 규칙
 
 브랜치 전략 · 커밋 규칙 · PR 규칙을 정리한 문서입니다.
-[menhering-app](https://github.com/MENHERING/menhering-app)의 협업 규칙 문서에서 **도메인과 무관한 부분만 발췌**했습니다.
 
 > 코드 스타일·폴더 구조·API 컨벤션은 아직 이 저장소에 없습니다. 백엔드 API 규격과 화면이 확정된 뒤에 작성합니다. ([`docs/deferred-setup.md`](../deferred-setup.md) 참고)
 

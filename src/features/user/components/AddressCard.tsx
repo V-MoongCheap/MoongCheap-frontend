@@ -82,7 +82,8 @@ export function AddressCard({
 
         <div className="flex w-full flex-col gap-1">
           <p className="text-body-14 text-content-primary w-full">
-            {street}, {addressDetail} ({postalCode})
+            {/* 상세주소는 선택 항목이다. 비어 있으면 쉼표까지 빼야 `주소, (우편번호)`가 되지 않는다. */}
+            {addressDetail === '' ? street : `${street}, ${addressDetail}`} ({postalCode})
           </p>
           <p className="text-caption-12 text-content-quarternary w-full">
             공동현관번호: {entranceCode ?? '미입력'}

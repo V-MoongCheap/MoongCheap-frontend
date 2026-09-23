@@ -4,6 +4,7 @@ import { ComingSoonButton } from '@/components/ui/ComingSoonButton';
 import { HOME_SECTIONS } from '@/constants/homeMessages';
 import { HorizontalScroller } from '@/features/home/components/HorizontalScroller';
 import { SectionHeader } from '@/features/home/components/SectionHeader';
+import { isRenderableImageSrc } from '@/lib/imageSource';
 import type { HomeBrandDeal } from '@/types/home';
 
 // card-list-5(현재 인기 브랜드딜). 시안 `981:18299`. 카드 260×142 + 아래 두 줄.
@@ -28,7 +29,8 @@ export function BrandDealSection({ deals }: BrandDealSectionProps) {
             key={deal.id}
           >
             <span className="rounded-8 bg-background-default relative block h-[142px] w-full overflow-hidden">
-              {deal.imageUrl !== undefined && (
+              {/* 그릴 수 있는 경로만 통과시킨다. 이유는 `lib/imageSource` 참고(`ProductCard`와 같다). */}
+              {isRenderableImageSrc(deal.imageUrl) && (
                 <Image alt="" className="object-cover" fill sizes="260px" src={deal.imageUrl} />
               )}
               {/*

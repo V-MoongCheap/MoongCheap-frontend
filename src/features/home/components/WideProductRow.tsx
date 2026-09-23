@@ -3,6 +3,7 @@ import Link from 'next/link';
 
 import { HOME_CARD } from '@/constants/homeMessages';
 import { TimeBadge } from '@/features/home/components/TimeBadge';
+import { isRenderableImageSrc } from '@/lib/imageSource';
 import type { HomeProductCard } from '@/types/home';
 
 // card-list-7(현재 인기 공구 상품)의 넓은 가로 카드. 시안 `981:18321`(310×120).
@@ -33,7 +34,8 @@ export function WideProductRow({ product, href }: WideProductRowProps) {
   return (
     <Link href={href} className="flex w-[310px] items-start gap-2 text-left">
       <span className="rounded-8 bg-surface-tertiary relative block size-[120px] shrink-0 overflow-hidden">
-        {product.thumbnailUrl !== undefined && (
+        {/* 그릴 수 있는 경로만 통과시킨다. 이유는 `lib/imageSource` 참고(`ProductCard`와 같다). */}
+        {isRenderableImageSrc(product.thumbnailUrl) && (
           <Image alt="" className="object-cover" fill sizes="120px" src={product.thumbnailUrl} />
         )}
         {hasTime && (

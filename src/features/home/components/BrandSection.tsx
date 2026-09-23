@@ -5,6 +5,7 @@ import { HOME_SECTIONS } from '@/constants/homeMessages';
 import { BrandProductRow } from '@/features/home/components/BrandProductRow';
 import { SectionHeader } from '@/features/home/components/SectionHeader';
 import { cn } from '@/lib/cn';
+import { isRenderableImageSrc } from '@/lib/imageSource';
 import type { HomeBrand, HomeProductCard } from '@/types/home';
 
 // card-list-8(브랜드별 인기 공구). 시안 `981:18329`.
@@ -36,8 +37,10 @@ export function BrandSection({ brands, products }: BrandSectionProps) {
               )}
               key={brand.id}
             >
-              {brand.logoUrl === undefined ? (
+              {!isRenderableImageSrc(brand.logoUrl) ? (
                 // 로고가 없으면 빈 버튼이 되어 표시 이름도 접근 가능한 이름도 사라진다.
+                // 앱이 그릴 수 없는 외부 절대 주소도 같이 걸러 이름으로 대체한다. 그대로 넘기면
+                // `next/image`가 예외를 던져 홈 화면 전체가 오류로 바뀐다(`lib/imageSource`).
                 <span className="text-caption-10 text-content-primary flex size-full items-center justify-center px-1 text-center">
                   {brand.name}
                 </span>

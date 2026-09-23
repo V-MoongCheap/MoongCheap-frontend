@@ -5,6 +5,7 @@ import { HOME_CARD } from '@/constants/homeMessages';
 import { TimeBadge } from '@/features/home/components/TimeBadge';
 import { WishButton } from '@/features/home/components/WishButton';
 import { cn } from '@/lib/cn';
+import { isRenderableImageSrc } from '@/lib/imageSource';
 import type { HomeProductCard } from '@/types/home';
 
 // 가로 스크롤 섹션의 세로 카드(폭 121). 시안이 두 벌을 쓴다.
@@ -55,7 +56,10 @@ export function ProductCard({ product, href, variant = 'demand' }: ProductCardPr
             isSucceeded && 'border-border-subtle border',
           )}
         >
-          {product.thumbnailUrl !== undefined && (
+          {/* 앱이 그릴 수 있는 경로만 통과시킨다. 백엔드 썸네일은 외부 절대 URL이라 그대로 넘기면
+              `next/image`가 예외를 던지고 홈 화면 전체가 오류로 바뀐다(`lib/imageSource`).
+              못 그리면 위 컨테이너의 회색 배경이 그대로 남는다. */}
+          {isRenderableImageSrc(product.thumbnailUrl) && (
             <Image alt="" className="object-cover" fill sizes="121px" src={product.thumbnailUrl} />
           )}
 

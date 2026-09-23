@@ -5,9 +5,11 @@ import type {
   OrderListResponseDto,
   OrderListTabDto,
   OrderStatusDto,
+  OrderSummaryResponseDto,
   PageDto,
 } from '@/types/api/order';
 import type { OrderDetail, OrderItem, OrderListPage, OrderSummary } from '@/types/order';
+import type { OrderProgressCounts } from '@/types/user';
 
 import { apiFetch } from './api';
 
@@ -214,4 +216,28 @@ export async function getOrderDetail(orderNo: string): Promise<OrderDetail> {
   const response = await apiFetch(`/api/orders/${encodeURIComponent(orderNo)}`);
   const dto = (await response.json()) as OrderDetailResponseDto;
   return toOrderDetail(dto);
+}
+
+/**
+ * 마이페이지 진행 요약(B-26)의 단계별 건수. `GET /api/orders/summary`.
+ *
+ * 응답은 4단계고 화면은 5단계다. 배송요청(`DELIVERY_REQUESTED`)은 백엔드에 대응하는 주문 상태가
+ * 없어 집계되지 않으므로 `getOrderProgressCounts`가 0을 채운다. 칸을 지우지 않는 것은 디자인팀과 합의한 결정이다
+ * (이슈 #131, `constants/orderStatus.ts`의 `ORDER_PROGRESS_STEPS` 주석).
+ *
+ * 상태 이름이 다른 둘도 함께 옮긴다. `preparingShipment` → `PREPARING`, `shipped` → `SHIPPING`.
+ * 목록·상세가 쓰는 `STATUS_FROM_DTO`와 같은 대응이지만, 요약 응답은 상태 문자열이 아니라 필드명으로
+ * 단계를 나타내 표를 공유할 수 없다.
+ */
+export async function getOrderProgressCounts(): Promise<OrderProgressCounts> {
+  const response = await apiFetch('/api/orders/summary');
+  const dto = (await response.json()) as OrderSummaryResponseDto;
+
+  return {
+    PAYMENT_COMPLETED: dto.paymentCompleted,
+    DELIVERY_REQUESTED: 0,
+    PREPARING: dto.preparingShipment,
+    SHIPPING: dto.shipped,
+    DELIVERED: dto.delivered,
+  };
 }

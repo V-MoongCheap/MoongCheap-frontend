@@ -15,7 +15,7 @@ import type { ActiveRole } from '@/types/user';
 // 전역 세션(#70)에서 프로필 카드를 그리는 client 조각. 마이페이지(B-26)·프로필 설정(B-24)이
 // 함께 쓴다. 두 화면 모두 로그인 뒤에만 보이는 보호 화면이라, 미로그인이면 로그인 화면으로 돌린다.
 //
-// mock(mockGetMyPageOverview)이 아니라 GET /api/members/me의 실제 세션을 소비하는 첫 지점이다.
+// mock이 아니라 GET /api/members/me의 실제 세션을 소비하는 첫 지점이다.
 // 서버 페이지는 그대로 두고 이 카드만 client 경계로 잘라, 조회 중/실패/미로그인 상태를 이 안에서
 // 처리한다(홈 피드의 영역별 스켈레톤과 같은 방침).
 

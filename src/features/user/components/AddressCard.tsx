@@ -36,8 +36,11 @@ interface AddressCardProps {
   onDefaultFocused?: () => void;
 }
 
+// 폭은 글자 + 좌우 여백으로 잡는다. 시안의 54px은 두 글자('수정'·'삭제', ≈21px)에 양옆 ≈16px이
+// 붙은 값이라, 고정 폭으로 두면 '기본 지정'(≈44px)은 여백이 5px로 줄어 카드 가장자리에 붙는다.
+// 최소 폭 54px은 두 글자 액션을 시안 그대로 두기 위한 것이다.
 const ACTION_CLASS =
-  'text-label-12 text-content-quarternary flex w-[54px] items-center justify-center py-2 disabled:opacity-40';
+  'text-label-12 text-content-quarternary flex min-w-[54px] items-center justify-center px-4 py-2 disabled:opacity-40';
 
 export function AddressCard({
   address,

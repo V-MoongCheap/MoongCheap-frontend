@@ -75,12 +75,18 @@ interface DemandFormViewProps {
   backHref: string;
   /** 등록 후 이동할 내 참여 목록(B-17). 라우트는 호출부(page)가 정한다. */
   participationListHref: string;
+  /**
+   * 없는 상품(404)에서 돌아갈 히스토리가 없을 때 갈 곳. `backHref`(상품 상세)는 같은 상품이라
+   * 역시 404이므로 따로 받는다. 라우트는 호출부(page)가 정한다.
+   */
+  notFoundHref: string;
 }
 
 export function DemandFormView({
   product: initialProduct,
   backHref,
   participationListHref,
+  notFoundHref,
 }: DemandFormViewProps) {
   // 상품 요약을 도감 실데이터로 덮는다. B-08과 같은 조회라 두 화면이 같은 상품을 보여 준다.
   // 서버에서 받은 mock은 모르는 id에 코어맥스 상품을 돌려주므로, 덮지 않으면 다른 상품이 보인다.
@@ -164,7 +170,7 @@ export function DemandFormView({
       <div className="max-w-mobile bg-surface-primary mx-auto flex min-h-svh w-full flex-col">
         <AppBar backHref={backHref} title={DEMAND_FORM_MESSAGES.appBarTitle} />
         {status === 'notFound' ? (
-          <NotFoundScreen fallbackHref="/" />
+          <NotFoundScreen fallbackHref={notFoundHref} />
         ) : (
           <div aria-busy className="p-4">
             <Skeleton className="h-24 w-full" />

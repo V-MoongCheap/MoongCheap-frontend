@@ -41,11 +41,14 @@ interface ProductDetailViewProps {
   product: ProductDetail;
   /** 하단 CTA '뭉치 참여하기'가 갈 곳. 라우트는 호출부(page)가 정한다. */
   participateHref: string;
+  /** 없는 상품(404)에서 돌아갈 히스토리가 없을 때 갈 곳. 라우트는 호출부(page)가 정한다. */
+  notFoundHref: string;
 }
 
 export function ProductDetailView({
   product: initialProduct,
   participateHref,
+  notFoundHref,
 }: ProductDetailViewProps) {
   // 상품 도감 상세를 실데이터로 덮는다. 실패(미로그인·미배선·네트워크)면 mock 유지.
   // 수요 등록(B-09)도 같은 상품을 보여 줘야 해서 훅으로 뺐다.
@@ -64,9 +67,9 @@ export function ProductDetailView({
   const hasDescription = product.description !== undefined && product.description !== '';
   const clampDescription = descriptionOverflows && !descriptionExpanded;
 
-  // 없는 상품 주소로 공유·직접 진입하면 뒤로 갈 곳이 없어 홈을 출구로 준다.
+  // 없는 상품 주소로 공유·직접 진입하면 뒤로 갈 곳이 없어 호출부가 준 출구로 보낸다.
   if (status === 'notFound') {
-    return <NotFoundScreen fallbackHref="/" />;
+    return <NotFoundScreen fallbackHref={notFoundHref} />;
   }
 
   // 조회 결과가 오기 전에 mock을 그리면 없는 상품·다른 상품이 잠깐 보인다. 이미지·상품명 자리만 잡는다.

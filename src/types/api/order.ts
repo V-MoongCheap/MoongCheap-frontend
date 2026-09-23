@@ -63,6 +63,30 @@ export interface PageDto<T> {
   last: boolean;
 }
 
+/**
+ * `GET /api/orders/summary` 응답(`OrderSummaryResponse`). 마이페이지 진행 요약(B-26)이 쓴다.
+ *
+ * 세션 기준 본인 주문만 집계하고, 0건인 단계도 키를 빼지 않는다.
+ *
+ * ⚠️ 키 표기가 이슈 #137 본문의 예시(`PAYMENT_COMPLETED` 같은 대문자)와 다르다. 백엔드는 Jackson
+ *    네이밍 전략을 설정하지 않아 record 필드명이 그대로 나간다. 로컬에서 실제 응답을 확인했다
+ *    (2026-09-23): `{"paymentCompleted":3,"preparingShipment":3,"shipped":3,"delivered":2}`.
+ *
+ * ⚠️ 화면은 5단계인데 응답은 4개다. 배송요청(`DELIVERY_REQUESTED`)에 해당하는 주문 상태가 백엔드에
+ *    없어(결제완료 → 상품준비중 직행) 집계 대상이 아니다. 칸은 유지하고 0으로 채우기로 디자인팀과
+ *    합의했다(이슈 #131). 변환은 `lib/orderApi.ts`가 한다.
+ */
+export interface OrderSummaryResponseDto {
+  /** 결제완료. */
+  paymentCompleted: number;
+  /** 배송준비중. 화면 레지스트리의 `PREPARING`이다. */
+  preparingShipment: number;
+  /** 배송중. 화면 레지스트리의 `SHIPPING`이다. */
+  shipped: number;
+  /** 배송완료. */
+  delivered: number;
+}
+
 /** `GET /api/orders/{orderNo}` 응답. */
 export interface OrderDetailResponseDto {
   orderDate: string;

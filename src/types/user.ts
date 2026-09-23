@@ -27,14 +27,9 @@ export type ActiveRole = 'buyer' | 'seller';
 export type OrderProgressStatus =
   'PAYMENT_COMPLETED' | 'DELIVERY_REQUESTED' | 'PREPARING' | 'SHIPPING' | 'DELIVERED';
 
-/** 단계별 주문 건수. 0건도 자리를 차지하므로 전 단계를 채운다. */
+/**
+ * 단계별 주문 건수. 0건도 자리를 차지하므로 전 단계를 채운다.
+ *
+ * 백엔드 요약 응답은 4단계뿐이라 `lib/orderApi.ts`가 배송요청 칸을 0으로 채워 이 모양으로 맞춘다.
+ */
 export type OrderProgressCounts = Record<OrderProgressStatus, number>;
-
-/** 마이페이지 홈(B-26)이 한 번에 필요로 하는 데이터. */
-export interface MyPageOverview {
-  nickname: string;
-  email: string;
-  /** 프로필 카드의 전환 버튼 라벨과 전환 시트의 '현재상태' 표시를 가른다. */
-  role: ActiveRole;
-  orderProgress: OrderProgressCounts;
-}

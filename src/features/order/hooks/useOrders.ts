@@ -3,7 +3,7 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
 import type { OrderListTabKey } from '@/constants/orderStatus';
-import { getOrderDetail, getOrders } from '@/lib/orderApi';
+import { getOrderDetail, getOrderProgressCounts, getOrders } from '@/lib/orderApi';
 import { shouldRetryQuery } from '@/lib/queryRetry';
 
 // 주문 조회 캐시(B-21 · B-28). 세션(`features/auth/session.ts`)처럼 TanStack Query 키로 공유한다.
@@ -14,6 +14,7 @@ import { shouldRetryQuery } from '@/lib/queryRetry';
 export const ORDER_QUERY_KEYS = {
   list: (tab: OrderListTabKey) => ['orders', 'list', tab] as const,
   detail: (orderNo: string) => ['orders', 'detail', orderNo] as const,
+  progressCounts: ['orders', 'progress-counts'] as const,
 };
 
 /** 주문 목록. 20건씩 이어 붙인다(`BR-B21-01-11`). 페이지 번호는 0부터다. */
@@ -32,6 +33,20 @@ export function useOrderDetail(orderNo: string) {
   return useQuery({
     queryKey: ORDER_QUERY_KEYS.detail(orderNo),
     queryFn: () => getOrderDetail(orderNo),
+    retry: shouldRetryQuery,
+  });
+}
+
+/**
+ * 마이페이지 진행 요약(B-26)의 단계별 건수.
+ *
+ * 목록 캐시와 키를 나눈다. 요약은 전체 주문을 집계한 값이라 특정 탭 목록에서 끌어낼 수 없고,
+ * 두 화면이 서로를 다시 받게 만들 이유도 없다.
+ */
+export function useOrderProgressCounts() {
+  return useQuery({
+    queryKey: ORDER_QUERY_KEYS.progressCounts,
+    queryFn: getOrderProgressCounts,
     retry: shouldRetryQuery,
   });
 }

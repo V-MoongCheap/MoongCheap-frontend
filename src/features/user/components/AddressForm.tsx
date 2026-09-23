@@ -22,8 +22,9 @@ import {
   ENTRANCE_CODE_MAX_LENGTH,
   PHONE_MAX_LENGTH,
   RECIPIENT_MAX_LENGTH,
-  addressSchema,
+  createAddressSchema,
   type AddressFormValues,
+  type SavedContact,
 } from '@/schemas/address';
 
 // B-30 배송지 등록·수정 폼. `FN-B30-02`.
@@ -55,6 +56,11 @@ interface AddressFormProps {
   /** 수정 화면에서 기존 값을 채워 넣는다. 없으면 등록. */
   defaultValues?: AddressFormValues;
   /**
+   * 수정 화면의 받는 분·휴대폰 저장값. 프론트 규칙에 안 맞아도 그대로면 통과시킨다
+   * (`schemas/address.ts`의 `SavedContact` 주석). 등록 화면은 넘기지 않는다.
+   */
+  savedContact?: SavedContact;
+  /**
    * '기본 배송지로 설정'을 체크한 채 잠근다. 두 경우에 해제할 수 없다.
    * - 최초 등록(목록 0건): 첫 배송지는 무조건 기본이 된다(구성 요소 `BR-04`)
    * - 현재 기본배송지 수정: 해제하면 기본배송지가 0건이 된다(`BR-B30-02-06`)
@@ -73,15 +79,19 @@ export function AddressForm({
   successHref,
   defaultValues = EMPTY_VALUES,
   lockDefault = false,
+  savedContact,
   onSave,
 }: AddressFormProps) {
   const router = useRouter();
   const { open } = useDaumPostcode();
   const { showToast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
+  // defaultValues처럼 마운트 때 한 번만 만든다. 호출부가 매 렌더 새 객체를 넘겨도 resolver가
+  // 바뀌지 않는다.
+  const [schema] = useState(() => createAddressSchema(savedContact));
 
   const { register, handleSubmit, setValue, control, formState } = useForm<AddressFormValues>({
-    resolver: zodResolver(addressSchema),
+    resolver: zodResolver(schema),
     // 잠긴 경우 값도 체크된 상태로 시작해야 한다. 체크박스를 disabled로만 두면 표시는 꺼진 채
     // 잠겨 버린다.
     defaultValues: lockDefault ? { ...defaultValues, isDefault: true } : defaultValues,

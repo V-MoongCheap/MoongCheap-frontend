@@ -22,7 +22,7 @@ export default function AddressListPage() {
   return (
     <main className="bg-background-default flex w-full flex-1 flex-col pb-6">
       <AppBar backHref="/mypage" title="배송지 목록" />
-      <AddressListView createHref="/mypage/addresses/new" />
+      <AddressListView createHref="/mypage/addresses/new" editBaseHref="/mypage/addresses" />
     </main>
   );
 }

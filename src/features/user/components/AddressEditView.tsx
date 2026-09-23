@@ -8,7 +8,7 @@ import { ERROR_SCREEN_RETRY_LABEL } from '@/constants/commonMessages';
 import { AddressForm } from '@/features/user/components/AddressForm';
 import { ADDRESS_QUERY_KEYS, useAddress } from '@/features/user/hooks/useAddresses';
 import { setDefaultAddress, updateAddress } from '@/lib/addressApi';
-import { PHONE_PATTERN, RECIPIENT_PATTERN, type AddressFormValues } from '@/schemas/address';
+import type { AddressFormValues } from '@/schemas/address';
 import type { AddressDetail } from '@/types/address';
 import { ADDRESS_ERROR_CODE } from '@/types/api/address';
 
@@ -29,12 +29,8 @@ interface AddressEditViewProps {
 }
 
 /**
- * 저장된 값을 폼 초기값으로 옮긴다.
- *
- * 받는 분·휴대폰은 프론트 규칙이 백엔드보다 좁다(백엔드는 공백·10자리 번호도 받는다). 프론트를
- * 거치지 않고 저장된 값이 그대로 들어오면, 그 칸을 건드리지 않는 한 확인 버튼이 잠긴 채 이유가
- * 보이지 않는다(폼은 오류 문구 없이 버튼 잠금으로만 검증을 알린다). 그래서 규칙에 안 맞는 값은
- * 비워서 넘긴다 — 빈 칸과 플레이스홀더가 다시 입력할 곳을 알려 준다.
+ * 저장된 값을 폼 초기값으로 옮긴다. 받는 분·휴대폰이 프론트 규칙에 안 맞아도 그대로 채운다 —
+ * 폼이 `savedContact`로 저장값을 인정한다(`schemas/address.ts`의 `SavedContact` 주석).
  */
 function toFormValues(address: AddressDetail): AddressFormValues {
   return {
@@ -45,8 +41,8 @@ function toFormValues(address: AddressDetail): AddressFormValues {
     // 저장된 값이 없다는 것은 '없음'을 골랐다는 뜻이다(스키마상 둘 중 하나는 채워진다).
     noEntranceCode: address.entranceCode === undefined,
     name: address.name,
-    recipient: RECIPIENT_PATTERN.test(address.recipient) ? address.recipient : '',
-    phone: PHONE_PATTERN.test(address.phoneRaw) ? address.phoneRaw : '',
+    recipient: address.recipient,
+    phone: address.phoneRaw,
     isDefault: address.isDefault,
   };
 }
@@ -109,6 +105,7 @@ export function AddressEditView({ addressId, successHref }: AddressEditViewProps
       defaultValues={toFormValues(current)}
       lockDefault={current.isDefault}
       onSave={handleSave}
+      savedContact={{ recipient: current.recipient, phone: current.phoneRaw }}
       successHref={successHref}
     />
   );

@@ -12,6 +12,8 @@ import type { DemandStatusDto } from '@/types/api/demand';
 // 안에서는 다시 받지 않는다. 조회가 클라이언트인 이유는 `lib/demandApi.ts` 주석 참고.
 
 export const DEMAND_QUERY_KEYS = {
+  /** 탭 전체를 한 번에 무효화할 때 쓰는 접두 키. 수요를 새로 등록하면 모든 탭이 낡는다. */
+  all: ['demands'] as const,
   list: (tab: ParticipationTab) => ['demands', 'list', tab] as const,
 };
 

@@ -18,12 +18,26 @@ import { formatWon } from './formatPrice';
  * 백엔드 소스(V-MoongCheap/MoongCheap-backend@develop `DemandController`·`DemandCreateRequestDto`·
  * `DemandService.create`)로 규격을 확인해 작성했다(2026-09-17).
  *
- * 🔴 **제출 배선 보류 사유(#112)**: `payMethodId`는 필수이고, `DemandService.create`가 회원의
- *    ACTIVE 브랜드페이 결제수단 존재를 검증한다(`existsByIdAndMemberIdAndStatus`). 그런데 백엔드에
- *    결제수단을 등록·조회하는 엔드포인트가 아직 없어(토스 브랜드페이 미배선) 프론트가 유효한
- *    `payMethodId`를 얻을 방법이 없다. 그래서 이 모듈(요청/매핑/호출)은 완성해 두되, 실제 제출은
- *    결제수단 조회 API가 생긴 뒤 화면에서 연결한다. 그 전까지 `DemandFormView`는 준비중을 알린다.
+ * 제출은 `DemandFormView`가 연결한다(#148). 필수값 `payMethodId`는 결제수단 등록 화면(B-14)이
+ * 아직 없어 `TEMPORARY_PAY_METHOD_ID`로 고정해 보낸다(아래 상수 주석).
  */
+
+/**
+ * 수요 등록·보드 참가 요청에 넣는 임시 결제수단 id(#148).
+ *
+ * 결제수단 등록 화면(B-14, 토스 브랜드페이 SDK)이 없어 사용자가 자기 결제수단을 만들 수 없다.
+ * 그래서 백엔드 팀장님과 협의해 1로 고정하고, 백엔드가 이 값을 받아 주도록 함께 수정한다.
+ *
+ * ⚠️ 백엔드 수정 전에는 `DemandService`가 결제수단 주인과 ACTIVE 상태를 검사해
+ *    (`existsByIdAndMemberIdAndStatus`) 1번 결제수단 주인이 아닌 계정은 404(`PAY_001`)를 받는다.
+ *
+ * ⚠️ 이 값은 저장만 되고 끝나지 않는다. 낙찰 후 주문 생성(`OrderService`)과 자동결제
+ *    (`PaymentExecutionService`)까지 그대로 이어진다. 운영 전에 되돌려야 한다.
+ *
+ * 제거 조건: B-14가 붙으면 `GET /api/payments/methods`로 본인의 ACTIVE 결제수단을 조회해 넣고
+ * 이 상수를 지운다. 사용처는 이 상수를 import하는 곳뿐이다.
+ */
+export const TEMPORARY_PAY_METHOD_ID = 1;
 
 /**
  * `POST /api/members/me/demand` 요청 바디. 백엔드 `DemandCreateRequestDto`(record)와 필드가 일치한다.
@@ -53,7 +67,8 @@ export interface DemandCreateRequestDto {
 /**
  * 화면이 분기하는 수요 등록 고유 에러 코드(백엔드 `ErrorCode`). `ApiError.code`로 온다.
  * - `DEMAND_001`: 같은 카탈로그에 진행 중인 수요가 이미 있음(409).
- * - `PAY_001`   : 유효한 결제수단이 없음(404). payMethodId 미배선 상태에서 나오는 코드.
+ * - `PAY_001`   : 유효한 결제수단이 없음(404). 백엔드가 `TEMPORARY_PAY_METHOD_ID`를 받도록 수정되기
+ *                 전에는 1번 결제수단 주인이 아닌 계정에서 이 코드가 온다.
  */
 export const DEMAND_ERROR_CODE = {
   ALREADY_EXISTS: 'DEMAND_001',

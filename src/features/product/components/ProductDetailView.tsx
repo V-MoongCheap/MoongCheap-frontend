@@ -12,9 +12,9 @@ import { GoBackButton } from '@/components/ui/GoBackButton';
 import { PRODUCT_DETAIL } from '@/constants/productMessages';
 import { WishButton } from '@/features/home/components/WishButton';
 import { QuickDealCard } from '@/features/product/components/QuickDealCard';
+import { useProductCatalogOverlay } from '@/features/product/hooks/useProductCatalogOverlay';
 import { cn } from '@/lib/cn';
 import { isRenderableImageSrc } from '@/lib/imageSource';
-import { fetchProductCatalogDetail } from '@/lib/productApi';
 import type { ProductDetail } from '@/types/product';
 
 // B-08 상품 상세 화면 본문. 시안 node 1153:72748(퀵 참여 0건) / 1153:73735(3건).
@@ -36,42 +36,20 @@ const DESCRIPTION_COLLAPSED_MAX = 240;
 
 interface ProductDetailViewProps {
   product: ProductDetail;
+  /** 하단 CTA '뭉치 참여하기'가 갈 곳. 라우트는 호출부(page)가 정한다. */
+  participateHref: string;
 }
 
-export function ProductDetailView({ product: initialProduct }: ProductDetailViewProps) {
-  const [product, setProduct] = useState(initialProduct);
+export function ProductDetailView({
+  product: initialProduct,
+  participateHref,
+}: ProductDetailViewProps) {
+  // 상품 도감 상세를 실데이터로 덮는다. 실패(미로그인·미배선·네트워크)면 mock 유지.
+  // 수요 등록(B-09)도 같은 상품을 보여 줘야 해서 훅으로 뺐다.
+  const product = useProductCatalogOverlay(initialProduct);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [descriptionOverflows, setDescriptionOverflows] = useState(false);
   const descriptionRef = useRef<HTMLParagraphElement>(null);
-
-  // 상품 도감 상세를 실데이터로 덮는다. 실패(미로그인·미배선·네트워크)면 mock 유지.
-  useEffect(() => {
-    // 백엔드 id는 숫자 Long이다. 홈 목의 문자열 id(demand-1 등)는 확정 400이 나므로 호출을 건너뛴다.
-    if (!/^\d+$/.test(initialProduct.id)) {
-      return;
-    }
-    let active = true;
-    fetchProductCatalogDetail(initialProduct.id)
-      .then((dto) => {
-        if (!active) return;
-        setProduct((prev) => ({
-          ...prev,
-          name: dto.name,
-          spec: dto.specSummary ?? prev.spec,
-          thumbnailUrl: dto.thumbnailUrl,
-          listPrice: dto.listPrice ?? prev.listPrice,
-          // 조회 성공 시 description은 서버 값을 그대로 반영한다. null이면 undefined로 두어
-          // 상품설명 섹션을 숨긴다(mock 설명으로 대체하지 않는다 — 다른 상품 문구 노출 방지).
-          description: dto.description ?? undefined,
-        }));
-      })
-      .catch(() => {
-        // 조회 실패는 정상 경로(로그인 전·백엔드 미기동). mock 그대로 보여준다.
-      });
-    return () => {
-      active = false;
-    };
-  }, [initialProduct.id]);
 
   // 상품설명이 접힘 높이를 넘는지 측정해 자세히 보기 노출을 결정한다(짧으면 버튼/페이드 없음).
   useEffect(() => {
@@ -261,13 +239,12 @@ export function ProductDetailView({ product: initialProduct }: ProductDetailView
         </section>
       </div>
 
-      {/* 하단 고정 CTA → 수요 등록·참여(B-09). 수요 등록 화면은 상품 하나에서 출발하므로 경로가
-          이 상품 아래에 있다(`app/products/[productId]/demand`). 두 화면이 같은 조회를 쓰기 때문에
-          여기서 그린 상품이면 그쪽에서도 같은 상품이 나온다. */}
+      {/* 하단 고정 CTA → 일정 타임라인(FN-B09-05) → [확인] → 수요 등록(B-09). 경로는 page가 준다.
+          수요 등록 화면도 `useProductCatalogOverlay`로 같은 조회를 해서 여기와 같은 상품이 나온다. */}
       <footer className="bg-background-default sticky bottom-0 w-full p-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
         <Link
           className="bg-surface-button-primary-default text-content-oncolor text-button-15 active:bg-surface-button-primary-pressed rounded-8 flex h-12 w-full items-center justify-center"
-          href={`/products/${encodeURIComponent(product.id)}/demand`}
+          href={participateHref}
         >
           {PRODUCT_DETAIL.participateCta}
         </Link>

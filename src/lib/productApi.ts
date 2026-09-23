@@ -25,6 +25,21 @@ export interface ProductCatalogDetailDto {
 }
 
 /**
+ * 화면 상품 id(라우트 `productId`)를 백엔드 도감 id(Long)로 바꾼다. 바꿀 수 없으면 null.
+ *
+ * 홈 목 카드의 id는 `demand-1` 같은 문자열이라 백엔드로 보내면 도감 조회는 404, 수요 등록은
+ * `catalogId`가 NaN → JSON에서 null이 되어 400이 난다. 부르기 전에 여기서 걸러낸다.
+ * 2^53을 넘는 숫자는 `Number`가 반올림해 다른 id가 되므로 함께 막는다(`parseCreatedId`와 같은 이유).
+ */
+export function toCatalogId(id: string): number | null {
+  if (!/^\d+$/.test(id)) {
+    return null;
+  }
+  const catalogId = Number(id);
+  return Number.isSafeInteger(catalogId) ? catalogId : null;
+}
+
+/**
  * 상품 도감 상세 조회(FN-B08-01). `GET /api/product-catalog/{id}`.
  * id는 백엔드에서 Long이라 숫자 문자열이어야 한다(홈 목의 문자열 id로는 404가 난다).
  */

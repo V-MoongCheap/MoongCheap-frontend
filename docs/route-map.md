@@ -33,6 +33,7 @@
 | `/oauth/complete`                | 소셜 최초가입 미완료(약관+닉네임) 완료 스텝 | `(auth)`   |
 | `/oauth/failed`                  | 소셜 로그인 실패 안내                       | `(auth)`   |
 | `/products/[productId]`          | 상품 상세(B-08)                             | `products` |
+| `/products/[productId]/timeline` | 일정 타임라인(FN-B09-05). B-09 앞 단계      | `products` |
 | `/demands/[demandId]`            | 수요 상세(B-12)                             | `demands`  |
 | `/award-result`                  | 낙찰 성공 정보(B-19)                        | (root)     |
 | `/mypage`                        | 마이페이지(B-26)                            | `mypage`   |

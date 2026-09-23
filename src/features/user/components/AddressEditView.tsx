@@ -8,7 +8,8 @@ import { ERROR_SCREEN_RETRY_LABEL } from '@/constants/commonMessages';
 import { AddressForm } from '@/features/user/components/AddressForm';
 import { ADDRESS_QUERY_KEYS, useAddress } from '@/features/user/hooks/useAddresses';
 import { setDefaultAddress, updateAddress } from '@/lib/addressApi';
-import type { AddressFormValues } from '@/schemas/address';
+import { PHONE_PATTERN, RECIPIENT_PATTERN, type AddressFormValues } from '@/schemas/address';
+import type { AddressDetail } from '@/types/address';
 import { ADDRESS_ERROR_CODE } from '@/types/api/address';
 
 // B-30 배송지 수정 본문. `FN-B30-02`.
@@ -25,6 +26,29 @@ interface AddressEditViewProps {
   addressId: string;
   /** 저장 후 이동할 경로. 조회 실패 시 돌아갈 곳도 여기다. */
   successHref: string;
+}
+
+/**
+ * 저장된 값을 폼 초기값으로 옮긴다.
+ *
+ * 받는 분·휴대폰은 프론트 규칙이 백엔드보다 좁다(백엔드는 공백·10자리 번호도 받는다). 프론트를
+ * 거치지 않고 저장된 값이 그대로 들어오면, 그 칸을 건드리지 않는 한 확인 버튼이 잠긴 채 이유가
+ * 보이지 않는다(폼은 오류 문구 없이 버튼 잠금으로만 검증을 알린다). 그래서 규칙에 안 맞는 값은
+ * 비워서 넘긴다 — 빈 칸과 플레이스홀더가 다시 입력할 곳을 알려 준다.
+ */
+function toFormValues(address: AddressDetail): AddressFormValues {
+  return {
+    postalCode: address.postalCode,
+    address: address.address,
+    addressDetail: address.addressDetail,
+    entranceCode: address.entranceCode ?? '',
+    // 저장된 값이 없다는 것은 '없음'을 골랐다는 뜻이다(스키마상 둘 중 하나는 채워진다).
+    noEntranceCode: address.entranceCode === undefined,
+    name: address.name,
+    recipient: RECIPIENT_PATTERN.test(address.recipient) ? address.recipient : '',
+    phone: PHONE_PATTERN.test(address.phoneRaw) ? address.phoneRaw : '',
+    isDefault: address.isDefault,
+  };
 }
 
 export function AddressEditView({ addressId, successHref }: AddressEditViewProps) {
@@ -57,23 +81,24 @@ export function AddressEditView({ addressId, successHref }: AddressEditViewProps
     );
   }
 
+  // 조기 반환 뒤라 null이 아니다. 중첩 함수에서는 좁혀진 타입이 이어지지 않아 상수로 붙잡는다.
+  const current = address;
+
   // 수정 API는 기본 지정을 받지 않는다(별도 엔드포인트). 폼의 '기본 배송지로 설정'을 새로 체크했을
   // 때만 이어서 지정한다. 현재 기본이면 체크박스가 잠겨 있어 해제 경로는 없다(BR-B30-02-06).
   //
-  // 캐시는 성공·실패와 무관하게 버린다. 수정은 됐는데 기본 지정만 실패(409 SHIP_004 등)해도 목록과
-  // 단건 모두 이미 바뀌었다. 실패하면 폼이 토스트를 띄우고 남아 있으므로 다시 누르면 된다(PATCH는
-  // 같은 값을 또 보내도 결과가 같다).
+  // 목록 캐시는 성공·실패와 무관하게 버린다. 수정은 됐는데 기본 지정만 실패(409 SHIP_004 등)해도
+  // 목록은 이미 바뀌었다. 실패하면 폼이 토스트를 띄우고 남아 있으므로 다시 누르면 된다(PATCH는
+  // 같은 값을 또 보내도 결과가 같다). 단건 캐시는 이 화면을 떠나면 지워지므로(`useAddress`) 다시
+  // 받지 않는다 — 여기서 재조회하면 이동 직전에 버릴 요청을 기다리게 된다.
   async function handleSave(values: AddressFormValues) {
-    if (address === null) {
-      return;
-    }
     try {
-      await updateAddress(address, values);
-      if (values.isDefault && !address.isDefault) {
-        await setDefaultAddress(address.id);
+      await updateAddress(current, values);
+      if (values.isDefault && !current.isDefault) {
+        await setDefaultAddress(current.id);
       }
     } finally {
-      await queryClient.invalidateQueries({ queryKey: ADDRESS_QUERY_KEYS.all });
+      await queryClient.invalidateQueries({ queryKey: ADDRESS_QUERY_KEYS.list });
     }
   }
 
@@ -81,21 +106,10 @@ export function AddressEditView({ addressId, successHref }: AddressEditViewProps
     // 현재 기본배송지는 해제하면 기본이 0건이 된다. 다른 배송지를 기본으로 지정하는 방식으로만
     // 바꿀 수 있다(BR-B30-02-06).
     <AddressForm
-      lockDefault={address.isDefault}
+      defaultValues={toFormValues(current)}
+      lockDefault={current.isDefault}
       onSave={handleSave}
       successHref={successHref}
-      defaultValues={{
-        postalCode: address.postalCode,
-        address: address.address,
-        addressDetail: address.addressDetail,
-        entranceCode: address.entranceCode ?? '',
-        // 저장된 값이 없다는 것은 '없음'을 골랐다는 뜻이다(스키마상 둘 중 하나는 채워진다).
-        noEntranceCode: address.entranceCode === undefined,
-        name: address.name,
-        recipient: address.recipient,
-        phone: address.phone,
-        isDefault: address.isDefault,
-      }}
     />
   );
 }

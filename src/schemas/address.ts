@@ -12,10 +12,10 @@ import { z } from 'zod';
  */
 
 /** 저장값은 하이픈 없는 숫자 11자다(FN-B30-02 "숫자 11자 / 저장 시 하이픈 제거"). */
-const PHONE_PATTERN = /^01\d{9}$/;
+export const PHONE_PATTERN = /^01\d{9}$/;
 
 /** 받는 분은 한글·영문 2~20자만 받는다. 숫자·특수문자는 백엔드가 거부한다. */
-const RECIPIENT_PATTERN = /^[가-힣a-zA-Z]{2,20}$/;
+export const RECIPIENT_PATTERN = /^[가-힣a-zA-Z]{2,20}$/;
 
 /** 우편번호는 검색 결과가 채우는 5자리 숫자다. */
 const POSTAL_CODE_PATTERN = /^\d{5}$/;

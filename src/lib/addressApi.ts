@@ -1,5 +1,5 @@
 import type { AddressFormValues } from '@/schemas/address';
-import type { Address } from '@/types/address';
+import type { Address, AddressDetail } from '@/types/address';
 import type {
   ShippingAddressEditRequestDto,
   ShippingAddressRequestDto,
@@ -26,12 +26,10 @@ function emptyToUndefined(value: string | null): string | undefined {
 }
 
 /**
- * 응답 DTO를 화면용 타입으로 옮긴다.
+ * 목록 응답 DTO를 화면용 타입으로 옮긴다.
  *
- * ⚠️ `phone`은 조회 경로에 따라 모양이 다르다(필드명은 둘 다 `phoneNumberMasked`).
- * - 목록: 마스킹된 문자열(`010-****-5678`). `formatPhone`이 형식 불일치 시 원본을 그대로 돌려주므로
- *   카드에 마스킹 값이 그대로 보인다(의도한 표시다).
- * - 단건: 하이픈 없는 원본(`01012345678`). 수정 폼에 채워 그대로 다시 보낼 수 있다.
+ * `phone`은 마스킹된 문자열(`010-****-5678`)이다. `formatPhone`이 형식 불일치 시 원본을 그대로
+ * 돌려주므로 카드에 마스킹 값이 그대로 보인다(의도한 표시다).
  */
 function toAddress(dto: ShippingAddressResponseDto): Address {
   return {
@@ -47,6 +45,17 @@ function toAddress(dto: ShippingAddressResponseDto): Address {
     entranceCode: emptyToUndefined(dto.entranceCode),
     recipient: dto.recipientName,
     phone: dto.phoneNumberMasked,
+  };
+}
+
+/**
+ * 단건 응답 DTO를 수정 화면용 타입으로 옮긴다. 필드명은 목록과 같은 `phoneNumberMasked`지만
+ * 단건은 하이픈 없는 원본(`01012345678`)을 준다(백엔드 aac2c39).
+ */
+function toAddressDetail(dto: ShippingAddressResponseDto): AddressDetail {
+  return {
+    ...toAddress(dto),
+    phoneRaw: dto.phoneNumberMasked,
     requestMessage: emptyToUndefined(dto.requestMessage),
   };
 }
@@ -101,10 +110,10 @@ export async function getAddresses(): Promise<Address[]> {
  *
  * `GET /api/shipping-addresses/{id}`
  */
-export async function getAddress(id: string): Promise<Address> {
+export async function getAddress(id: string): Promise<AddressDetail> {
   const response = await apiFetch(`/api/shipping-addresses/${encodeURIComponent(id)}`);
   const data = (await response.json()) as ShippingAddressResponseDto;
-  return toAddress(data);
+  return toAddressDetail(data);
 }
 
 /**
@@ -127,10 +136,14 @@ export async function createAddress(values: AddressFormValues): Promise<string> 
  * 응답은 204에 본문이 없다.
  *
  * `current`(단건 조회 결과)를 받는 이유는 폼에 없는 필드를 보존하기 위해서다(`toEditRequestDto`).
+ * 목록의 `Address`는 받지 않는다 — 마스킹된 값을 기준으로 수정하는 경로를 타입으로 막는다.
  *
  * `PATCH /api/shipping-addresses/{id}`
  */
-export async function updateAddress(current: Address, values: AddressFormValues): Promise<void> {
+export async function updateAddress(
+  current: AddressDetail,
+  values: AddressFormValues,
+): Promise<void> {
   await apiFetch(`/api/shipping-addresses/${encodeURIComponent(current.id)}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

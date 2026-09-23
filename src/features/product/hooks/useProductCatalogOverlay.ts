@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { ApiError } from '@/lib/api';
-import { fetchProductCatalogDetail, toCatalogId } from '@/lib/productApi';
+import { PRODUCT_ERROR_CODE, fetchProductCatalogDetail, toCatalogId } from '@/lib/productApi';
 import type { ProductDetail } from '@/types/product';
 
 /**
@@ -63,8 +63,14 @@ export function useProductCatalogOverlay(initialProduct: ProductDetail): {
       })
       .catch((error: unknown) => {
         if (!active) return;
-        // 그 밖의 실패는 정상 경로(로그인 전·백엔드 미기동). mock 그대로 보여준다.
-        setStatus(error instanceof ApiError && error.status === 404 ? 'notFound' : 'fallback');
+        // 상태 코드만 보지 않고 코드까지 맞춘다. 게이트웨이·경로 설정 오류로 나는 404까지 없는
+        // 상품으로 읽으면 모든 상품이 404가 된다. 그 밖의 실패는 정상 경로(로그인 전·백엔드
+        // 미기동)라 mock 그대로 보여준다.
+        const isNotFound =
+          error instanceof ApiError &&
+          error.status === 404 &&
+          error.code === PRODUCT_ERROR_CODE.NOT_FOUND;
+        setStatus(isNotFound ? 'notFound' : 'fallback');
       });
     return () => {
       active = false;

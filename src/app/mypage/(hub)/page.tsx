@@ -16,8 +16,8 @@ export const metadata: Metadata = {
 // 하단 탭바(홈·대기·MY)의 목적지이자 탭 루트라 `(hub)` 그룹에 두어 탭바 셸(../(hub)/layout)을 입는다.
 // 상세 화면(프로필 설정·배송지 등)은 이 그룹 밖에 있어 탭바가 붙지 않는다.
 //
-// 페이지는 서버 컴포넌트다. 세션이 필요한 두 조각(프로필 카드·진행 요약)만 client 경계를 만들고,
-// 미구현 진입점의 '준비 중' 토스트는 `ComingSoonButton` 리프에서 만든다.
+// 페이지는 서버 컴포넌트다. 세션이 필요한 `SessionProfileCard`와 `SessionOrderProgressSummary`만
+// client 경계를 만들고, 미구현 진입점의 '준비 중' 토스트는 `ComingSoonButton` 리프에서 만든다.
 //
 // 시안의 진입점 중 화면이 아직 없는 것이 많다. 링크로 두면 404가 나므로 경로를 비워 토스트로
 // 돌린다(의사결정 기록 2026-08-28 "미구현 진입점 인터랙션은 토스트 일괄 표시").
@@ -29,9 +29,10 @@ export default function MyPage() {
       </header>
 
       <div className="flex w-full flex-col gap-6 px-4">
-        {/* 프로필 카드는 전역 세션(GET /api/members/me)을 소비하는 client 조각이다(#70). 조회 중·
-            실패·미로그인 처리를 이 안에서 하고, 나머지(주문 요약 등)는 서버 렌더로 남는다.
-            전환 버튼(시트)은 그 안에서 함께 그린다 — 시트의 '판매자' 선택은 S-01로 보낸다
+        {/* 프로필 카드는 전역 세션(GET /api/members/me)을 소비하는 client 컴포넌트다(#70). 조회 중·
+            실패·미로그인 처리를 `SessionProfileCard`가 맡는다. 아래 주문 요약
+            (`SessionOrderProgressSummary`)도 같은 이유로 client 경계이고, 나머지는 서버 렌더로 남는다.
+            전환 버튼(시트)은 `SessionProfileCard`가 함께 그린다. 시트의 '판매자' 선택은 S-01로 보낸다
             (기능명세 FN-B26-01이 판매자 전환을 미확정으로 남겨, IA의 판매자 전환 → S-01 매핑을 따랐다). */}
         <SessionProfileCard
           editHref="/mypage/profile/edit"

@@ -6,13 +6,15 @@ import { ORDER_PROGRESS_STEPS } from '@/constants/orderStatus';
 import { useOrderProgressCounts } from '@/features/order/hooks/useOrders';
 import { OrderProgressSummary } from '@/features/user/components/OrderProgressSummary';
 
-// 마이페이지(B-26) 진행 요약을 실 API로 그리는 client 조각. `SessionProfileCard`와 같은 방침이다.
+// 마이페이지(B-26) 진행 요약을 실 API로 그리는 client 컴포넌트. `SessionProfileCard`와 같은 방침이다.
 //
 // 세션이 SID httpOnly 쿠키라 서버 컴포넌트에서 부르면 쿠키 없이 나가 401이 된다(`lib/orderApi.ts`
-// 주석). 그래서 페이지는 서버 컴포넌트로 두고 이 조각만 잘라 조회 중·실패 상태를 안에서 처리한다.
+// 주석). 그래서 `app/mypage/(hub)/page.tsx`는 서버 컴포넌트로 두고 요약 부분만 잘라 냈다.
+// 조회 중·실패 상태는 `SessionOrderProgressSummary`가 직접 처리한다.
 //
-// 미로그인 처리는 여기서 하지 않는다. 같은 화면의 `SessionProfileCard`가 세션을 보고 로그인 화면으로
-// 돌리므로, 둘이 같이 이동을 걸면 중복이 된다. 이 조각은 401도 다른 조회 실패와 같이 다룬다.
+// 미로그인 이동은 `SessionOrderProgressSummary`가 하지 않는다. 같은 화면의 `SessionProfileCard`가
+// 세션을 보고 로그인 화면으로 돌리므로, 둘이 같이 이동을 걸면 중복이 된다. 401도 다른 조회 실패와
+// 같이 다룬다.
 
 export function SessionOrderProgressSummary() {
   const { data, isPending, isError, refetch } = useOrderProgressCounts();

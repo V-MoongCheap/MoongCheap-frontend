@@ -222,10 +222,10 @@ export async function getOrderDetail(orderNo: string): Promise<OrderDetail> {
  * 마이페이지 진행 요약(B-26)의 단계별 건수. `GET /api/orders/summary`.
  *
  * 응답은 4단계고 화면은 5단계다. 배송요청(`DELIVERY_REQUESTED`)은 백엔드에 대응하는 주문 상태가
- * 없어 집계되지 않으므로 여기서 0을 채운다. 칸을 지우지 않는 것은 디자인팀과 합의한 결정이다
+ * 없어 집계되지 않으므로 `getOrderProgressCounts`가 0을 채운다. 칸을 지우지 않는 것은 디자인팀과 합의한 결정이다
  * (이슈 #131, `constants/orderStatus.ts`의 `ORDER_PROGRESS_STEPS` 주석).
  *
- * 상태 이름이 다른 둘도 여기서 옮긴다. `preparingShipment` → `PREPARING`, `shipped` → `SHIPPING`.
+ * 상태 이름이 다른 둘도 함께 옮긴다. `preparingShipment` → `PREPARING`, `shipped` → `SHIPPING`.
  * 목록·상세가 쓰는 `STATUS_FROM_DTO`와 같은 대응이지만, 요약 응답은 상태 문자열이 아니라 필드명으로
  * 단계를 나타내 표를 공유할 수 없다.
  */

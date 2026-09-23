@@ -32,7 +32,7 @@ import {
 // 글로 노출하지 않고 **버튼 잠금**으로만 쓴다(schemas/address.ts 주석 참고).
 //
 // 저장은 `onSave`로 받는다. 폼은 어떤 엔드포인트를 부르는지 모른다(등록·수정이 다른 API다).
-// `onSave`가 없으면 이동만 한다 — 수정 화면이 아직 그 상태다(props 주석 참고).
+// `onSave`가 없으면 이동만 한다.
 
 const EMPTY_VALUES: AddressFormValues = {
   postalCode: '',
@@ -64,10 +64,7 @@ interface AddressFormProps {
    * 저장 동작. 넘기지 않으면 저장 없이 `successHref`로 이동만 한다.
    *
    * 함수 prop이라 넘기는 쪽도 client여야 한다. 서버 컴포넌트인 페이지가 직접 넘길 수 없어
-   * 등록 화면은 `AddressCreateView`가 중간에서 받는다.
-   *
-   * ⚠️ 수정 화면은 아직 넘기지 않는다. 조회 응답이 마스킹된 전화번호만 주어 기존 값을 폼에
-   *    채울 수 없다(`lib/addressApi.ts` 주석 참고). 백엔드 회신 후 배선한다.
+   * `AddressCreateView`·`AddressEditView`가 중간에서 받는다.
    */
   onSave?: (values: AddressFormValues) => Promise<void>;
 }
@@ -114,7 +111,7 @@ export function AddressForm({
 
   async function onSubmit(values: AddressFormValues) {
     if (onSave === undefined) {
-      // 저장이 배선되지 않은 화면(수정)은 이동만 한다.
+      // 저장이 배선되지 않은 화면은 이동만 한다.
       router.push(successHref);
       return;
     }

@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { deleteAddress, getAddresses, setDefaultAddress } from '@/lib/addressApi';
+import { deleteAddress, getAddress, getAddresses, setDefaultAddress } from '@/lib/addressApi';
 import { ApiError } from '@/lib/api';
 import { shouldRetryQuery } from '@/lib/queryRetry';
 import type { Address } from '@/types/address';
@@ -20,7 +20,10 @@ import type { Address } from '@/types/address';
 
 /** 배송지 캐시 키. 등록·수정 후 무효화할 때도 이 키를 쓴다(`useOrders`의 키 표와 같은 방식). */
 export const ADDRESS_QUERY_KEYS = {
+  /** 목록·단건 전부. 수정은 둘 다 낡게 만들어 접두 키로 한 번에 버린다. */
+  all: ['addresses'] as const,
   list: ['addresses', 'list'] as const,
+  detail: (id: string) => ['addresses', 'detail', id] as const,
 };
 
 export interface AddressesState {
@@ -61,6 +64,38 @@ export function useAddresses(): AddressesState {
     isLoading: isPending,
     error: settledError,
     // 호출부는 반환값을 쓰지 않는다. 계약을 그대로 두려고 Promise를 삼킨다.
+    refetch: () => {
+      void refetch();
+    },
+  };
+}
+
+export interface AddressState {
+  /** 조회 전·실패 시 null. */
+  address: Address | null;
+  isLoading: boolean;
+  /** 조회 실패 사유. 404(`SHIP_001`)·403(`SHIP_003`)은 화면이 재시도 없이 안내한다. */
+  error: ApiError | null;
+  refetch: () => void;
+}
+
+/**
+ * 배송지 단건 조회 상태(B-30 수정 화면). 목록과 달리 전화번호가 마스킹되지 않은 원본으로 온다.
+ *
+ * 목록 훅과 달리 재조회가 실패해도 받아 둔 값을 버리지 않는다. 이 값은 폼의 초기값으로 한 번
+ * 쓰이고 끝나는데, null로 바꾸면 호출부가 오류 화면으로 갈아 끼우면서 입력 중인 폼이 사라진다.
+ */
+export function useAddress(id: string): AddressState {
+  const { data, isPending, isFetching, error, refetch } = useQuery({
+    queryKey: ADDRESS_QUERY_KEYS.detail(id),
+    queryFn: () => getAddress(id),
+    retry: shouldRetryQuery,
+  });
+
+  return {
+    address: data ?? null,
+    isLoading: isPending,
+    error: error !== null && !isFetching ? toApiError(error) : null,
     refetch: () => {
       void refetch();
     },

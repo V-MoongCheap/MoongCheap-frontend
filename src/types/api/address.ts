@@ -15,19 +15,18 @@ export interface ShippingAddressResponseDto {
   alias: string;
   recipientName: string;
   /**
-   * 마스킹된 전화번호(`010-****-5678`).
-   *
-   * ⚠️ 원본 번호를 주는 필드가 없다. 수정 화면은 기존 번호를 입력칸에 채워야 하는데 이 값은
-   * 그대로 다시 저장할 수 없고 `PATCH`의 `phoneNumber` 정규식에도 맞지 않는다.
-   * 상세 조회에 원본을 실어줄 수 있는지 백엔드에 문의 중이라 수정 화면은 목을 유지한다.
+   * 전화번호. ⚠️ 이름과 달리 조회 경로마다 마스킹 여부가 다르다(백엔드 aac2c39, 2026-09-22).
+   * - 목록: 마스킹(`010-****-5678`)
+   * - 단건: 하이픈 없는 원본(`01012345678`) — 수정 폼 프리필용
    */
   phoneNumberMasked: string;
   /** 우편번호 5자리. 화면의 `postalCode`. */
   zipcode: string;
   address: string;
-  addressDetail: string;
-  entranceCode: string;
-  requestMessage: string;
+  /** 선택 필드라 null일 수 있다(아래 둘도 같다). */
+  addressDetail: string | null;
+  entranceCode: string | null;
+  requestMessage: string | null;
   isDefault: boolean;
 }
 
@@ -52,7 +51,7 @@ export interface ShippingAddressRequestDto {
   addressDetail?: string;
   /** 최대 20자. */
   entranceCode?: string;
-  /** 배송 요청사항. 최대 100자. 시안과 현재 폼에는 없어 보내지 않는다(디자인 확인 중). */
+  /** 배송 요청사항. 최대 100자. 시안과 폼에 없다. 등록은 생략, 수정은 기존 값을 보존해 보낸다. */
   requestMessage?: string;
   setAsDefault?: boolean;
 }

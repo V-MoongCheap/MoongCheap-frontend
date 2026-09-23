@@ -162,11 +162,10 @@ export function AddressListView({ createHref }: AddressListViewProps) {
       {!isEmpty && (
         <ul className="flex w-full flex-col gap-5">
           {addresses.map((address) => (
-            // `editHref`를 넘기지 않아 '수정'은 그려지기만 한다. 수정 저장이 배선되기 전에 링크를
-            // 살리면, 폼을 채우고 확인을 눌러도 저장 없이 목록으로 돌아가 저장된 것처럼 보인다
-            // (조회 응답에 원본 전화번호가 없어 아직 못 붙인다). 기본 지정·삭제는 #129에서 배선했다.
+            // 수정 경로는 B-09 배송지 섹션(`AddressSection`)과 같다.
             <AddressCard
               address={address}
+              editHref={`/mypage/addresses/${address.id}/edit`}
               isBusy={isBusy}
               key={address.id}
               onDefaultFocused={() => setFocusDefaultId(null)}

@@ -20,13 +20,18 @@ import { apiFetch, parseCreatedId } from './api';
  * 모아 뒀다(`SHIP_002` 상한 5개 등). 화면이 `error.code`로 분기한다.
  */
 
+/** 선택 필드는 null·빈 문자열이 올 수 있다. 화면은 '없음'을 undefined 하나로 본다. */
+function emptyToUndefined(value: string | null): string | undefined {
+  return value === null || value === '' ? undefined : value;
+}
+
 /**
  * 응답 DTO를 화면용 타입으로 옮긴다.
  *
- * ⚠️ `phone`에 들어가는 값은 **마스킹된 문자열**(`010-****-5678`)이다. 백엔드가 원본을 주지 않는다.
- * 목록 카드는 `formatPhone`이 형식 불일치 시 원본을 그대로 돌려주므로 마스킹 값이 그대로 보인다
- * (의도한 표시다). 반면 수정 화면은 이 값을 입력칸에 채울 수 없다 — 그대로 저장하면 백엔드
- * 정규식에 걸린다. 그래서 수정은 아직 목을 쓴다.
+ * ⚠️ `phone`은 조회 경로에 따라 모양이 다르다(필드명은 둘 다 `phoneNumberMasked`).
+ * - 목록: 마스킹된 문자열(`010-****-5678`). `formatPhone`이 형식 불일치 시 원본을 그대로 돌려주므로
+ *   카드에 마스킹 값이 그대로 보인다(의도한 표시다).
+ * - 단건: 하이픈 없는 원본(`01012345678`). 수정 폼에 채워 그대로 다시 보낼 수 있다.
  */
 function toAddress(dto: ShippingAddressResponseDto): Address {
   return {
@@ -36,11 +41,13 @@ function toAddress(dto: ShippingAddressResponseDto): Address {
     isDefault: dto.isDefault,
     postalCode: dto.zipcode,
     address: dto.address,
-    addressDetail: dto.addressDetail,
-    // 카드가 `미입력`을 보여주는 기준이 undefined다. 빈 문자열이 오면 없는 것으로 본다.
-    entranceCode: dto.entranceCode === '' ? undefined : dto.entranceCode,
+    // 폼 스키마가 문자열만 받는다. null이면 수정 화면의 확인 버튼이 영영 잠긴다.
+    addressDetail: dto.addressDetail ?? '',
+    // 카드가 `미입력`을 보여주는 기준이 undefined다. 빈 문자열·null은 없는 것으로 본다.
+    entranceCode: emptyToUndefined(dto.entranceCode),
     recipient: dto.recipientName,
     phone: dto.phoneNumberMasked,
+    requestMessage: emptyToUndefined(dto.requestMessage),
   };
 }
 
@@ -50,10 +57,14 @@ function toAddress(dto: ShippingAddressResponseDto): Address {
  * `noEntranceCode`는 입력을 잠그는 UI 상태라 보내지 않는다. 체크되면 폼이 `entranceCode`를
  * 비우므로 값만 봐도 된다.
  *
- * `requestMessage`(배송 요청사항)는 백엔드에 있으나 시안과 폼에 없어 보내지 않는다. 선택 필드라
- * 생략해도 등록된다. 디자인 확인 후 폼이 생기면 여기에 더한다.
+ * `requestMessage`(배송 요청사항)는 백엔드에 있으나 시안과 폼에 없다. 등록은 생략하고, 수정은
+ * 기존 값을 그대로 실어 보낸다 — `PATCH`가 **전체 교체**라 빠뜨리면 백엔드가 null로 덮어쓴다.
+ * 디자인 확인 후 폼이 생기면 폼 값으로 바꾼다.
  */
-function toEditRequestDto(values: AddressFormValues): ShippingAddressEditRequestDto {
+function toEditRequestDto(
+  values: AddressFormValues,
+  requestMessage?: string,
+): ShippingAddressEditRequestDto {
   return {
     alias: values.name,
     recipientName: values.recipient,
@@ -63,6 +74,7 @@ function toEditRequestDto(values: AddressFormValues): ShippingAddressEditRequest
     address: values.address,
     addressDetail: values.addressDetail,
     entranceCode: values.entranceCode,
+    requestMessage,
   };
 }
 
@@ -73,7 +85,7 @@ function toCreateRequestDto(values: AddressFormValues): ShippingAddressRequestDt
 
 /**
  * 배송지 목록. 백엔드가 **기본 배송지 우선, 최근 등록순**으로 정렬해 준다(`BR-B30-01`).
- * 프론트에서 다시 정렬하지 않는다.
+ * 프론트에서 다시 정렬하지 않는다. 전화번호는 마스킹돼 온다.
  *
  * `GET /api/shipping-addresses`
  */
@@ -85,6 +97,7 @@ export async function getAddresses(): Promise<Address[]> {
 
 /**
  * 배송지 단건. 본인 소유가 아니면 403(`SHIP_003`), 없으면 404(`SHIP_001`)다.
+ * 목록과 달리 전화번호를 마스킹하지 않는다(수정 폼 프리필용).
  *
  * `GET /api/shipping-addresses/{id}`
  */
@@ -110,17 +123,18 @@ export async function createAddress(values: AddressFormValues): Promise<string> 
 }
 
 /**
- * 배송지 수정. 기본 지정은 이 요청으로 바꿀 수 없고 별도 엔드포인트를 쓴다.
+ * 배송지 수정(전체 교체). 기본 지정은 이 요청으로 바꿀 수 없고 `setDefaultAddress`를 쓴다.
+ * 응답은 204에 본문이 없다.
  *
- * ⚠️ 조회 응답에 원본 전화번호가 없어 수정 화면을 아직 배선하지 못한다. 백엔드 회신 후 연결한다.
+ * `current`(단건 조회 결과)를 받는 이유는 폼에 없는 필드를 보존하기 위해서다(`toEditRequestDto`).
  *
  * `PATCH /api/shipping-addresses/{id}`
  */
-export async function updateAddress(id: string, values: AddressFormValues): Promise<void> {
-  await apiFetch(`/api/shipping-addresses/${encodeURIComponent(id)}`, {
+export async function updateAddress(current: Address, values: AddressFormValues): Promise<void> {
+  await apiFetch(`/api/shipping-addresses/${encodeURIComponent(current.id)}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(toEditRequestDto(values)),
+    body: JSON.stringify(toEditRequestDto(values, current.requestMessage)),
   });
 }
 

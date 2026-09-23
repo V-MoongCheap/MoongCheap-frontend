@@ -25,6 +25,7 @@ export default async function DemandFormPage({
       backHref={`/products/${productId}`}
       key={productId}
       participationListHref="/waiting"
+      paymentMethodsHref="/mypage/payment-methods"
       product={product}
     />
   );

@@ -33,10 +33,14 @@ export const DEMAND_FORM_MESSAGES = {
   editAddress: '수정',
   deleteAddress: '삭제',
 
-  /** 결제수단 상단 프로모션 배너. 토스 연동 시 서버가 내려줄 수 있어 배선 시점에 교체한다. */
-  tossPromotion: '토스페이 1천원 즉시 할인 (일 선착순 320명)',
   /** 결제수단 카드 아래 안내. */
   autoPaymentNote: '낙찰이 확정되면 등록된 결제수단으로 자동 결제돼요',
+  /**
+   * 쓸 수 있는 결제수단이 없을 때의 배너와 버튼(FN-B09-02 '결제수단 상태 배너 (미등록 시)').
+   * 문구는 기능명세서 그대로다. 시안에 이 상태가 없다.
+   */
+  paymentMissing: '등록해두지 않으면 낙찰돼도 놓칠 수 있어요',
+  registerPaymentMethod: '결제수단 등록하기',
 
   /**
    * 제품 카드 오른쪽 값의 라벨.
@@ -71,44 +75,6 @@ export const DEMAND_FORM_MESSAGES = {
    */
   submitSuccess: '접수 완료! 비슷한 조건이 모이면 공구가 열려요. 내 대기에서 확인할 수 있어요',
 } as const;
-
-/**
- * 결제수단 선택지. 시안에는 4개가 다 있지만 **동작은 간편결제만 붙인다.**
- *
- * 시안 B-09 프레임 설명이 범위를 못박아 뒀다.
- *   "결제수단 중 카드결제/계좌결제/휴대폰결제는 구현하지 않음"
- *   "간편결제도 토스페이만 구현"
- *   "네이버페이, 카카오페이는 디자인상으로만 존재"
- *
- * 그래서 화면에는 시안대로 다 그리되 `implemented`가 false인 것은 고를 수 없게 한다. 임의로
- * 숨기지 않는 이유는 시안과 달라지기 때문이다.
- */
-export const DEMAND_PAYMENT_METHODS = [
-  { key: 'easy', label: '간편결제', implemented: true },
-  { key: 'card', label: '카드결제', implemented: false },
-  { key: 'account', label: '계좌결제', implemented: false },
-  { key: 'phone', label: '휴대폰 결제', implemented: false },
-] as const;
-
-export type DemandPaymentMethodKey = (typeof DEMAND_PAYMENT_METHODS)[number]['key'];
-
-/**
- * 간편결제 안의 사업자. 토스만 실제로 고를 수 있다.
- *
- * 화면에는 로고 이미지(`DEMAND_FORM_ASSETS`)가 들어가고, 여기 `label`은 그 이미지의 대체
- * 텍스트로 쓰인다. 카카오 로고에는 `kakao` 글자가 없어서 이름을 여기서 준다.
- *
- * ⚠️ 시안 컴포넌트에는 토스 옆에 `혜택` 배지가 붙어 있지만 화면에는 나오지 않는다. 배지
- *    프레임(`1153:71308`)의 x가 130인데 부모 박스 폭이 107이라 잘려 나간다. 보이지 않는 것을
- *    임의로 살리지 않으려고 필드를 두지 않았다.
- */
-export const DEMAND_EASY_PAY_PROVIDERS = [
-  { key: 'toss', label: '토스페이', implemented: true },
-  { key: 'naver', label: '네이버페이', implemented: false },
-  { key: 'kakao', label: '카카오페이', implemented: false },
-] as const;
-
-export type DemandEasyPayProviderKey = (typeof DEMAND_EASY_PAY_PROVIDERS)[number]['key'];
 
 /**
  * 약관 동의 목록. 전부 필수라 하나라도 빠지면 참여 버튼이 잠긴다.

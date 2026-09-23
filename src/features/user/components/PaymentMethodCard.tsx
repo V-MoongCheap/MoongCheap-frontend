@@ -2,6 +2,7 @@ import { cn } from '@/lib/cn';
 import type { PaymentMethod } from '@/types/payment';
 
 // 결제수단 목록(B-14)의 카드 한 장. 카드 썸네일 + 카드사명 + 마스킹 번호로 구성한다.
+// B-09 결제수단 섹션도 이번 수요에 쓸 결제수단을 이 카드의 조회 모드로 보여 준다.
 //
 // 두 모드를 판별 유니온으로 나눈다(FN-B14-01 BR-12).
 //   · 'view'   조회 모드 — 기본 카드에 '기본' 뱃지. onActivate가 있으면 행 탭으로 기본변경 모드에

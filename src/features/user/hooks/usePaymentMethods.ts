@@ -31,6 +31,25 @@ export interface PaymentMethodsState {
   refetch: () => void;
 }
 
+/**
+ * 수요 등록·참여에 쓸 결제수단 하나를 고른다(B-09 결제수단 영역, 9/23 결제 범위 조정).
+ *
+ * 순서: 기본이면서 고를 수 있는 것 → 고를 수 있는 첫 건 → 없으면 null.
+ *
+ * 기본이 `INACTIVE`면 자동결제에 쓸 수 없으므로 건너뛴다. 백엔드가 기본을 맨 앞에, 나머지를
+ * 등록순으로 주므로 '첫 건'은 가장 먼저 등록한 ACTIVE 결제수단이다. null이면 화면은 미등록 배너를
+ * 띄우고 제출을 잠근다(FN-B09-02 '결제수단 등록 완료자만 접수 가능').
+ */
+export function pickPaymentMethodForDemand(
+  methods: readonly PaymentMethod[],
+): PaymentMethod | null {
+  return (
+    methods.find((method) => method.isDefault && method.isSelectable) ??
+    methods.find((method) => method.isSelectable) ??
+    null
+  );
+}
+
 /** apiFetch는 네트워크 오류·미배선까지 ApiError로 감싸지만, 그 밖의 예외도 형태를 맞춘다. */
 function toApiError(caught: unknown): ApiError {
   return caught instanceof ApiError ? caught : new ApiError('결제수단을 불러오지 못했습니다.', 0);

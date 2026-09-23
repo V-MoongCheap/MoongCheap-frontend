@@ -41,6 +41,13 @@ function PlusIcon() {
 interface AddressListViewProps {
   /** 등록 화면 경로. 라우트는 호출부(page)가 정한다. */
   createHref: string;
+  /**
+   * 수정 화면 경로의 앞부분. 카드마다 `${editBaseHref}/${id}/edit`로 붙인다.
+   *
+   * 경로 생성 함수가 아니라 문자열로 받는 이유는, 넘기는 쪽이 서버 컴포넌트라 함수가 client
+   * 경계를 넘지 못해서다(`ParticipationList`의 `awardResultBaseHref`와 같다).
+   */
+  editBaseHref: string;
 }
 
 /**
@@ -58,7 +65,7 @@ function setDefaultErrorMessage(caught: unknown): string {
   return ADDRESS_ACTION_TOAST.defaultFailed;
 }
 
-export function AddressListView({ createHref }: AddressListViewProps) {
+export function AddressListView({ createHref, editBaseHref }: AddressListViewProps) {
   const { addresses, isLoading, error, refetch } = useAddresses();
   const { showToast } = useToast();
   const setDefault = useSetDefaultAddress();
@@ -162,11 +169,9 @@ export function AddressListView({ createHref }: AddressListViewProps) {
       {!isEmpty && (
         <ul className="flex w-full flex-col gap-5">
           {addresses.map((address) => (
-            // `editHref`를 넘기지 않아 '수정'은 그려지기만 한다. 수정 저장이 배선되기 전에 링크를
-            // 살리면, 폼을 채우고 확인을 눌러도 저장 없이 목록으로 돌아가 저장된 것처럼 보인다
-            // (조회 응답에 원본 전화번호가 없어 아직 못 붙인다). 기본 지정·삭제는 #129에서 배선했다.
             <AddressCard
               address={address}
+              editHref={`${editBaseHref}/${encodeURIComponent(address.id)}/edit`}
               isBusy={isBusy}
               key={address.id}
               onDefaultFocused={() => setFocusDefaultId(null)}

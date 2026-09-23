@@ -22,8 +22,9 @@ import {
   ENTRANCE_CODE_MAX_LENGTH,
   PHONE_MAX_LENGTH,
   RECIPIENT_MAX_LENGTH,
-  addressSchema,
+  createAddressSchema,
   type AddressFormValues,
+  type SavedContact,
 } from '@/schemas/address';
 
 // B-30 배송지 등록·수정 폼. `FN-B30-02`.
@@ -32,7 +33,7 @@ import {
 // 글로 노출하지 않고 **버튼 잠금**으로만 쓴다(schemas/address.ts 주석 참고).
 //
 // 저장은 `onSave`로 받는다. 폼은 어떤 엔드포인트를 부르는지 모른다(등록·수정이 다른 API다).
-// `onSave`가 없으면 이동만 한다 — 수정 화면이 아직 그 상태다(props 주석 참고).
+// `onSave`가 없으면 이동만 한다.
 
 const EMPTY_VALUES: AddressFormValues = {
   postalCode: '',
@@ -55,6 +56,11 @@ interface AddressFormProps {
   /** 수정 화면에서 기존 값을 채워 넣는다. 없으면 등록. */
   defaultValues?: AddressFormValues;
   /**
+   * 수정 화면의 받는 분·휴대폰 저장값. 프론트 규칙에 안 맞아도 그대로면 통과시킨다
+   * (`schemas/address.ts`의 `SavedContact` 주석). 등록 화면은 넘기지 않는다.
+   */
+  savedContact?: SavedContact;
+  /**
    * '기본 배송지로 설정'을 체크한 채 잠근다. 두 경우에 해제할 수 없다.
    * - 최초 등록(목록 0건): 첫 배송지는 무조건 기본이 된다(구성 요소 `BR-04`)
    * - 현재 기본배송지 수정: 해제하면 기본배송지가 0건이 된다(`BR-B30-02-06`)
@@ -64,10 +70,7 @@ interface AddressFormProps {
    * 저장 동작. 넘기지 않으면 저장 없이 `successHref`로 이동만 한다.
    *
    * 함수 prop이라 넘기는 쪽도 client여야 한다. 서버 컴포넌트인 페이지가 직접 넘길 수 없어
-   * 등록 화면은 `AddressCreateView`가 중간에서 받는다.
-   *
-   * ⚠️ 수정 화면은 아직 넘기지 않는다. 조회 응답이 마스킹된 전화번호만 주어 기존 값을 폼에
-   *    채울 수 없다(`lib/addressApi.ts` 주석 참고). 백엔드 회신 후 배선한다.
+   * `AddressCreateView`·`AddressEditView`가 중간에서 받는다.
    */
   onSave?: (values: AddressFormValues) => Promise<void>;
 }
@@ -76,15 +79,19 @@ export function AddressForm({
   successHref,
   defaultValues = EMPTY_VALUES,
   lockDefault = false,
+  savedContact,
   onSave,
 }: AddressFormProps) {
   const router = useRouter();
   const { open } = useDaumPostcode();
   const { showToast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
+  // defaultValues처럼 마운트 때 한 번만 만든다. 호출부가 매 렌더 새 객체를 넘겨도 resolver가
+  // 바뀌지 않는다.
+  const [schema] = useState(() => createAddressSchema(savedContact));
 
   const { register, handleSubmit, setValue, control, formState } = useForm<AddressFormValues>({
-    resolver: zodResolver(addressSchema),
+    resolver: zodResolver(schema),
     // 잠긴 경우 값도 체크된 상태로 시작해야 한다. 체크박스를 disabled로만 두면 표시는 꺼진 채
     // 잠겨 버린다.
     defaultValues: lockDefault ? { ...defaultValues, isDefault: true } : defaultValues,
@@ -114,7 +121,7 @@ export function AddressForm({
 
   async function onSubmit(values: AddressFormValues) {
     if (onSave === undefined) {
-      // 저장이 배선되지 않은 화면(수정)은 이동만 한다.
+      // 저장이 배선되지 않은 화면은 이동만 한다.
       router.push(successHref);
       return;
     }

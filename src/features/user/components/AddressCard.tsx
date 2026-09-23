@@ -36,8 +36,11 @@ interface AddressCardProps {
   onDefaultFocused?: () => void;
 }
 
+// 폭은 글자 + 좌우 여백으로 잡는다. 시안의 54px은 두 글자('수정'·'삭제', ≈21px)에 양옆 ≈16px이
+// 붙은 값이라, 고정 폭으로 두면 '기본 지정'(≈44px)은 여백이 5px로 줄어 카드 가장자리에 붙는다.
+// 최소 폭 54px은 두 글자 액션을 시안 그대로 두기 위한 것이다.
 const ACTION_CLASS =
-  'text-label-12 text-content-quarternary flex w-[54px] items-center justify-center py-2 disabled:opacity-40';
+  'text-label-12 text-content-quarternary flex min-w-[54px] items-center justify-center px-4 py-2 disabled:opacity-40';
 
 export function AddressCard({
   address,
@@ -79,7 +82,8 @@ export function AddressCard({
 
         <div className="flex w-full flex-col gap-1">
           <p className="text-body-14 text-content-primary w-full">
-            {street}, {addressDetail} ({postalCode})
+            {/* 상세주소는 선택 항목이다. 비어 있으면 쉼표까지 빼야 `주소, (우편번호)`가 되지 않는다. */}
+            {addressDetail === '' ? street : `${street}, ${addressDetail}`} ({postalCode})
           </p>
           <p className="text-caption-12 text-content-quarternary w-full">
             공동현관번호: {entranceCode ?? '미입력'}

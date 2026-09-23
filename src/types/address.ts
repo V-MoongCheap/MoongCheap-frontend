@@ -24,6 +24,24 @@ export interface Address {
   /** 공동현관 출입번호. '공동현관번호 없음'을 체크했거나 비워 두면 undefined. */
   entranceCode?: string;
   recipient: string;
-  /** 하이픈 없는 원본. 표시할 때만 포맷한다(시안의 입력칸이 하이픈 없이 받는다). */
+  /**
+   * 표시용 전화번호. `formatPhone`으로 포맷해 보여 준다.
+   * ⚠️ 목록 조회에서 온 값은 백엔드가 마스킹한 것이다(`010-****-5678`). 폼에 채우거나 다시 보내면
+   * 안 된다 — 원본이 필요하면 `AddressDetail.phoneRaw`를 쓴다.
+   */
   phone: string;
+}
+
+/**
+ * 단건 조회로 받은 배송지(수정 화면 전용). 목록의 `Address`와 타입을 갈라, 마스킹된 목록 값이
+ * 수정 폼·수정 요청으로 흘러 들어가지 못하게 한다(`updateAddress`가 이 타입만 받는다).
+ */
+export interface AddressDetail extends Address {
+  /** 하이픈 없는 원본 번호. 단건 응답만 마스킹하지 않는다. */
+  phoneRaw: string;
+  /**
+   * 배송 요청사항. 시안·폼에 없어 화면에 보이지 않는다. 수정 `PATCH`가 전체 교체라 기존 값을
+   * 다시 보내 보존하려고만 들고 있다.
+   */
+  requestMessage?: string;
 }

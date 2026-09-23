@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -20,6 +20,7 @@ import { useCreateDemand } from '@/features/demand/hooks/useCreateDemand';
 import { useProductCatalogOverlay } from '@/features/product/hooks/useProductCatalogOverlay';
 import { ApiError } from '@/lib/api';
 import { DEMAND_ERROR_CODE, TEMPORARY_PAY_METHOD_ID, toDemandCreateRequest } from '@/lib/demandApi';
+import { toCatalogId } from '@/lib/productApi';
 import type { DemandFormValues } from '@/types/demandForm';
 import type { ProductDetail } from '@/types/product';
 
@@ -101,15 +102,24 @@ export function DemandFormView({
   //
   // 결제수단은 조건에 넣지 않는다. 결제수단 등록 화면(B-14)이 없어 `payMethodId`를
   // `TEMPORARY_PAY_METHOD_ID`로 고정해 보내므로, 화면에서 고르는 값이 요청에 쓰이지 않는다.
+  //
+  // 상품 id가 백엔드 도감 id로 바뀌지 않으면(홈 목 카드의 `demand-1` 등) 버튼을 잠근다. 보내 봐야
+  // `catalogId`가 null로 나가 400이 확정이다. 목 상품이라 안내 문구는 따로 두지 않는다.
+  const catalogId = toCatalogId(product.id);
   const canSubmit =
-    values.priceBand !== null && DEMAND_FORM_CONSENTS.every(({ key }) => values.consents[key]);
+    catalogId !== null &&
+    values.priceBand !== null &&
+    DEMAND_FORM_CONSENTS.every(({ key }) => values.consents[key]);
   const isSubmitting = createDemand.isPending;
+  // 중복 제출 가드. `isPending`은 다음 렌더에서야 true가 되므로, 그 사이의 두 번째 탭은 통과한다.
+  // ref는 탭 즉시 바뀌어 같은 틱의 두 번째 호출까지 막는다.
+  const submittingRef = useRef(false);
 
   /**
    * 수요 등록 제출(FN-B09-04, #148). `POST /api/members/me/demand`.
    *
-   * 카탈로그 id는 이 화면의 상품 id(라우트 `productId`)다. 결제수단 id는 임시로 고정한다
-   * (`TEMPORARY_PAY_METHOD_ID` 주석).
+   * 카탈로그 id는 이 화면의 상품 id(라우트 `productId`)를 숫자로 바꾼 값이다(`toCatalogId`).
+   * 결제수단 id는 임시로 고정한다(`TEMPORARY_PAY_METHOD_ID` 주석).
    *
    * 성공·중복 모두 내 참여 목록(B-17)으로 replace한다. push로 쌓으면 목록에서 뒤로 가기가 이미
    * 제출한 폼으로 돌아와, 같은 값을 다시 눌러 409를 받게 된다. replace면 상품 상세로 돌아간다.
@@ -118,21 +128,24 @@ export function DemandFormView({
    * 오류까지 한국어 메시지를 붙여 올린다. 입력값은 그대로 두어 버튼을 다시 누르면 재시도가 된다.
    */
   function handleSubmit() {
-    if (!canSubmit || isSubmitting) {
+    if (!canSubmit || submittingRef.current) {
       return;
     }
 
     const request = toDemandCreateRequest(values, {
-      catalogId: Number(product.id),
+      catalogId,
       payMethodId: TEMPORARY_PAY_METHOD_ID,
     });
 
+    submittingRef.current = true;
     createDemand.mutate(request, {
+      // 성공하면 가드를 풀지 않는다. 목록으로 이동하는 동안 버튼이 다시 눌려 409가 나지 않게 한다.
       onSuccess: () => {
         showToast(DEMAND_FORM_MESSAGES.submitSuccess);
         router.replace(participationListHref);
       },
       onError: (error) => {
+        submittingRef.current = false;
         showToast(error.message);
         // 같은 상품에 진행 중인 수요가 이미 있으면 B-17에서 기존 건을 보게 한다
         // (FN-B09-04 예외처리 '이미 접수한 상태 → 안내 후 B-17 이동').

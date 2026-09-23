@@ -36,9 +36,14 @@ const DESCRIPTION_COLLAPSED_MAX = 240;
 
 interface ProductDetailViewProps {
   product: ProductDetail;
+  /** 하단 CTA '뭉치 참여하기'가 갈 곳. 라우트는 호출부(page)가 정한다. */
+  participateHref: string;
 }
 
-export function ProductDetailView({ product: initialProduct }: ProductDetailViewProps) {
+export function ProductDetailView({
+  product: initialProduct,
+  participateHref,
+}: ProductDetailViewProps) {
   // 상품 도감 상세를 실데이터로 덮는다. 실패(미로그인·미배선·네트워크)면 mock 유지.
   // 수요 등록(B-09)도 같은 상품을 보여 줘야 해서 훅으로 뺐다.
   const product = useProductCatalogOverlay(initialProduct);
@@ -234,14 +239,12 @@ export function ProductDetailView({ product: initialProduct }: ProductDetailView
         </section>
       </div>
 
-      {/* 하단 고정 CTA → 일정 타임라인(FN-B09-05) → [확인] → 수요 등록(B-09).
-          명세가 B-09 앞에 타임라인을 거치도록 고정했다(BR-B09-05-01, TC-B08-01-04). 두 화면 모두
-          상품 하나에서 출발하므로 경로가 이 상품 아래에 있다(`app/products/[productId]/...`).
+      {/* 하단 고정 CTA → 일정 타임라인(FN-B09-05) → [확인] → 수요 등록(B-09). 경로는 page가 준다.
           수요 등록 화면도 `useProductCatalogOverlay`로 같은 조회를 해서 여기와 같은 상품이 나온다. */}
       <footer className="bg-background-default sticky bottom-0 w-full p-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
         <Link
           className="bg-surface-button-primary-default text-content-oncolor text-button-15 active:bg-surface-button-primary-pressed rounded-8 flex h-12 w-full items-center justify-center"
-          href={`/products/${encodeURIComponent(product.id)}/timeline`}
+          href={participateHref}
         >
           {PRODUCT_DETAIL.participateCta}
         </Link>

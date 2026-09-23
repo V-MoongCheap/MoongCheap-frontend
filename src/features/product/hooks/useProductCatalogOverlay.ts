@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-import { fetchProductCatalogDetail } from '@/lib/productApi';
+import { fetchProductCatalogDetail, toCatalogId } from '@/lib/productApi';
 import type { ProductDetail } from '@/types/product';
 
 /**
@@ -21,8 +21,8 @@ export function useProductCatalogOverlay(initialProduct: ProductDetail): Product
   const [product, setProduct] = useState(initialProduct);
 
   useEffect(() => {
-    // 백엔드 id는 숫자 Long이다. 홈 목의 문자열 id(demand-1 등)는 확정 400이 나므로 호출을 건너뛴다.
-    if (!/^\d+$/.test(initialProduct.id)) {
+    // 백엔드 id는 숫자 Long이다. 홈 목의 문자열 id(demand-1 등)는 확정 실패라 호출을 건너뛴다.
+    if (toCatalogId(initialProduct.id) === null) {
       return;
     }
     let active = true;

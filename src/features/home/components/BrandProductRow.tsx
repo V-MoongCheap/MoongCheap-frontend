@@ -3,6 +3,7 @@ import Link from 'next/link';
 
 import { HOME_CARD } from '@/constants/homeMessages';
 import { TimeBadge } from '@/features/home/components/TimeBadge';
+import { isRenderableImageSrc } from '@/lib/imageSource';
 import type { HomeProductCard } from '@/types/home';
 
 // card-list-8(브랜드별 인기 공구)의 카드. 시안 `981:18342`(354×106).
@@ -31,7 +32,8 @@ export function BrandProductRow({ product, href }: BrandProductRowProps) {
   return (
     <Link href={href} className="flex w-full items-center gap-2 text-left">
       <span className="rounded-8 bg-surface-tertiary relative block size-[106px] shrink-0 overflow-hidden">
-        {product.thumbnailUrl !== undefined && (
+        {/* 그릴 수 있는 경로만 통과시킨다. 이유는 `lib/imageSource` 참고(`ProductCard`와 같다). */}
+        {isRenderableImageSrc(product.thumbnailUrl) && (
           <Image alt="" className="object-cover" fill sizes="106px" src={product.thumbnailUrl} />
         )}
       </span>

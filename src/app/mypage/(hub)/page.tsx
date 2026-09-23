@@ -51,8 +51,8 @@ export default function MyPage() {
 
         <SettingsSection title="설정">
           <SettingsList>
-            {/* 결제수단 등록(B-14)은 팀원 담당분이라 아직 화면이 없다. */}
-            <SettingsRow comingSoon label="결제수단 등록 • 변경" />
+            {/* B-14 결제수단 관리. 등록(토스 SDK)은 이번 범위에서 빠져 조회·기본 변경만 된다. */}
+            <SettingsRow href="/mypage/payment-methods" label="결제수단 등록 • 변경" />
             <SettingsRow href="/mypage/addresses" label="배송지 관리" />
             <SettingsRow href="/mypage/notifications/settings" label="알림설정" />
             {/* 찜은 시안의 마이페이지 목록에 없는 항목이다. 화면도 시안이 없어 경로만 만들어 두고

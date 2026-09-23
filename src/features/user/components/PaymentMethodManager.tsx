@@ -5,29 +5,31 @@ import { useState } from 'react';
 import Image from 'next/image';
 
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { useToast } from '@/components/ui/Toast';
 import { EXCEPTION_ASSETS } from '@/constants/assets';
 import { PAYMENT_METHOD_MAX } from '@/constants/businessRules';
+import { ERROR_SCREEN_RETRY_LABEL, SESSION_EXPIRED_MESSAGE } from '@/constants/commonMessages';
+import { PAYMENT_METHOD_MESSAGES } from '@/constants/paymentMethodMessages';
 import { PaymentMethodCard } from '@/features/user/components/PaymentMethodCard';
-import type { PaymentMethod } from '@/types/payment';
+import { PaymentMethodListSkeleton } from '@/features/user/components/PaymentMethodListSkeleton';
+import {
+  usePaymentMethods,
+  useSetDefaultPaymentMethod,
+} from '@/features/user/hooks/usePaymentMethods';
+import { ApiError } from '@/lib/api';
+import { cn } from '@/lib/cn';
+import { PAYMENT_ERROR_CODE } from '@/types/api/payment';
 
 // B-14 결제수단 관리(FN-B14-01). 목록 조회 + 기본결제수단 변경까지가 이 화면의 MVP 범위다.
 //
-// 상태(모드·선택·목록)를 들고 있어 클라이언트 경계다. 페이지는 서버 컴포넌트로 두고 목 데이터만
-// 내려준다(MarketingConsentSection과 같은 방식).
+// 조회는 client에서 한다(`usePaymentMethods` 주석). 페이지는 서버 컴포넌트로 앱바만 조립한다.
 //
-// ⚠️ mock UI다. 실제 목록 조회·기본변경은 토스 브랜드페이 SDK/백엔드 연동 시점에 붙인다
-//    (08.26 mock→위젯 전환, FN-B14-02). 지금은 화면 상태만 바꾼다.
-//
-// 이번 범위에서 뺀 것(명세 근거):
-//  · 카드 추가 — 토스 브랜드페이 위젯이 담당(자체 화면 없음). SDK 미연동이라 '준비 중' 토스트.
-//  · 삭제(편집 모드) — FN-B14-04 Full·⚠️TBD 미확정. '편집' 진입점은 노출하되 '준비 중' 토스트.
-//  · 기본변경 모드 백버튼 복귀(BR-13)·'변경 중…' 로딩(BR-10) — 뒤로가기 가로채기·실제 비동기가
-//    필요해 mock 범위 밖. 연동 시 채운다.
-
-interface PaymentMethodManagerProps {
-  initialMethods: PaymentMethod[];
-}
+// 이번 범위에서 뺀 것(명세·결정 근거):
+//  · 카드 추가: 토스 브랜드페이 SDK 등록은 2026-09-23 범위 조정으로 제외했다(Swagger로 대신).
+//    진입점은 노출하되 '준비 중' 토스트.
+//  · 삭제(편집 모드): FN-B14-04 Full·⚠️TBD 미확정. '편집' 진입점은 노출하되 '준비 중' 토스트.
+//  · 기본변경 모드 백버튼 복귀(BR-13): 뒤로가기 가로채기가 필요해 뺐다. 백버튼은 진입 경로로 간다.
 
 type Mode = 'view' | 'changeDefault';
 
@@ -48,16 +50,26 @@ function AddGlyph() {
   );
 }
 
-export function PaymentMethodManager({ initialMethods }: PaymentMethodManagerProps) {
-  const { showToast, showComingSoon } = useToast();
-  const [methods, setMethods] = useState<PaymentMethod[]>(initialMethods);
-  const [mode, setMode] = useState<Mode>('view');
+/**
+ * 기본 변경 실패 토스트 문구를 고른다. 401(세션 만료)만 재로그인 안내로 따로 두고, 나머지는
+ * 명세 문구 하나로 묶는다(`AddressListView`의 기본 지정 실패와 같은 방침).
+ */
+function changeDefaultErrorMessage(caught: unknown): string {
+  if (caught instanceof ApiError && caught.status === 401) {
+    return SESSION_EXPIRED_MESSAGE;
+  }
+  return PAYMENT_METHOD_MESSAGES.changeDefaultFailed;
+}
 
-  const defaultId = methods.find((method) => method.isDefault)?.id ?? null;
-  const [selectedId, setSelectedId] = useState<string | null>(defaultId);
+export function PaymentMethodManager() {
+  const { methods, error, refetch } = usePaymentMethods();
+  const setDefault = useSetDefaultPaymentMethod();
+  const { showToast, showComingSoon } = useToast();
+  const [mode, setMode] = useState<Mode>('view');
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   // 빈 목록(등록 카드 0건). 안내 문구 + '카드 등록하기'만 노출한다(FN-B14-01 화면상태 '빈 목록').
-  if (methods.length === 0) {
+  if (methods !== null && methods.length === 0) {
     return (
       <EmptyState
         action={
@@ -80,25 +92,47 @@ export function PaymentMethodManager({ initialMethods }: PaymentMethodManagerPro
     );
   }
 
-  const atMax = methods.length >= PAYMENT_METHOD_MAX;
-  const canApply = mode === 'changeDefault' && selectedId !== null && selectedId !== defaultId;
+  const isLoaded = methods !== null;
+  const defaultId = methods?.find((method) => method.isDefault)?.id ?? null;
+  // 기본으로 바꿀 대상(선택 가능하면서 기본이 아닌 것)이 있을 때만 기본변경 모드에 들어간다.
+  // 명세는 '2건 이상'이지만, 나머지가 전부 선택 불가(INACTIVE)면 들어가도 고를 것이 없다.
+  const canChangeDefault =
+    methods?.some((method) => method.isSelectable && !method.isDefault) ?? false;
+  const atMax = isLoaded && methods.length >= PAYMENT_METHOD_MAX;
+  const isChanging = setDefault.isPending;
+  // 선택 대상이 지금 목록에서 여전히 고를 수 있는지까지 본다. 변경 실패(404)로 목록을 다시 받은 뒤
+  // 그 결제수단이 사라졌거나 비활성이 됐으면 CTA를 다시 잠가 같은 실패를 반복하지 않게 한다.
+  const selectedMethod = methods?.find((method) => method.id === selectedId);
+  const canApply =
+    mode === 'changeDefault' &&
+    selectedMethod !== undefined &&
+    selectedMethod.isSelectable &&
+    !selectedMethod.isDefault &&
+    !isChanging;
 
   function enterChangeDefault() {
     setSelectedId(defaultId);
     setMode('changeDefault');
   }
 
-  // 기본변경 확정(mock). 선택 카드를 기본으로 바꾸고 최상단으로 올린다(BR-01/05). 성공 토스트 후 조회 모드 복귀.
+  // 기본변경 확정. 성공하면 훅이 목록을 다시 받고(기본 우선 정렬은 서버가 한다) 조회 모드로 돌아간다.
+  //
+  // 실패하면 명세대로 선택과 CTA를 그대로 두고 토스트만 띄운다(재시도 = CTA 재탭). 라디오는 요청 중에만
+  // 잠겼다가 풀린다. 404(`PAY_001`)는 고른 결제수단이 그사이 삭제·비활성된 경우라 목록을 다시 받는다.
   function applyDefaultChange() {
-    if (selectedId === null) return;
-    setMethods((prev) => {
-      const next = prev.map((method) => ({ ...method, isDefault: method.id === selectedId }));
-      const picked = next.find((method) => method.id === selectedId);
-      if (picked === undefined) return prev;
-      return [picked, ...next.filter((method) => method.id !== selectedId)];
+    if (!canApply) return;
+    setDefault.mutate(selectedMethod.id, {
+      onSuccess: () => {
+        setMode('view');
+        showToast(PAYMENT_METHOD_MESSAGES.defaultChanged);
+      },
+      onError: (caught) => {
+        if (caught instanceof ApiError && caught.code === PAYMENT_ERROR_CODE.methodNotFound) {
+          refetch();
+        }
+        showToast(changeDefaultErrorMessage(caught));
+      },
     });
-    setMode('view');
-    showToast('기본결제수단이 변경되었어요');
   }
 
   return (
@@ -117,27 +151,38 @@ export function PaymentMethodManager({ initialMethods }: PaymentMethodManagerPro
           </button>
         </div>
 
-        <ul className="flex w-full flex-col gap-3">
-          {methods.map((method) =>
-            mode === 'changeDefault' ? (
-              <PaymentMethodCard
-                key={method.id}
-                method={method}
-                onSelect={() => setSelectedId(method.id)}
-                selected={selectedId === method.id}
-                variant="select"
-              />
-            ) : (
-              <PaymentMethodCard
-                key={method.id}
-                method={method}
-                // 2건 이상일 때만 행 탭으로 기본변경 모드 진입(BR-16).
-                onActivate={methods.length >= 2 ? enterChangeDefault : undefined}
-                variant="view"
-              />
-            ),
-          )}
-        </ul>
+        {/* 목록 영역. 조회 실패·조회 중에도 헤더·편집·CTA는 그대로 두고 이 자리만 바꾼다(명세 화면상태). */}
+        {error !== null ? (
+          <ErrorState
+            message={PAYMENT_METHOD_MESSAGES.loadFailed}
+            onRetry={refetch}
+            retryLabel={ERROR_SCREEN_RETRY_LABEL}
+          />
+        ) : methods === null ? (
+          <PaymentMethodListSkeleton />
+        ) : (
+          <ul className="flex w-full flex-col gap-3">
+            {methods.map((method) =>
+              mode === 'changeDefault' ? (
+                <PaymentMethodCard
+                  key={method.id}
+                  locked={isChanging}
+                  method={method}
+                  onSelect={() => setSelectedId(method.id)}
+                  selected={selectedId === method.id}
+                  variant="select"
+                />
+              ) : (
+                <PaymentMethodCard
+                  key={method.id}
+                  method={method}
+                  onActivate={canChangeDefault ? enterChangeDefault : undefined}
+                  variant="view"
+                />
+              ),
+            )}
+          </ul>
+        )}
 
         {atMax ? (
           // 상한(5건) 도달: 비활성 + '+' 미노출(BR-07). 문구는 🖌️ 디자인 확정 전 임시.
@@ -145,8 +190,15 @@ export function PaymentMethodManager({ initialMethods }: PaymentMethodManagerPro
             결제 카드는 최대 {PAYMENT_METHOD_MAX}개까지 등록할 수 있어요
           </p>
         ) : (
+          // 조회 중·조회 실패에는 흐리게 잠근다(명세 화면상태). 개수를 모르면 상한 여부도 모른다.
           <button
-            className="bg-surface-secondary text-label-14 text-content-tertiary rounded-12 active:bg-surface-tertiary flex w-full flex-col items-center justify-center gap-1.5 px-4 py-5"
+            className={cn(
+              'bg-surface-secondary text-label-14 rounded-12 flex w-full flex-col items-center justify-center gap-1.5 px-4 py-5',
+              isLoaded
+                ? 'text-content-tertiary active:bg-surface-tertiary'
+                : 'text-content-disabled-primary',
+            )}
+            disabled={!isLoaded}
             onClick={showComingSoon}
             type="button"
           >
@@ -159,12 +211,15 @@ export function PaymentMethodManager({ initialMethods }: PaymentMethodManagerPro
       {mode === 'changeDefault' && (
         <div className="sticky bottom-0 w-full px-4 pt-3 pb-6">
           <button
+            aria-busy={isChanging}
             className="bg-surface-button-tertiary-default text-content-inverse text-label-16 rounded-12 active:bg-surface-button-tertiary-pressed disabled:bg-surface-button-quarternary-default disabled:text-content-disabled-primary w-full py-4"
             disabled={!canApply}
             onClick={applyDefaultChange}
             type="button"
           >
-            기본결제수단 바꾸기
+            {isChanging
+              ? PAYMENT_METHOD_MESSAGES.changingDefaultCta
+              : PAYMENT_METHOD_MESSAGES.changeDefaultCta}
           </button>
         </div>
       )}

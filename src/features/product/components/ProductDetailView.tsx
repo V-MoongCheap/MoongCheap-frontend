@@ -9,6 +9,8 @@ import Link from 'next/link';
 import { Accordion } from '@/components/ui/Accordion';
 import { ComingSoonButton } from '@/components/ui/ComingSoonButton';
 import { GoBackButton } from '@/components/ui/GoBackButton';
+import { NotFoundScreen } from '@/components/ui/NotFoundScreen';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { PRODUCT_DETAIL } from '@/constants/productMessages';
 import { WishButton } from '@/features/home/components/WishButton';
 import { QuickDealCard } from '@/features/product/components/QuickDealCard';
@@ -26,6 +28,7 @@ import type { ProductDetail } from '@/types/product';
 // 데이터: 상품 도감 상세(name·규격·썸네일·상품설명·정가)는 `GET /api/product-catalog/{id}`로
 // **client에서** 실데이터를 받아 mock 위에 덮는다(세션 쿠키가 필요해 서버 컴포넌트에서 못 부름,
 // [[lib/productApi]]). 미로그인/미배선/숫자 아닌 id(홈 목)면 조회가 실패하고 mock을 그대로 쓴다.
+// 404(없는 상품)면 mock 대신 404를 그리고, 그 판정이 나기 전까지는 mock을 그리지 않는다(#151).
 // 브랜드·실시간 열람수·퀵참여딜·비슷한상품·정보 아코디언은 BE 규격이 없어 계속 mock이다.
 //
 // 미구현 진입점은 노출하되 탭 시 '준비 중' 토스트다(ComingSoonButton).
@@ -46,28 +49,46 @@ export function ProductDetailView({
 }: ProductDetailViewProps) {
   // 상품 도감 상세를 실데이터로 덮는다. 실패(미로그인·미배선·네트워크)면 mock 유지.
   // 수요 등록(B-09)도 같은 상품을 보여 줘야 해서 훅으로 뺐다.
-  const product = useProductCatalogOverlay(initialProduct);
+  const { product, status } = useProductCatalogOverlay(initialProduct);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [descriptionOverflows, setDescriptionOverflows] = useState(false);
   const descriptionRef = useRef<HTMLParagraphElement>(null);
 
   // 상품설명이 접힘 높이를 넘는지 측정해 자세히 보기 노출을 결정한다(짧으면 버튼/페이드 없음).
+  // 로딩 중에는 본문이 없어 잴 수 없으므로 조회 상태가 바뀔 때도 다시 잰다.
   useEffect(() => {
     const el = descriptionRef.current;
     setDescriptionOverflows(el !== null && el.scrollHeight > DESCRIPTION_COLLAPSED_MAX + 1);
-  }, [product.description]);
+  }, [product.description, status]);
 
   const hasDescription = product.description !== undefined && product.description !== '';
   const clampDescription = descriptionOverflows && !descriptionExpanded;
 
+  // 없는 상품 주소로 공유·직접 진입하면 뒤로 갈 곳이 없어 홈을 출구로 준다.
+  if (status === 'notFound') {
+    return <NotFoundScreen fallbackHref="/" />;
+  }
+
+  // 조회 결과가 오기 전에 mock을 그리면 없는 상품·다른 상품이 잠깐 보인다. 이미지·상품명 자리만 잡는다.
+  if (status === 'loading') {
+    return (
+      <>
+        <DetailHeader />
+        <div aria-busy className="flex flex-1 flex-col">
+          <Skeleton className="h-[322px] w-full rounded-none" />
+          <div className="flex flex-col gap-2 p-4">
+            <Skeleton className="h-6 w-24" />
+            <Skeleton className="h-7 w-3/4" />
+            <Skeleton className="h-5 w-1/2" />
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
-      <header className="border-divider-default flex h-13 w-full shrink-0 items-center border-b">
-        <GoBackButton className="text-content-tertiary flex h-13 w-10 shrink-0 items-center px-2">
-          <ChevronLeft aria-hidden className="size-6" />
-          <span className="sr-only">뒤로 가기</span>
-        </GoBackButton>
-      </header>
+      <DetailHeader />
 
       <div className="flex flex-1 flex-col">
         {/* 상품 이미지 + 실시간 열람 배지 + '비슷한 상품' 칩 */}
@@ -250,5 +271,17 @@ export function ProductDetailView({
         </Link>
       </footer>
     </>
+  );
+}
+
+/** 뒤로가기만 있는 상단 바. 로딩 중에도 빠져나갈 수 있게 본문과 따로 그린다. */
+function DetailHeader() {
+  return (
+    <header className="border-divider-default flex h-13 w-full shrink-0 items-center border-b">
+      <GoBackButton className="text-content-tertiary flex h-13 w-10 shrink-0 items-center px-2">
+        <ChevronLeft aria-hidden className="size-6" />
+        <span className="sr-only">뒤로 가기</span>
+      </GoBackButton>
+    </header>
   );
 }

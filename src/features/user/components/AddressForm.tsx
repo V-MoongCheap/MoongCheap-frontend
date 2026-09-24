@@ -140,8 +140,12 @@ export function AddressForm({
     }
   }
 
+  // formState는 렌더 중에 읽은 항목만 구독하는 Proxy다. `isValid && isDirty`로 쓰면 isValid가
+  // false인 동안 isDirty를 읽지 않아 dirty 추적이 꺼지고, 유효해진 순간 낡은 false가 남아
+  // 버튼이 한 입력 늦게 열린다(#163). 그래서 먼저 꺼내 둔다.
+  const { isValid, isDirty } = formState;
   // 저장 중에는 잠근다. 연타하면 같은 배송지가 두 건 등록된다.
-  const canSubmit = formState.isValid && formState.isDirty && !isSaving;
+  const canSubmit = isValid && isDirty && !isSaving;
 
   return (
     <form className="flex w-full flex-1 flex-col" onSubmit={handleSubmit(onSubmit)}>

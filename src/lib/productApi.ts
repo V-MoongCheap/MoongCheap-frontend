@@ -24,6 +24,12 @@ export interface ProductCatalogDetailDto {
   description: string | null;
 }
 
+/** 도감 조회 실패 중 화면이 따로 반응하는 비즈니스 코드. */
+export const PRODUCT_ERROR_CODE = {
+  /** 404. 없는 도감 id(#151). */
+  NOT_FOUND: 'PRODUCT_001',
+} as const;
+
 /**
  * 화면 상품 id(라우트 `productId`)를 백엔드 도감 id(Long)로 바꾼다. 바꿀 수 없으면 null.
  *

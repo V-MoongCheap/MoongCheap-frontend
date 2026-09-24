@@ -30,6 +30,8 @@ export default async function ProductDetailPage({
   return (
     <ProductDetailView
       key={productId}
+      // 없는 상품(404)은 공유·직접 진입이 많아 뒤로 갈 곳이 없을 수 있다. 홈을 출구로 준다.
+      notFoundHref="/"
       participateHref={`/products/${encodeURIComponent(productId)}/timeline`}
       product={product}
     />

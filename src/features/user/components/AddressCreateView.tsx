@@ -38,9 +38,9 @@ export function AddressCreateView({ successHref }: AddressCreateViewProps) {
 
   // 등록 후 목록 캐시를 버린다. 이것이 없으면 방금 등록한 배송지가 목록에 바로 보이지 않는다.
   //
-  // `AddressForm`이 저장을 마치고 `router.refresh()`를 부르지만, 그것은 서버 캐시(RSC 페이로드)만
-  // 버린다. 목록은 이 훅의 Query 캐시에서 나오므로 신선도 시간(전역 60초) 안에는 옛 목록이 그대로
-  // 그려진다. 무효화를 기다린 뒤에 폼이 이동하도록 await로 둔다.
+  // 목록은 이 훅의 Query 캐시에서 나오므로 신선도 시간(전역 60초) 안에는 옛 목록이 그대로
+  // 그려진다. 폼은 저장 뒤 들어온 화면으로 돌아가기만 하므로(`AddressForm`), 무효화를 기다린 뒤에
+  // 폼이 이동하도록 await로 둔다.
   async function handleSave(values: AddressFormValues) {
     await createAddress(values);
     await queryClient.invalidateQueries({ queryKey: ADDRESS_QUERY_KEYS.list });

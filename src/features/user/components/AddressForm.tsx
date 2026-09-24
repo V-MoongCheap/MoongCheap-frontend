@@ -16,6 +16,7 @@ import {
 import { toFullAddress, useDaumPostcode } from '@/hooks/useDaumPostcode';
 import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/cn';
+import { canGoBackInApp } from '@/lib/navigationHistory';
 import {
   ADDRESS_DETAIL_MAX_LENGTH,
   ADDRESS_NAME_MAX_LENGTH,
@@ -49,7 +50,8 @@ const EMPTY_VALUES: AddressFormValues = {
 
 interface AddressFormProps {
   /**
-   * 저장을 마친 뒤 이동할 경로. 배송지 입력은 마이페이지 외에 주문 플로우에서도 쓰이므로
+   * 저장을 마친 뒤 돌아갈 앱 내부 히스토리가 없을 때(직접 진입) 이동할 경로. 있으면 들어온
+   * 화면으로 돌아간다(#165). 배송지 입력은 마이페이지 외에 주문 플로우에서도 쓰이므로
    * 폼이 목적지를 직접 들고 있으면 안 된다(`features`는 라우트 문자열을 갖지 않는다).
    */
   successHref: string;
@@ -67,7 +69,7 @@ interface AddressFormProps {
    */
   lockDefault?: boolean;
   /**
-   * 저장 동작. 넘기지 않으면 저장 없이 `successHref`로 이동만 한다.
+   * 저장 동작. 넘기지 않으면 저장 없이 이동만 한다.
    *
    * 함수 prop이라 넘기는 쪽도 client여야 한다. 서버 컴포넌트인 페이지가 직접 넘길 수 없어
    * `AddressCreateView`·`AddressEditView`가 중간에서 받는다.
@@ -119,19 +121,31 @@ export function AddressForm({
     }
   }
 
+  // 저장 뒤에는 들어온 화면으로 **돌아간다**(#165). push로 목록을 새로 쌓으면 히스토리가
+  // `목록 → 폼 → 목록`이 되어, 목록에서 뒤로 가기를 누르면 방금 떠난 폼이 다시 열린다(등록할수록
+  // 한 쌍씩 쌓여 무한 반복처럼 보였다). 돌아갈 앱 내부 항목이 없는 직접 진입(새로고침·공유 링크)만
+  // `successHref`로 보내고, 그때도 replace로 폼 항목을 덮어 뒤로 가기에 폼이 남지 않게 한다.
+  //
+  // 목록 데이터는 `onSave`가 Query 캐시를 무효화해 두므로 돌아간 화면이 새 목록을 그린다.
+  function leaveForm() {
+    if (canGoBackInApp()) {
+      router.back();
+      return;
+    }
+    router.replace(successHref);
+  }
+
   async function onSubmit(values: AddressFormValues) {
     if (onSave === undefined) {
       // 저장이 배선되지 않은 화면은 이동만 한다.
-      router.push(successHref);
+      leaveForm();
       return;
     }
 
     setIsSaving(true);
     try {
       await onSave(values);
-      router.push(successHref);
-      // 목록은 client에서 조회하므로 push만으로는 낡은 데이터가 남는다. 서버 캐시도 함께 버린다.
-      router.refresh();
+      leaveForm();
     } catch (error) {
       // 시안에 오류 문구 자리가 없다(검증은 버튼 잠금으로만 표시). 서버가 거절한 사유는
       // 알려야 하므로 공용 토스트로 띄운다. 백엔드가 사용자용 한국어 문구를 주므로 그대로 쓴다.

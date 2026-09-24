@@ -69,3 +69,26 @@ export function syncNavigationHistory(): void {
 export function hasInAppHistoryEntry(): boolean {
   return currentDepth > 0;
 }
+
+/** 일부 브라우저(주로 Chromium)만 지원하는 Navigation API의 필요한 부분만 좁혀 쓴다. */
+interface NavigationApi {
+  readonly canGoBack?: boolean;
+}
+
+/**
+ * 이 페이지에서 `router.back()`으로 돌아갈 **앱 내부** 항목이 있는지. Navigation API의 canGoBack이
+ * 정확한 신호라(현재가 히스토리의 첫 항목이면 false) 지원 브라우저에선 그것을 쓴다.
+ *
+ * 미지원 브라우저(예: Safari)에선 `window.history.length`를 쓰면 안 된다 — 교차 출처·빈 탭 항목까지
+ * 세므로, 외부 링크로 처음 들어와도 length가 2가 되어 back()이 사이트를 벗어난다. 대신 앱이 직접
+ * 센 내부 히스토리를 본다(위 depth 스탬프).
+ *
+ * GoBackButton(뒤로 가기)과 배송지 폼(저장 후 복귀, #165)이 쓴다.
+ */
+export function canGoBackInApp(): boolean {
+  const nav = (window as unknown as { navigation?: NavigationApi }).navigation;
+  if (nav !== undefined && typeof nav.canGoBack === 'boolean') {
+    return nav.canGoBack;
+  }
+  return hasInAppHistoryEntry();
+}

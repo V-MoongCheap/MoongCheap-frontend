@@ -153,8 +153,9 @@ export function ParticipationList({ awardResultBaseHref }: ParticipationListProp
         </button>
       </ErrorScreen>
     );
-  } else if (data === undefined) {
-    // 첫 조회 중.
+  } else if (data === undefined || isRedirectingToLogin) {
+    // 첫 조회 중. 401로 로그인 화면에 보내는 중이면 받은 목록이 있어도(이어 받기·재조회 중 만료)
+    // 스켈레톤을 그려 이동 전까지 이전 목록과 재시도 UI가 비치지 않게 한다.
     content = (
       <div aria-busy className="flex w-full flex-1 flex-col gap-3 px-4 pt-4" role="status">
         <span className="sr-only">참여 목록을 불러오는 중</span>

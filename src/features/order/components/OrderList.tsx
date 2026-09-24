@@ -64,7 +64,7 @@ export function OrderList({ detailHrefBase }: OrderListProps) {
   const sentinelRef = useInfiniteScrollSentinel(canLoadMore, fetchNextPage);
 
   // 첫 조회 실패. 이어 받기 실패는 받은 목록을 지우지 않고 목록 아래에서 따로 알린다.
-  // 401로 로그인 화면에 보내는 동안은 아래 스켈레톤을 유지한다(깜빡임 방지).
+  // 401로 로그인 화면에 보내는 동안은 아래 스켈레톤으로 넘긴다(깜빡임 방지).
   if (data === undefined && isError && !isRedirectingToLogin) {
     return (
       <ErrorScreen>
@@ -115,7 +115,9 @@ export function OrderList({ detailHrefBase }: OrderListProps) {
 
   // 첫 조회 중. '전체' 탭은 주문이 0건이면 탭이 통째로 사라지므로(빈 상태 시안) 결과를 알기 전에
   // 진짜 탭을 그리지 않는다. 다른 탭은 이미 탭이 보이는 상태에서 넘어온 것이라 탭을 유지한다.
-  if (data === undefined) {
+  // 401로 로그인 화면에 보내는 중이면 받은 목록이 있어도(이어 받기·재조회 중 만료) 스켈레톤을
+  // 그린다. 이동이 끝날 때까지 이전 목록과 재시도 UI가 비치지 않게 한다.
+  if (data === undefined || isRedirectingToLogin) {
     if (tab === 'all') {
       return <OrderListSkeleton withHeader />;
     }

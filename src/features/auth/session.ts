@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
@@ -95,11 +95,19 @@ export function useRedirectOnUnauthorized(error: Error | null): boolean {
   const router = useRouter();
   const queryClient = useQueryClient();
   const isUnauthorized = error instanceof ApiError && error.status === 401;
+  // 한 번만 처리한다. `clear()`가 지금 떠 있는 목록 쿼리까지 지워, 이동 전에 다시 그려지면 쿼리가
+  // 새로 만들어져 재조회 → 또 401 → 또 clear로 반복될 수 있다.
+  const handledRef = useRef(false);
 
   useEffect(() => {
-    if (!isUnauthorized) {
+    if (!isUnauthorized || handledRef.current) {
       return;
     }
+    handledRef.current = true;
+    // 🔒 로그아웃과 같은 이유로 조회 캐시를 통째로 버린다(`useSessionClearingMutation` 참고).
+    // 만료된 계정의 주문·참여·배송지가 캐시에 남으면 같은 기기에서 다른 계정으로 로그인했을 때
+    // 잠깐 그려진다. `clear()` 뒤에 세션을 세워야 null까지 지워지지 않는다.
+    queryClient.clear();
     queryClient.setQueryData(SESSION_QUERY_KEY, null);
     router.replace('/login');
   }, [isUnauthorized, queryClient, router]);

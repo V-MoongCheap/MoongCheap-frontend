@@ -1,6 +1,4 @@
-import { ERROR_ACTION_CLASS, ErrorScreen } from '@/components/ui/ErrorScreen';
-import { GoBackButton } from '@/components/ui/GoBackButton';
-import { ERROR_SCREEN_RETRY_LABEL } from '@/constants/commonMessages';
+import { NotFoundScreen } from '@/components/ui/NotFoundScreen';
 
 // 404(#44). 아직 화면이 없는 진입점이 여러 개라 실제로 도달한다
 // (결제수단·회원정보 변경·비밀번호 변경·닉네임 변경·프로필 이미지 변경·판매자 전환·주문 내역).
@@ -18,9 +16,7 @@ import { ERROR_SCREEN_RETRY_LABEL } from '@/constants/commonMessages';
 export default function NotFound() {
   return (
     <div className="max-w-mobile mx-auto flex min-h-svh w-full flex-col">
-      <ErrorScreen>
-        <GoBackButton className={ERROR_ACTION_CLASS}>{ERROR_SCREEN_RETRY_LABEL}</GoBackButton>
-      </ErrorScreen>
+      <NotFoundScreen />
     </div>
   );
 }

@@ -1,7 +1,11 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
+
+import { ApiError } from '@/lib/api';
 import { getMe, logout, updateNickname, withdraw } from '@/lib/authApi';
 import type { SessionUser } from '@/types/auth';
 
@@ -75,6 +79,32 @@ function useSessionClearingMutation(mutationFn: () => Promise<void>) {
       queryClient.setQueryData(SESSION_QUERY_KEY, null);
     },
   });
+}
+
+/**
+ * 로그인이 필요한 조회가 401(세션 만료·쿠키 없음)로 실패하면 로그인 화면으로 보낸다(#159).
+ *
+ * 401은 다시 조회해도 같은 결과라 '다시 시도' 오류 화면을 띄우면 유저가 갇힌다. 그래서 전역 세션을
+ * 미로그인(null)으로 맞추고 로그인 화면으로 replace 한다(뒤로가기로 오류 화면에 돌아오지 않게).
+ * 렌더 중 이동은 안 되므로 effect에서 처리한다.
+ *
+ * 반환값은 "지금 로그인 화면으로 보내는 중인지"다. 호출부는 이 동안 오류 화면 대신 자리표시자를
+ * 그려 깜빡임을 막는다(`SessionProfileCard`와 같은 방침).
+ */
+export function useRedirectOnUnauthorized(error: Error | null): boolean {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const isUnauthorized = error instanceof ApiError && error.status === 401;
+
+  useEffect(() => {
+    if (!isUnauthorized) {
+      return;
+    }
+    queryClient.setQueryData(SESSION_QUERY_KEY, null);
+    router.replace('/login');
+  }, [isUnauthorized, queryClient, router]);
+
+  return isUnauthorized;
 }
 
 /** 로그아웃 뮤테이션(#70). `POST /api/auth/logout`으로 세션을 폐기한다. */

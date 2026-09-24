@@ -20,6 +20,7 @@ import {
   PARTICIPATION_TABS,
   type ParticipationTab,
 } from '@/constants/participationStatus';
+import { useRedirectOnUnauthorized } from '@/features/auth/session';
 import { ParticipationCard } from '@/features/participation/components/ParticipationCard';
 import { useMyDemands } from '@/features/participation/hooks/useMyDemands';
 import { useInfiniteScrollSentinel } from '@/hooks/useInfiniteScrollSentinel';
@@ -89,6 +90,7 @@ export function ParticipationList({ awardResultBaseHref }: ParticipationListProp
 
   const {
     data,
+    error,
     isError,
     refetch,
     hasNextPage,
@@ -96,6 +98,8 @@ export function ParticipationList({ awardResultBaseHref }: ParticipationListProp
     isFetchingNextPage,
     isFetchNextPageError,
   } = useMyDemands(tab);
+  // 세션 만료(401)는 재시도해도 소용없어 오류 화면 대신 로그인 화면으로 보낸다(#159).
+  const isRedirectingToLogin = useRedirectOnUnauthorized(error);
 
   // 목록 끝이 가까워지면 다음 20건을 받는다(`BR-B17-01-11`). 이어 받기가 실패하면 감지를 멈추고
   // 아래 재시도 버튼을 기다린다. 감지 로직은 주문 목록과 공유한다(`useInfiniteScrollSentinel`).
@@ -138,8 +142,9 @@ export function ParticipationList({ awardResultBaseHref }: ParticipationListProp
 
   // 본문은 네 상태로 갈린다: 첫 조회 실패 → 전체화면 오류, 첫 조회 중 → 스켈레톤, 결과 없음 → 빈 상태,
   // 그 외 → 목록. SegmentControl(탭)과 취소 다이얼로그는 어느 상태에서나 유지한다.
+  // 401로 로그인 화면에 보내는 동안은 오류 화면 대신 스켈레톤을 유지한다(깜빡임 방지).
   let content;
-  if (data === undefined && isError) {
+  if (data === undefined && isError && !isRedirectingToLogin) {
     // 첫 조회 실패. 이어 받기 실패는 받은 목록을 지우지 않고 목록 아래에서 따로 알린다(목록 안).
     content = (
       <ErrorScreen>

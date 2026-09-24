@@ -10,6 +10,7 @@ import { ERROR_ACTION_CLASS, ErrorScreen } from '@/components/ui/ErrorScreen';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ERROR_SCREEN_RETRY_LABEL } from '@/constants/commonMessages';
 import { ORDER_LIST_TABS, type OrderListTabKey } from '@/constants/orderStatus';
+import { useRedirectOnUnauthorized } from '@/features/auth/session';
 import { useOrderList } from '@/features/order/hooks/useOrders';
 import { useInfiniteScrollSentinel } from '@/hooks/useInfiniteScrollSentinel';
 import { cn } from '@/lib/cn';
@@ -45,6 +46,7 @@ export function OrderList({ detailHrefBase }: OrderListProps) {
   const [tab, setTab] = useState<OrderListTabKey>('all');
   const {
     data,
+    error,
     isError,
     refetch,
     hasNextPage,
@@ -52,6 +54,8 @@ export function OrderList({ detailHrefBase }: OrderListProps) {
     isFetchingNextPage,
     isFetchNextPageError,
   } = useOrderList(tab);
+  // 세션 만료(401)는 재시도해도 소용없어 오류 화면 대신 로그인 화면으로 보낸다(#159).
+  const isRedirectingToLogin = useRedirectOnUnauthorized(error);
 
   // 목록 끝이 화면에 가까워지면 다음 20건을 받는다(`BR-B21-01-11`). 이어 받기가 실패하면 감지를
   // 멈추고 목록 아래 재시도 버튼을 기다린다. 감지 로직은 참여 목록과 공유한다
@@ -60,7 +64,8 @@ export function OrderList({ detailHrefBase }: OrderListProps) {
   const sentinelRef = useInfiniteScrollSentinel(canLoadMore, fetchNextPage);
 
   // 첫 조회 실패. 이어 받기 실패는 받은 목록을 지우지 않고 목록 아래에서 따로 알린다.
-  if (data === undefined && isError) {
+  // 401로 로그인 화면에 보내는 동안은 아래 스켈레톤을 유지한다(깜빡임 방지).
+  if (data === undefined && isError && !isRedirectingToLogin) {
     return (
       <ErrorScreen>
         <button className={ERROR_ACTION_CLASS} onClick={() => void refetch()} type="button">

@@ -6,8 +6,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { useForm, useWatch } from 'react-hook-form';
 
+import { AppBar } from '@/components/layout/AppBar';
+import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { useToast } from '@/components/ui/Toast';
+import { LEAVE_ADDRESS_FORM_DIALOG } from '@/constants/addressActions';
 import {
   ADDRESS_INPUT_CLASS,
   ADDRESS_READONLY_CLASS,
@@ -35,6 +38,9 @@ import {
 //
 // 저장은 `onSave`로 받는다. 폼은 어떤 엔드포인트를 부르는지 모른다(등록·수정이 다른 API다).
 // `onSave`가 없으면 이동만 한다.
+//
+// 앱바도 폼이 그린다. 뒤로 가기가 입력 변경 여부(isDirty)를 알아야 이탈 확인 다이얼로그를 띄울 수
+// 있어서다(#164). 로딩·오류처럼 폼이 없는 상태의 앱바는 Create/EditView가 그린다.
 
 const EMPTY_VALUES: AddressFormValues = {
   postalCode: '',
@@ -49,6 +55,8 @@ const EMPTY_VALUES: AddressFormValues = {
 };
 
 interface AddressFormProps {
+  /** 앱바 제목('배송지 등록' / '배송지 수정'). */
+  title: string;
   /**
    * 저장을 마친 뒤 돌아갈 앱 내부 히스토리가 없을 때(직접 진입) 이동할 경로. 있으면 들어온
    * 화면으로 돌아간다(#165). 배송지 입력은 마이페이지 외에 주문 플로우에서도 쓰이므로
@@ -78,6 +86,7 @@ interface AddressFormProps {
 }
 
 export function AddressForm({
+  title,
   successHref,
   defaultValues = EMPTY_VALUES,
   lockDefault = false,
@@ -88,6 +97,7 @@ export function AddressForm({
   const { open } = useDaumPostcode();
   const { showToast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
+  const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
   // defaultValues처럼 마운트 때 한 번만 만든다. 호출부가 매 렌더 새 객체를 넘겨도 resolver가
   // 바뀌지 않는다.
   const [schema] = useState(() => createAddressSchema(savedContact));
@@ -100,6 +110,12 @@ export function AddressForm({
     // 시안의 버튼이 입력 도중에 활성으로 바뀌므로 매 변경마다 판정한다.
     mode: 'onChange',
   });
+
+  // formState는 렌더 중에 읽은 항목만 구독하는 Proxy다. `isValid && isDirty`로 쓰면 isValid가
+  // false인 동안 isDirty를 읽지 않아 dirty 추적이 꺼진다. 그러면 유효해진 순간 낡은 false가 남아
+  // 확인 버튼이 한 입력 늦게 열리고(#163), 뒤로 가기(`handleBack`)가 보는 isDirty도 false로
+  // 굳는다(#164). 그래서 조건식 전에 항상 꺼내 둔다.
+  const { isValid, isDirty } = formState;
 
   // useWatch는 watch()와 달리 메모이제이션 안전(React Compiler 호환)이라 이걸 쓴다.
   const noEntranceCode = useWatch({ control, name: 'noEntranceCode' });
@@ -135,6 +151,29 @@ export function AddressForm({
     router.replace(successHref);
   }
 
+  // 앱바 뒤로 가기(FN-B30-02 이탈 확인, #164). 입력이 바뀌었으면 확인을 먼저 받는다.
+  //
+  // 나가는 길은 저장 후와 같은 `leaveForm`이다. 기본 `GoBackButton`은 직접 진입에서 목록을 push해
+  // 폼이 히스토리에 남는다(#165와 같은 되돌아옴). 변경이 없어 바로 나갈 때도 이 길로 보낸다.
+  //
+  // 저장 중에는 무시한다. 나간 뒤 저장이 끝나면 `onSubmit`이 `leaveForm`을 한 번 더 불러 한 칸 더
+  // 뒤로 간다.
+  function handleBack() {
+    if (isSaving) {
+      return;
+    }
+    if (isDirty) {
+      setIsLeaveDialogOpen(true);
+      return;
+    }
+    leaveForm();
+  }
+
+  function handleConfirmLeave() {
+    setIsLeaveDialogOpen(false);
+    leaveForm();
+  }
+
   async function onSubmit(values: AddressFormValues) {
     if (onSave === undefined) {
       // 저장이 배선되지 않은 화면은 이동만 한다.
@@ -154,131 +193,143 @@ export function AddressForm({
     }
   }
 
-  // formState는 렌더 중에 읽은 항목만 구독하는 Proxy다. `isValid && isDirty`로 쓰면 isValid가
-  // false인 동안 isDirty를 읽지 않아 dirty 추적이 꺼지고, 유효해진 순간 낡은 false가 남아
-  // 버튼이 한 입력 늦게 열린다(#163). 그래서 먼저 꺼내 둔다.
-  const { isValid, isDirty } = formState;
   // 저장 중에는 잠근다. 연타하면 같은 배송지가 두 건 등록된다.
   const canSubmit = isValid && isDirty && !isSaving;
 
   return (
-    <form className="flex w-full flex-1 flex-col" onSubmit={handleSubmit(onSubmit)}>
-      <div className="flex w-full flex-1 flex-col gap-5 px-4 py-2">
-        <AddressField label="주소">
-          <div className="flex w-full flex-col gap-2">
-            <div className="flex items-center gap-2">
-              {/* 검색 결과만 채우는 칸이라 readOnly. disabled로 두면 제출값에서 빠진다. */}
-              <input
-                aria-label="우편번호"
-                className={cn(ADDRESS_READONLY_CLASS, 'w-22.5')}
-                readOnly
-                {...register('postalCode')}
-              />
-              {/* 시안은 86x40(w-21.5) 안에 '우편번호 찾기'가 한 줄로 꽉 찬다. Figma가 붙여 둔
+    <>
+      <AppBar backHref={successHref} onBack={handleBack} title={title} />
+      <form className="flex w-full flex-1 flex-col" onSubmit={handleSubmit(onSubmit)}>
+        <div className="flex w-full flex-1 flex-col gap-5 px-4 py-2">
+          <AddressField label="주소">
+            <div className="flex w-full flex-col gap-2">
+              <div className="flex items-center gap-2">
+                {/* 검색 결과만 채우는 칸이라 readOnly. disabled로 두면 제출값에서 빠진다. */}
+                <input
+                  aria-label="우편번호"
+                  className={cn(ADDRESS_READONLY_CLASS, 'w-22.5')}
+                  readOnly
+                  {...register('postalCode')}
+                />
+                {/* 시안은 86x40(w-21.5) 안에 '우편번호 찾기'가 한 줄로 꽉 찬다. Figma가 붙여 둔
                   좌우 여백 12px은 컴포넌트 기본값이고 텍스트가 그걸 밀고 나간 상태라, 그대로
                   옮기면 글자 자리가 62px밖에 안 남아 두 줄로 깨진다. */}
-              <button
-                className="bg-surface-button-tertiary-default text-content-inverse text-label-13 rounded-8 active:bg-surface-button-tertiary-pressed focus-visible:ring-effect-focus-ring-primary flex h-10 w-21.5 shrink-0 items-center justify-center px-1 whitespace-nowrap outline-none focus-visible:ring-2"
-                onClick={handleFindPostalCode}
-                type="button"
-              >
-                우편번호 찾기
-              </button>
-            </div>
+                <button
+                  className="bg-surface-button-tertiary-default text-content-inverse text-label-13 rounded-8 active:bg-surface-button-tertiary-pressed focus-visible:ring-effect-focus-ring-primary flex h-10 w-21.5 shrink-0 items-center justify-center px-1 whitespace-nowrap outline-none focus-visible:ring-2"
+                  onClick={handleFindPostalCode}
+                  type="button"
+                >
+                  우편번호 찾기
+                </button>
+              </div>
 
-            <input
-              aria-label="주소"
-              className={cn(ADDRESS_READONLY_CLASS, 'w-full')}
-              readOnly
-              {...register('address')}
-            />
-            <input
-              aria-label="상세주소"
-              className={cn(ADDRESS_READONLY_CLASS, 'w-full')}
-              // 시안대로 주소를 고르기 전에는 상세주소를 막는다(FN-B30-02 BR-02).
-              // 시안에 플레이스홀더가 없어 넣지 않았다. 어느 칸인지는 aria-label로만 구분된다.
-              disabled={address === ''}
-              maxLength={ADDRESS_DETAIL_MAX_LENGTH}
-              {...register('addressDetail')}
-            />
-          </div>
-        </AddressField>
-
-        <div className="flex w-full flex-col gap-5">
-          <AddressField label="공동현관 출입번호">
-            <div className="flex w-full flex-col gap-3">
               <input
-                className={cn(ADDRESS_INPUT_CLASS, noEntranceCode && 'bg-surface-disabled-primary')}
-                disabled={noEntranceCode}
-                aria-label="공동현관 출입번호"
-                maxLength={ENTRANCE_CODE_MAX_LENGTH}
-                placeholder="공동현관번호를 입력해주세요. (예 : #1234)"
-                {...register('entranceCode')}
+                aria-label="주소"
+                className={cn(ADDRESS_READONLY_CLASS, 'w-full')}
+                readOnly
+                {...register('address')}
               />
-              <Checkbox
-                checked={noEntranceCode}
-                label="공동현관번호 없음"
-                onChange={(event) => handleNoEntranceCodeChange(event.target.checked)}
+              <input
+                aria-label="상세주소"
+                className={cn(ADDRESS_READONLY_CLASS, 'w-full')}
+                // 시안대로 주소를 고르기 전에는 상세주소를 막는다(FN-B30-02 BR-02).
+                // 시안에 플레이스홀더가 없어 넣지 않았다. 어느 칸인지는 aria-label로만 구분된다.
+                disabled={address === ''}
+                maxLength={ADDRESS_DETAIL_MAX_LENGTH}
+                {...register('addressDetail')}
               />
             </div>
           </AddressField>
 
-          <AddressField label="배송지명">
-            <input
-              className={ADDRESS_INPUT_CLASS}
-              aria-label="배송지명"
-              maxLength={ADDRESS_NAME_MAX_LENGTH}
-              placeholder="배송지명을 입력해주세요. (예 : 집, 회사)"
-              {...register('name')}
-            />
-          </AddressField>
+          <div className="flex w-full flex-col gap-5">
+            <AddressField label="공동현관 출입번호">
+              <div className="flex w-full flex-col gap-3">
+                <input
+                  className={cn(
+                    ADDRESS_INPUT_CLASS,
+                    noEntranceCode && 'bg-surface-disabled-primary',
+                  )}
+                  disabled={noEntranceCode}
+                  aria-label="공동현관 출입번호"
+                  maxLength={ENTRANCE_CODE_MAX_LENGTH}
+                  placeholder="공동현관번호를 입력해주세요. (예 : #1234)"
+                  {...register('entranceCode')}
+                />
+                <Checkbox
+                  checked={noEntranceCode}
+                  label="공동현관번호 없음"
+                  onChange={(event) => handleNoEntranceCodeChange(event.target.checked)}
+                />
+              </div>
+            </AddressField>
 
-          <AddressField label="받는 분">
-            <input
-              className={ADDRESS_INPUT_CLASS}
-              aria-label="받는 분"
-              maxLength={RECIPIENT_MAX_LENGTH}
-              placeholder="받는 분을 입력해주세요."
-              {...register('recipient')}
-            />
-          </AddressField>
+            <AddressField label="배송지명">
+              <input
+                className={ADDRESS_INPUT_CLASS}
+                aria-label="배송지명"
+                maxLength={ADDRESS_NAME_MAX_LENGTH}
+                placeholder="배송지명을 입력해주세요. (예 : 집, 회사)"
+                {...register('name')}
+              />
+            </AddressField>
 
-          <AddressField label="휴대폰 번호">
-            {/* 입력칸은 하이픈 없이 받는다(시안 453:25833의 입력값이 `01012341234`, 플레이스홀더도
+            <AddressField label="받는 분">
+              <input
+                className={ADDRESS_INPUT_CLASS}
+                aria-label="받는 분"
+                maxLength={RECIPIENT_MAX_LENGTH}
+                placeholder="받는 분을 입력해주세요."
+                {...register('recipient')}
+              />
+            </AddressField>
+
+            <AddressField label="휴대폰 번호">
+              {/* 입력칸은 하이픈 없이 받는다(시안 453:25833의 입력값이 `01012341234`, 플레이스홀더도
                 '-없이'). 하이픈은 목록 카드에서만 붙인다(formatPhone).
                 기능명세 FN-B30-02는 "하이픈 자동 삽입 표시"라고 적고 있어 시안과 어긋난다.
                 시안 두 곳(입력값·플레이스홀더)이 서로 일관되므로 시안을 따르고 PM에 확인 요청했다. */}
-            <input
-              className={ADDRESS_INPUT_CLASS}
-              inputMode="numeric"
-              aria-label="휴대폰 번호"
-              maxLength={PHONE_MAX_LENGTH}
-              placeholder="-없이 휴대폰 번호를 입력해주세요."
-              {...register('phone')}
-            />
-          </AddressField>
+              <input
+                className={ADDRESS_INPUT_CLASS}
+                inputMode="numeric"
+                aria-label="휴대폰 번호"
+                maxLength={PHONE_MAX_LENGTH}
+                placeholder="-없이 휴대폰 번호를 입력해주세요."
+                {...register('phone')}
+              />
+            </AddressField>
+          </div>
+
+          {/* 최초 등록과 현재 기본배송지 수정에서는 해제할 수 없다(BR-04 · BR-B30-02-06). */}
+          <Checkbox disabled={lockDefault} label="기본 배송지로 설정" {...register('isDefault')} />
         </div>
 
-        {/* 최초 등록과 현재 기본배송지 수정에서는 해제할 수 없다(BR-04 · BR-B30-02-06). */}
-        <Checkbox disabled={lockDefault} label="기본 배송지로 설정" {...register('isDefault')} />
-      </div>
-
-      <div className="w-full p-4">
-        {/* 명세는 수정 모드 CTA를 "변경 발생 시 활성"으로 정한다. 등록 모드는 빈 폼에서 시작해
+        <div className="w-full p-4">
+          {/* 명세는 수정 모드 CTA를 "변경 발생 시 활성"으로 정한다. 등록 모드는 빈 폼에서 시작해
             값을 채우는 순간 dirty가 되므로, 두 모드에 같은 조건을 써도 동작이 갈리지 않는다. */}
-        <button
-          className={cn(
-            'text-button-15 rounded-8 focus-visible:ring-effect-focus-ring-primary flex h-12 w-full items-center justify-center px-3 outline-none focus-visible:ring-2',
-            canSubmit
-              ? 'bg-surface-button-tertiary-default text-content-inverse active:bg-surface-button-tertiary-pressed'
-              : 'bg-surface-disabled-secondary text-content-disabled-secondary',
-          )}
-          disabled={!canSubmit}
-          type="submit"
-        >
-          확인
-        </button>
-      </div>
-    </form>
+          <button
+            className={cn(
+              'text-button-15 rounded-8 focus-visible:ring-effect-focus-ring-primary flex h-12 w-full items-center justify-center px-3 outline-none focus-visible:ring-2',
+              canSubmit
+                ? 'bg-surface-button-tertiary-default text-content-inverse active:bg-surface-button-tertiary-pressed'
+                : 'bg-surface-disabled-secondary text-content-disabled-secondary',
+            )}
+            disabled={!canSubmit}
+            type="submit"
+          >
+            확인
+          </button>
+        </div>
+      </form>
+
+      <AlertDialog
+        cancelLabel={LEAVE_ADDRESS_FORM_DIALOG.cancelLabel}
+        confirmLabel={LEAVE_ADDRESS_FORM_DIALOG.confirmLabel}
+        isOpen={isLeaveDialogOpen}
+        message={LEAVE_ADDRESS_FORM_DIALOG.message}
+        onClose={() => setIsLeaveDialogOpen(false)}
+        onConfirm={handleConfirmLeave}
+        title={LEAVE_ADDRESS_FORM_DIALOG.title}
+      />
+    </>
   );
 }

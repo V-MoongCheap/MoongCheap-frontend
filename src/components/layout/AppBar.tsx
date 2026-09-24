@@ -16,6 +16,9 @@ import { GoBackButton } from '@/components/ui/GoBackButton';
 // 뒤로 가기는 `next/link`가 아니라 `GoBackButton`이다. 링크는 replace를 주지 않으면 push라서,
 // 뒤로 가기를 눌러도 되돌아가는 게 아니라 히스토리에 한 항목이 더 쌓인다. 그래서 상품 상세처럼
 // `router.back()`을 쓰는 화면과 이어지면 두 화면을 서로 오가며 빠져나올 수 없었다(#138).
+//
+// `onBack`을 주면 이동을 호출부에 맡긴다. 입력 중인 폼이 이탈 확인 다이얼로그를 먼저 띄워야 하는
+// 경우다(B-30 배송지 폼, #164). 함수 prop이라 이 경우 호출부는 client여야 한다.
 
 interface AppBarProps {
   title: string;
@@ -24,20 +27,33 @@ interface AppBarProps {
   backHref: string;
   /** 제목 오른쪽 액션(아이콘 버튼·"편집" 링크 등). 없으면 제목만 그린다. */
   action?: ReactNode;
+  /** 뒤로 가기를 가로챈다. 주면 `backHref`로 이동하지 않고 이 함수만 부른다. */
+  onBack?: () => void;
 }
 
-export function AppBar({ title, backHref, action }: AppBarProps) {
+const BACK_BUTTON_CLASS = 'text-content-tertiary flex h-13 w-10 shrink-0 items-center px-2';
+
+export function AppBar({ title, backHref, action, onBack }: AppBarProps) {
+  const backIcon = (
+    <>
+      <ChevronLeft aria-hidden className="size-6" />
+      <span className="sr-only">뒤로 가기</span>
+    </>
+  );
+
   return (
     <header className="border-divider-default flex h-13 w-full shrink-0 items-center border-b">
       {/* 시안의 chevron-left는 #575757(content/tertiary)이다. B-24에 인라인으로 짤 때
           content/primary로 넣었던 것을 여기서 바로잡는다. */}
-      <GoBackButton
-        className="text-content-tertiary flex h-13 w-10 shrink-0 items-center px-2"
-        fallbackHref={backHref}
-      >
-        <ChevronLeft aria-hidden className="size-6" />
-        <span className="sr-only">뒤로 가기</span>
-      </GoBackButton>
+      {onBack === undefined ? (
+        <GoBackButton className={BACK_BUTTON_CLASS} fallbackHref={backHref}>
+          {backIcon}
+        </GoBackButton>
+      ) : (
+        <button className={BACK_BUTTON_CLASS} onClick={onBack} type="button">
+          {backIcon}
+        </button>
+      )}
       {/* 시안 `818:9980` - 제목과 액션이 한 줄을 나눠 쓴다(justify-between). 액션이 없어도
           제목 위치가 바뀌면 안 되므로 flex-1은 이 줄이 갖는다. */}
       <div className="flex h-full min-w-0 flex-1 items-center justify-between">

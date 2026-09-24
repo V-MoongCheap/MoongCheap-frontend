@@ -3,6 +3,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 
+import { AppBar } from '@/components/layout/AppBar';
 import { ERROR_ACTION_CLASS, ErrorScreen } from '@/components/ui/ErrorScreen';
 import { ERROR_SCREEN_RETRY_LABEL } from '@/constants/commonMessages';
 import { AddressForm } from '@/features/user/components/AddressForm';
@@ -24,6 +25,8 @@ import { ADDRESS_ERROR_CODE } from '@/types/api/address';
 
 interface AddressEditViewProps {
   addressId: string;
+  /** 앱바 제목. 폼이 없는 조회 중·오류 상태에도 같은 앱바를 보인다. */
+  title: string;
   /** 저장 후 이동할 경로. 조회 실패 시 돌아갈 곳도 여기다. */
   successHref: string;
 }
@@ -47,33 +50,41 @@ function toFormValues(address: AddressDetail): AddressFormValues {
   };
 }
 
-export function AddressEditView({ addressId, successHref }: AddressEditViewProps) {
+export function AddressEditView({ addressId, title, successHref }: AddressEditViewProps) {
   const { address, isLoading, error, refetch } = useAddress(addressId);
   const queryClient = useQueryClient();
 
   // 값을 받기 전에 폼을 그리면 빈 폼이 초기값으로 굳는다(useForm은 defaultValues를 마운트 때만
   // 읽는다). 받은 뒤에 한 번만 그린다.
   if (address === null) {
+    // 폼이 없는 상태의 앱바. 입력이 없으니 이탈 확인 없이 기본 뒤로 가기를 쓴다.
+    const appBar = <AppBar backHref={successHref} title={title} />;
+
     if (isLoading || error === null) {
-      return null;
+      return appBar;
     }
 
     // 없는 배송지(이미 삭제)·남의 배송지는 다시 불러도 같다. 재시도 대신 목록으로 돌려보낸다.
     const isGone =
       error.code === ADDRESS_ERROR_CODE.notFound || error.code === ADDRESS_ERROR_CODE.forbidden;
 
-    return isGone ? (
-      <ErrorScreen description={['배송지를 찾을 수 없어요.', '목록에서 다시 선택해주세요.']}>
-        <Link className={ERROR_ACTION_CLASS} href={successHref}>
-          목록으로
-        </Link>
-      </ErrorScreen>
-    ) : (
-      <ErrorScreen description={['배송지를 불러오지 못했어요.', '잠시 후 다시 시도해주세요.']}>
-        <button className={ERROR_ACTION_CLASS} onClick={refetch} type="button">
-          {ERROR_SCREEN_RETRY_LABEL}
-        </button>
-      </ErrorScreen>
+    return (
+      <>
+        {appBar}
+        {isGone ? (
+          <ErrorScreen description={['배송지를 찾을 수 없어요.', '목록에서 다시 선택해주세요.']}>
+            <Link className={ERROR_ACTION_CLASS} href={successHref}>
+              목록으로
+            </Link>
+          </ErrorScreen>
+        ) : (
+          <ErrorScreen description={['배송지를 불러오지 못했어요.', '잠시 후 다시 시도해주세요.']}>
+            <button className={ERROR_ACTION_CLASS} onClick={refetch} type="button">
+              {ERROR_SCREEN_RETRY_LABEL}
+            </button>
+          </ErrorScreen>
+        )}
+      </>
     );
   }
 
@@ -107,6 +118,7 @@ export function AddressEditView({ addressId, successHref }: AddressEditViewProps
       onSave={handleSave}
       savedContact={{ recipient: current.recipient, phone: current.phoneRaw }}
       successHref={successHref}
+      title={title}
     />
   );
 }

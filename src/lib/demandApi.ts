@@ -157,8 +157,10 @@ function formatRequestedAt(iso: string | null): string {
 /**
  * 마감(`desireEndAt`)까지 남은 일수. 오늘 자정 기준 달력일 차이로 세고, 지난 마감은 0으로 둔다.
  * 시각까지 빼면 같은 날 오전·오후에 D-0/D-1이 갈려 표기가 흔들려서, 날짜만 비교한다.
+ *
+ * 수요보드 마감(`saleEndAt`)도 같은 규칙으로 센다(`lib/demandBoardApi.ts`).
  */
-function computeDday(iso: string | null): number {
+export function computeDday(iso: string | null): number {
   if (iso === null) {
     return 0;
   }

@@ -46,9 +46,14 @@ export function ProductSummarySection({
         </span>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <p className="text-caption-10 text-content-secondary truncate">{product.brandName}</p>
+          {/* 브랜드는 mock에만 있고, 규격은 도감 값이 없을 수 있다. 없으면 그 줄을 숨긴다(#173). */}
+          {product.brandName !== undefined && (
+            <p className="text-caption-10 text-content-secondary truncate">{product.brandName}</p>
+          )}
           <p className="text-label-16 text-content-primary truncate">{product.name}</p>
-          <p className="text-caption-10 text-content-quarternary truncate">{product.spec}</p>
+          {product.spec !== undefined && (
+            <p className="text-caption-10 text-content-quarternary truncate">{product.spec}</p>
+          )}
 
           {/* 시안: 오른쪽 정렬. 라벨이 위, 값이 아래. */}
           <div className="mt-2 flex flex-col items-end">

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ERROR_ACTION_CLASS, ErrorScreen } from '@/components/ui/ErrorScreen';
 import { ERROR_SCREEN_RETRY_LABEL } from '@/constants/commonMessages';
 import { SEARCH_ERROR_DESCRIPTION } from '@/constants/searchMessages';
+import { useCatalogDemandSummaries } from '@/features/product/hooks/useCatalogDemandBoards';
 import { SearchEmptyState } from '@/features/search/components/SearchEmptyState';
 import { SearchFilterTabs } from '@/features/search/components/SearchFilterTabs';
 import { SearchResultCard } from '@/features/search/components/SearchResultCard';
@@ -22,11 +23,10 @@ import type { ProductSearchResult, SearchFilterKey } from '@/types/search';
 // 조회에 실패하면(미로그인 · 미배선 · 색인 없음) 목으로 떨어진다. `ProductDetailView`와 같은 방침이다.
 // 검색이 아예 안 되는 것과 결과가 0건인 것은 화면이 달라야 해서, 목 대체는 '실패'로 세지 않는다.
 //
-// ⚠️ 필터는 아직 목록을 실질적으로 거르지 못한다. 검색 응답에 수요보드 정보가 없어 실데이터에는
-//    `demandStatus`가 없기 때문이다([[types/search]]). 아래 분기는 값이 생기면 그대로 동작하고,
-//    지금은 목으로 떨어졌을 때만 시안대로 갈린다.
+// 검색 응답에 수요보드 정보가 없어, 카드의 수요 값(마감·상태·건수·인원)은 카드마다
+// 수요보드 조회로 채운다(`useCatalogDemandSummaries`, #173). 필터도 그 값으로 거른다.
 
-/** 검색 응답을 화면 타입으로 옮긴다. 수요 관련 값은 응답에 없어 비워 둔다. */
+/** 검색 응답을 화면 타입으로 옮긴다. 수요 관련 값은 응답에 없어 비워 두고 수요보드 조회로 채운다. */
 function toResults(products: Awaited<ReturnType<typeof searchProducts>>['products']) {
   return products.map<ProductSearchResult>((item) => ({
     id: String(item.id),
@@ -59,6 +59,9 @@ export function SearchResultsView({ query, productHrefBase }: SearchResultsViewP
   const [filter, setFilter] = useState<SearchFilterKey>('all');
   // 재시도 때마다 값을 바꿔 조회 effect를 다시 돌린다.
   const [attempt, setAttempt] = useState(0);
+  // 지금 검색어의 결과에만 수요 요약을 붙인다. 검색어가 바뀐 직후 남은 이전 결과로는 부르지 않는다.
+  const currentResults = loaded !== null && loaded.query === query ? loaded.results : null;
+  const demand = useCatalogDemandSummaries(currentResults?.map((item) => item.id) ?? []);
 
   useEffect(() => {
     let active = true;
@@ -120,23 +123,32 @@ export function SearchResultsView({ query, productHrefBase }: SearchResultsViewP
 
   // 첫 조회 중에는 필터도 목록도 그리지 않는다. 개수를 알기 전에 필터를 그리면 칩을 누를 수 있는데
   // 거를 대상이 없다.
-  if (loaded === null || loaded.query !== query) {
+  if (currentResults === null) {
     return null;
   }
 
-  // 필터를 그릴 수 있는지. 검색 응답에 수요보드 정보가 없어 **실데이터에는 `demandStatus`가
-  // 하나도 없다**([[types/search]]). 그 상태로 칩을 그리면 '모집중'을 눌렀을 때 결과가 통째로
-  // 사라지고 '찾는 상품이 없어요'가 뜬다. 검색은 성공했는데 검색어를 바꾸라고 안내하는 셈이라
-  // 거를 근거가 하나도 없으면 칩을 아예 감춘다.
+  // 수요 요약을 카드 값에 얹는다. 조회 전·실패면 검색 응답 값 그대로 둔다(목 결과는 목 값 그대로).
+  const results = currentResults.map((item) => {
+    const summary = demand.summaries.get(item.id);
+    return summary === undefined || summary === null ? item : { ...item, ...summary };
+  });
+
+  // 필터를 그릴 수 있는지. 수요가 있는 카드가 하나도 없으면(수요보드 조회 전·실패 포함) 칩을
+  // 감춘다. 그 상태로 칩을 그리면 '모집중'을 눌렀을 때 결과가 통째로 사라지고 '찾는 상품이 없어요'가
+  // 뜬다. 검색은 성공했는데 검색어를 바꾸라고 안내하는 셈이다.
+  //
+  // 수요 요약 조회가 하나라도 진행 중이면 역시 감춘다. 그 사이 칩을 누르면 아직 값이 없는 카드가
+  // 필터에 걸려 빠졌다가 조회가 끝나면 다시 나타난다.
   //
   // 검색이 0건일 때도 감춘다. 빈 상태 시안(`1153:72790`)에 칩이 없고, 거를 대상도 없다.
-  const canFilter = loaded.results.some((item) => item.demandStatus !== undefined);
+  const canFilter =
+    demand.pendingIds.size === 0 && results.some((item) => item.demandStatus !== undefined);
 
   // 칩을 감춘 상태에서는 이전에 고른 필터가 남아 있어도 무시한다(재조회로 값이 사라진 경우).
   const visible =
     !canFilter || filter === 'all'
-      ? loaded.results
-      : loaded.results.filter((item) => item.demandStatus === filter);
+      ? results
+      : results.filter((item) => item.demandStatus === filter);
 
   return (
     <div className="flex w-full flex-1 flex-col">
@@ -149,6 +161,13 @@ export function SearchResultsView({ query, productHrefBase }: SearchResultsViewP
         <ul className="flex w-full flex-col gap-5 p-4">
           {visible.map((product) => (
             <SearchResultCard
+              demandLoadState={
+                demand.pendingIds.has(product.id)
+                  ? 'loading'
+                  : demand.failedIds.has(product.id)
+                    ? 'failed'
+                    : undefined
+              }
               href={`${productHrefBase}/${encodeURIComponent(product.id)}`}
               key={product.id}
               product={product}

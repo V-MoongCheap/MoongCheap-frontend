@@ -2,6 +2,7 @@ import { ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 
 import { ComingSoonButton } from '@/components/ui/ComingSoonButton';
+import { GoBackButton } from '@/components/ui/GoBackButton';
 import { CartIcon, CircleXIcon } from '@/components/ui/Icons';
 import { SEARCH_INPUT_LABEL } from '@/constants/searchMessages';
 
@@ -28,13 +29,15 @@ export function SearchQueryBar({ query, searchHref }: SearchQueryBarProps) {
       <div className="flex min-w-0 flex-1 items-center">
         {/* 시안: 34 박스 안 24 글리프. 색은 #303030(content/secondary)으로 B-05 앱바의
             chevron(#575757)과 다르다. 각 화면의 시안값을 그대로 따른다. */}
-        <Link
-          aria-label="뒤로 가기"
+        {/* 뒤로 가기는 링크가 아니라 `GoBackButton`이다(#165). 링크(push)면 B-05가 히스토리에 새로
+            쌓이고, B-05 앱바의 뒤로 가기(back)가 다시 이 화면을 열어 두 화면을 무한히 오갔다. */}
+        <GoBackButton
           className="text-content-secondary flex size-[34px] shrink-0 items-center justify-center"
-          href={searchHref}
+          fallbackHref={searchHref}
         >
           <ChevronLeft aria-hidden className="size-6" />
-        </Link>
+          <span className="sr-only">뒤로 가기</span>
+        </GoBackButton>
 
         {/* 시안: 높이 40, radius 20. B-05의 알약(radius round)과 값이 다르다. */}
         <div className="bg-surface-secondary rounded-20 flex h-10 min-w-0 flex-1 items-center gap-2 px-4 py-1">

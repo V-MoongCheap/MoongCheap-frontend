@@ -14,9 +14,11 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { PRODUCT_DETAIL } from '@/constants/productMessages';
 import { WishButton } from '@/features/home/components/WishButton';
 import { QuickDealCard } from '@/features/product/components/QuickDealCard';
+import { useCatalogQuickDeals } from '@/features/product/hooks/useCatalogDemandBoards';
 import { useProductCatalogOverlay } from '@/features/product/hooks/useProductCatalogOverlay';
 import { cn } from '@/lib/cn';
 import { isRenderableImageSrc } from '@/lib/imageSource';
+import { toCatalogId } from '@/lib/productApi';
 import type { ProductDetail } from '@/types/product';
 
 // B-08 상품 상세 화면 본문. 시안 node 1153:72748(퀵 참여 0건) / 1153:73735(3건).
@@ -29,10 +31,12 @@ import type { ProductDetail } from '@/types/product';
 // **client에서** 실데이터를 받아 mock 위에 덮는다(세션 쿠키가 필요해 서버 컴포넌트에서 못 부름,
 // [[lib/productApi]]). 미로그인/미배선/숫자 아닌 id(홈 목)면 조회가 실패하고 mock을 그대로 쓴다.
 // 404(없는 상품)면 mock 대신 404를 그리고, 그 판정이 나기 전까지는 mock을 그리지 않는다(#151).
-// 브랜드·실시간 열람수·퀵참여딜·비슷한상품·정보 아코디언은 BE 규격이 없어 계속 mock이다.
+// 실데이터를 받으면 퀵 참여 딜은 수요보드 조회(`GET /api/demand-boards/catalog/{id}`)로 그리고,
+// 백엔드에 필드가 없는 브랜드·실시간 열람수·비슷한 상품 썸네일은 숨긴다(#173). 정보 아코디언은
+// 상품과 무관한 안내 문구라 그대로 둔다.
 //
 // 미구현 진입점은 노출하되 탭 시 '준비 중' 토스트다(ComingSoonButton).
-//  - 비슷한 상품(Full) · 찜(시안 전용) · 퀵 참여 딜 카드→수요 상세(B-12)
+//  - 비슷한 상품(Full) · 찜(시안 전용)
 
 /** 상품설명 접힘 높이(px). 이보다 길면 자세히 보기 버튼과 하단 페이드를 노출한다. */
 const DESCRIPTION_COLLAPSED_MAX = 240;
@@ -53,6 +57,8 @@ export function ProductDetailView({
   // 상품 도감 상세를 실데이터로 덮는다. 실패(미로그인·미배선·네트워크)면 mock 유지.
   // 수요 등록(B-09)도 같은 상품을 보여 줘야 해서 훅으로 뺐다.
   const { product, status } = useProductCatalogOverlay(initialProduct);
+  // 모이는 중인 수요보드. 도감 조회와 동시에 보낸다. 홈 목 카드(문자열 id)는 조회하지 않는다.
+  const catalogQuickDeals = useCatalogQuickDeals(toCatalogId(initialProduct.id));
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [descriptionOverflows, setDescriptionOverflows] = useState(false);
   const descriptionRef = useRef<HTMLParagraphElement>(null);
@@ -66,6 +72,9 @@ export function ProductDetailView({
 
   const hasDescription = product.description !== undefined && product.description !== '';
   const clampDescription = descriptionOverflows && !descriptionExpanded;
+  // 실데이터 상품이면 수요보드 조회 결과를, mock 상품이면 mock 딜을 그린다. 조회 중·실패면 null이다.
+  const quickDeals = status === 'ready' ? catalogQuickDeals.deals : product.quickDeals;
+  const similarThumbnails = product.similarThumbnails?.slice(0, 2) ?? [];
 
   // 없는 상품 주소로 공유·직접 진입하면 뒤로 갈 곳이 없어 호출부가 준 출구로 보낸다.
   if (status === 'notFound') {
@@ -117,88 +126,114 @@ export function ProductDetailView({
             )}
           </div>
 
-          {/* 실시간 열람 배지(상단 중앙). 인원 수만 코랄 강조. */}
-          <div className="absolute inset-x-0 top-3 flex justify-center">
-            <span className="bg-background-default border-border-subtle text-body-14 rounded-full border px-2.5 py-1">
-              <span className="text-content-secondary">{PRODUCT_DETAIL.viewingPrefix}</span>
-              <span className="text-button-14 text-content-brand">
-                {PRODUCT_DETAIL.viewingCount(product.viewingCount)}
+          {/* 실시간 열람 배지(상단 중앙). 인원 수만 코랄 강조. 열람수는 mock에만 있다. */}
+          {product.viewingCount !== undefined && (
+            <div className="absolute inset-x-0 top-3 flex justify-center">
+              <span className="bg-background-default border-border-subtle text-body-14 rounded-full border px-2.5 py-1">
+                <span className="text-content-secondary">{PRODUCT_DETAIL.viewingPrefix}</span>
+                <span className="text-button-14 text-content-brand">
+                  {PRODUCT_DETAIL.viewingCount(product.viewingCount)}
+                </span>
+                <span className="text-content-secondary">{PRODUCT_DETAIL.viewingSuffix}</span>
               </span>
-              <span className="text-content-secondary">{PRODUCT_DETAIL.viewingSuffix}</span>
-            </span>
-          </div>
+            </div>
+          )}
 
-          {/* 비슷한 상품 칩(좌하단). Full 기능이라 진입점만 노출. */}
-          <ComingSoonButton className="relative flex w-fit items-center">
-            {product.similarThumbnails?.slice(0, 2).map((thumb, index) => (
-              <span
-                key={thumb}
-                className={cn(
-                  'border-border-subtle rounded-4 bg-surface-tertiary relative size-[30px] shrink-0 overflow-hidden border',
-                  index > 0 && '-ml-3.5',
-                )}
-              >
-                {isRenderableImageSrc(thumb) && (
-                  <Image alt="" className="object-cover" fill sizes="30px" src={thumb} />
-                )}
+          {/* 비슷한 상품 칩(좌하단). Full 기능이라 진입점만 노출. 썸네일이 mock에만 있어 실데이터
+              상품에서는 칩을 통째로 숨긴다(9/25 PM 공지: 비슷한 상품은 MVP 미노출). */}
+          {similarThumbnails.length > 0 && (
+            <ComingSoonButton className="relative flex w-fit items-center">
+              {similarThumbnails.map((thumb, index) => (
+                <span
+                  key={thumb}
+                  className={cn(
+                    'border-border-subtle rounded-4 bg-surface-tertiary relative size-[30px] shrink-0 overflow-hidden border',
+                    index > 0 && '-ml-3.5',
+                  )}
+                >
+                  {isRenderableImageSrc(thumb) && (
+                    <Image alt="" className="object-cover" fill sizes="30px" src={thumb} />
+                  )}
+                </span>
+              ))}
+              <span className="bg-background-default border-border-subtle rounded-4 -ml-2 flex items-center gap-1 border px-2.5 py-1">
+                <span className="text-body-14 text-content-secondary whitespace-nowrap">
+                  {PRODUCT_DETAIL.similarProducts}
+                </span>
+                <ChevronRight aria-hidden className="text-content-tertiary size-5" />
               </span>
-            ))}
-            <span className="bg-background-default border-border-subtle rounded-4 -ml-2 flex items-center gap-1 border px-2.5 py-1">
-              <span className="text-body-14 text-content-secondary whitespace-nowrap">
-                {PRODUCT_DETAIL.similarProducts}
-              </span>
-              <ChevronRight aria-hidden className="text-content-tertiary size-5" />
-            </span>
-          </ComingSoonButton>
+            </ComingSoonButton>
+          )}
         </section>
 
         {/* 브랜드 행 + 상품명/규격 */}
         <section className="border-border-subtle flex w-full flex-col gap-4 border-b p-4">
           <div className="flex items-center justify-between">
+            {/* 브랜드는 mock에만 있다. 없어도 칸은 남겨 찜 버튼이 오른쪽에 붙어 있게 한다. */}
             <div className="flex items-center gap-1 py-1">
-              <span className="bg-surface-tertiary relative size-6 shrink-0 overflow-hidden rounded-full">
-                {isRenderableImageSrc(product.brandLogoUrl) && (
-                  <Image
-                    alt=""
-                    className="object-cover"
-                    fill
-                    sizes="24px"
-                    src={product.brandLogoUrl}
-                  />
-                )}
-              </span>
-              <span className="text-body-15 text-content-tertiary">{product.brandName}</span>
+              {product.brandName !== undefined && (
+                <>
+                  <span className="bg-surface-tertiary relative size-6 shrink-0 overflow-hidden rounded-full">
+                    {isRenderableImageSrc(product.brandLogoUrl) && (
+                      <Image
+                        alt=""
+                        className="object-cover"
+                        fill
+                        sizes="24px"
+                        src={product.brandLogoUrl}
+                      />
+                    )}
+                  </span>
+                  <span className="text-body-15 text-content-tertiary">{product.brandName}</span>
+                </>
+              )}
             </div>
             <WishButton />
           </div>
 
           <div className="flex flex-col gap-1">
             <h1 className="text-heading-20 text-content-primary">{product.name}</h1>
-            <p className="text-title-17 text-content-quarternary">{product.spec}</p>
+            {product.spec !== undefined && (
+              <p className="text-title-17 text-content-quarternary">{product.spec}</p>
+            )}
           </div>
         </section>
 
-        {/* 진행중인 뭉치 퀵 참여 */}
-        <section className="flex w-full flex-col px-4 py-3">
-          <div className="flex h-[46px] items-center">
-            <p className="text-button-14 text-content-tertiary">
-              {PRODUCT_DETAIL.quickDealsLead(product.quickDeals.length)}
-              <span className="text-content-primary">{PRODUCT_DETAIL.quickDealsUnit}</span>
-            </p>
-          </div>
+        {/* 진행중인 뭉치 퀵 참여. 백엔드가 마감 임박순으로 준다(FN-B08-01).
+            0건이면 섹션을 숨긴다(BR-B08-01-02~04, 9/25 PM 공지). 시안에는 '0건' 제목만 있는
+            화면(node 1153:72748)이 있지만 명세를 따른다.
+            조회 중에는 자리만 잡고, 조회가 실패해도 섹션을 숨긴다. 실패 문구는 시안·명세에 없다. */}
+        {quickDeals === null
+          ? catalogQuickDeals.isLoading && (
+              <section aria-busy className="flex w-full flex-col px-4 py-3">
+                <div className="flex h-11.5 items-center">
+                  <Skeleton className="h-5 w-40" />
+                </div>
+                <div className="py-2">
+                  <Skeleton className="rounded-12 h-27 w-47" />
+                </div>
+              </section>
+            )
+          : quickDeals.length > 0 && (
+              <section className="flex w-full flex-col px-4 py-3">
+                <div className="flex h-[46px] items-center">
+                  <p className="text-button-14 text-content-tertiary">
+                    {PRODUCT_DETAIL.quickDealsLead(quickDeals.length)}
+                    <span className="text-content-primary">{PRODUCT_DETAIL.quickDealsUnit}</span>
+                  </p>
+                </div>
 
-          {product.quickDeals.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto py-2">
-              {product.quickDeals.map((deal) => (
-                <QuickDealCard
-                  deal={deal}
-                  href={`/demands/${encodeURIComponent(deal.id)}`}
-                  key={deal.id}
-                />
-              ))}
-            </div>
-          )}
-        </section>
+                <div className="flex gap-2 overflow-x-auto py-2">
+                  {quickDeals.map((deal) => (
+                    <QuickDealCard
+                      deal={deal}
+                      href={`/demands/${encodeURIComponent(deal.id)}`}
+                      key={deal.id}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
 
         {/* 상품설명. BE description(TEXT). 없으면 섹션을 숨긴다. */}
         {hasDescription && (

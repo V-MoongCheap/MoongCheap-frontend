@@ -23,8 +23,9 @@ export type ProductCatalogStatus = 'loading' | 'ready' | 'fallback' | 'notFound'
  * 방식으로 보여 줘야 해서 한 곳에 둔다. 세션(SID httpOnly 쿠키)이 필요해 서버 컴포넌트에서는
  * 부를 수 없다(`lib/productApi.ts` 주석).
  *
- * 덮는 값은 도감 응답에 있는 것뿐이다(이름·규격·썸네일·정가·상품설명). 브랜드·퀵 참여 딜 등
- * 응답에 없는 값은 mock이 그대로 남는다. 조회가 실패하면(미로그인·미배선·네트워크) mock을 유지한다.
+ * 덮는 값은 도감 응답에 있는 것뿐이다(이름·규격·썸네일·정가·상품설명). 응답에 없는 mock 전용 값
+ * (브랜드·열람수·비슷한 상품)은 비운다(#173). 퀵 참여 딜은 호출부가 수요보드 조회로 따로 그린다.
+ * 조회가 실패하면(미로그인·미배선·네트워크) mock을 유지한다.
  *
  * ⚠️ 404만은 mock으로 덮지 않는다(#151). mock은 모르는 id에도 상품을 돌려주므로, 없는 상품
  *    주소로 들어오면 다른 상품 화면이 그대로 떠 버린다. 호출부가 `notFound`를 보고 404를 그린다.
@@ -52,12 +53,18 @@ export function useProductCatalogOverlay(initialProduct: ProductDetail): {
         setProduct((prev) => ({
           ...prev,
           name: dto.name,
-          spec: dto.specSummary ?? prev.spec,
+          // 규격·상품설명은 서버 값을 그대로 쓴다. null이면 undefined로 두어 그 줄·섹션을 숨긴다.
+          // mock으로 채우면 다른 상품의 규격·설명이 이 상품 아래 붙는다(#173).
+          spec: dto.specSummary ?? undefined,
           thumbnailUrl: dto.thumbnailUrl,
           listPrice: dto.listPrice ?? prev.listPrice,
-          // 조회 성공 시 description은 서버 값을 그대로 반영한다. null이면 undefined로 두어
-          // 상품설명 섹션을 숨긴다(mock 설명으로 대체하지 않는다. 다른 상품 문구 노출 방지).
           description: dto.description ?? undefined,
+          // 백엔드에 필드가 없는 mock 전용 값은 비운다. 실제 상품 화면에 가짜 브랜드·열람수·
+          // 비슷한 상품 썸네일이 보이지 않게 한다(#173).
+          brandName: undefined,
+          brandLogoUrl: undefined,
+          viewingCount: undefined,
+          similarThumbnails: undefined,
         }));
         setStatus('ready');
       })

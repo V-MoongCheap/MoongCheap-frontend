@@ -2,6 +2,7 @@
 
 import { useQueryClient } from '@tanstack/react-query';
 
+import { AppBar } from '@/components/layout/AppBar';
 import { AddressForm } from '@/features/user/components/AddressForm';
 import { ADDRESS_QUERY_KEYS, useAddresses } from '@/features/user/hooks/useAddresses';
 import { createAddress } from '@/lib/addressApi';
@@ -17,11 +18,13 @@ import type { AddressFormValues } from '@/schemas/address';
 // '기본 배송지로 설정'을 체크한 채 잠가야 한다(구성 요소 `BR-04`).
 
 interface AddressCreateViewProps {
+  /** 앱바 제목. 폼이 그리기 전(조회 중)에도 같은 앱바를 보인다. */
+  title: string;
   /** 저장 후 이동할 경로. 주문 플로우에서도 쓰이므로 페이지가 정한다. */
   successHref: string;
 }
 
-export function AddressCreateView({ successHref }: AddressCreateViewProps) {
+export function AddressCreateView({ title, successHref }: AddressCreateViewProps) {
   const { addresses, isLoading, error } = useAddresses();
   const queryClient = useQueryClient();
 
@@ -31,7 +34,7 @@ export function AddressCreateView({ successHref }: AddressCreateViewProps) {
   // 조회에 실패해도 등록 자체는 가능해야 한다. 개수를 모르면 잠그지 않고(0건 아님으로 간주),
   // 상한을 넘겼다면 서버가 SHIP_002로 거절하고 폼이 그 문구를 토스트로 띄운다.
   if (isLoading) {
-    return null;
+    return <AppBar backHref={successHref} title={title} />;
   }
 
   const lockDefault = error === null && addresses !== null && addresses.length === 0;
@@ -46,5 +49,12 @@ export function AddressCreateView({ successHref }: AddressCreateViewProps) {
     await queryClient.invalidateQueries({ queryKey: ADDRESS_QUERY_KEYS.list });
   }
 
-  return <AddressForm lockDefault={lockDefault} onSave={handleSave} successHref={successHref} />;
+  return (
+    <AddressForm
+      lockDefault={lockDefault}
+      onSave={handleSave}
+      successHref={successHref}
+      title={title}
+    />
+  );
 }

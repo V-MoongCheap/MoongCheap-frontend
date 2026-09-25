@@ -21,6 +21,17 @@ export const DELETE_ADDRESS_DIALOG = {
   cancelLabel: '돌아가기',
 } as const;
 
+/**
+ * 등록·수정 폼 이탈 확인 다이얼로그(공용 AlertDialog, #164). **잠정** — FN-B30-02가 이탈 확인만
+ * 정하고 시안에 모달 프레임·문구가 없다.
+ */
+export const LEAVE_ADDRESS_FORM_DIALOG = {
+  title: '작성을 그만두시겠어요?',
+  message: '입력한 내용은 저장되지 않아요.',
+  confirmLabel: '나가기',
+  cancelLabel: '계속 작성',
+} as const;
+
 /** 기본 지정·삭제 결과 토스트. */
 export const ADDRESS_ACTION_TOAST = {
   defaultSet: '기본 배송지로 설정했어요',

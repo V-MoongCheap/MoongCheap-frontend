@@ -16,6 +16,10 @@ import type { ProductSearchResult } from '@/types/search';
 // 수요 값은 검색 응답에 없어 수요보드 조회로 채운다(#173). 조회 중에는 마감 배지 자리에 자리표시자를,
 // 조회가 실패하면 배지를 빼서 '수요 없음'으로 잘못 보이지 않게 한다.
 //
+// ⚠️ 9/25 PM 공지로 P1 카드는 수요 유무만 보인다('수요 없음' / 'n개 모집중'). 마감 D-day·상태 배지·
+//    하단 행은 P2라 호출부가 값을 넘기지 않아 그려지지 않는다(검색 실패 시 목 결과에만 남는다).
+//    P2에서 호출부가 값을 넘기면 이 컴포넌트는 고칠 것 없이 시안대로 그린다.
+//
 // ⚠️ 상태 배지 배경도 필터 칩과 같은 오바인딩이다(SearchFilterTabs 주석 참고). 이름이 아니라
 //    실제 채움값을 따라 `surface-visibility` · `surface-error`에 맞췄다.
 //
@@ -54,7 +58,8 @@ interface SearchResultCardProps {
 
 export function SearchResultCard({ product, href, demandLoadState }: SearchResultCardProps) {
   const status = product.demandStatus === undefined ? null : STATUS_BADGE[product.demandStatus];
-  const hasFooter = product.quickDealCount !== undefined || product.participantCount !== undefined;
+  // 하단 행은 참여 인원이 있을 때만 그린다. P1은 보드 수만 넘겨서 하단 행 없이 배지로만 보인다.
+  const hasFooter = product.participantCount !== undefined;
 
   return (
     <li className="w-full">
@@ -92,7 +97,11 @@ export function SearchResultCard({ product, href, demandLoadState }: SearchResul
             <span className="flex items-start">
               <span className={META_BADGE_CLASS}>
                 {product.dday === undefined ? (
-                  SEARCH_RESULT_CARD.noDemand
+                  product.quickDealCount !== undefined && product.quickDealCount > 0 ? (
+                    SEARCH_RESULT_CARD.demandCount(product.quickDealCount)
+                  ) : (
+                    SEARCH_RESULT_CARD.noDemand
+                  )
                 ) : (
                   // 한 겹 더 감싼다. 이 배지가 inline-flex라 `마감 `과 `D-1`을 나란히 두면 각각
                   // flex item이 되고, 그 과정에서 `마감 ` 끝의 공백이 잘려 `마감D-1`로 붙는다.

@@ -128,9 +128,15 @@ export function SearchResultsView({ query, productHrefBase }: SearchResultsViewP
   }
 
   // 수요 요약을 카드 값에 얹는다. 조회 전·실패면 검색 응답 값 그대로 둔다(목 결과는 목 값 그대로).
+  //
+  // ⚠️ 9/25 PM 공지로 P1은 수요 유무('수요 없음' / 'n개 모집중')만 보인다. 그래서 보드 수만 얹는다.
+  //    마감 D-day·상태 배지·참여 인원은 P2다. P2에서는 `{ ...item, ...summary }`로 요약 전체를 얹으면
+  //    카드와 필터가 그대로 동작한다. 상태 값이 없으니 P1에서는 필터 칩도 나오지 않는다.
   const results = currentResults.map((item) => {
     const summary = demand.summaries.get(item.id);
-    return summary === undefined || summary === null ? item : { ...item, ...summary };
+    return summary === undefined || summary === null
+      ? item
+      : { ...item, quickDealCount: summary.quickDealCount };
   });
 
   // 필터를 그릴 수 있는지. 수요가 있는 카드가 하나도 없으면(수요보드 조회 전·실패 포함) 칩을

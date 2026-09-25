@@ -40,18 +40,20 @@ export function RecentSearches({ keywords, onSelect, onRemove, onClear }: Recent
       {/* 시안 실측: 항목 높이 42, 항목 간격 11. */}
       <ul className="flex w-full flex-col gap-[11px]">
         {keywords.map((keyword) => (
-          <li className="flex w-full items-center justify-between pt-1 pb-2" key={keyword}>
+          <li className="flex w-full items-stretch" key={keyword}>
+            {/* 검색어 버튼이 삭제 버튼을 뺀 행 전체(높이 42)를 차지해야 한다. 글자 폭만 잡으면 글자
+                밖 여백을 눌렀을 때 반응이 없다(#160). 시안의 상하 여백(4·8)은 버튼 안쪽에 둔다. */}
             <button
-              className="text-body-14 text-content-secondary min-w-0 truncate text-left"
+              className="text-body-14 text-content-secondary min-w-0 flex-1 truncate pt-1 pb-2 text-left"
               onClick={() => onSelect(keyword)}
               type="button"
             >
               {keyword}
             </button>
-            {/* 시안 `1153:72658` - 30×30 터치 박스 안 18px 글리프. */}
+            {/* 시안 `1153:72658` - 30×30 터치 박스 안 18px 글리프. 바깥 여백이 행 높이 42를 만든다. */}
             <button
               aria-label={RECENT_SEARCHES.removeLabel(keyword)}
-              className="text-content-quinary flex size-[30px] shrink-0 items-center justify-center"
+              className="text-content-quinary mt-1 mb-2 flex size-[30px] shrink-0 items-center justify-center"
               onClick={() => onRemove(keyword)}
               type="button"
             >

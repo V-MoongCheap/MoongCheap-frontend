@@ -30,6 +30,25 @@ export function getOAuthAuthorizeUrl(provider: OAuthProvider): string | null {
 }
 
 /**
+ * Spring Security가 인가 요청을 세션에서 찾지 못했을 때의 오류 코드. 백엔드 실패 핸들러가 예외
+ * 메시지를 reason에 그대로 싣고, 이 경우 메시지는 `[authorization_request_not_found] `다.
+ * reason은 대개 예외 원문이지만 이 코드는 Spring이 고정한 상수라 판별에 쓸 수 있다.
+ */
+const STALE_AUTHORIZATION_REQUEST_CODE = 'authorization_request_not_found';
+
+/**
+ * 소셜 로그인 실패 reason이 "이미 끝난 인가 흐름에 다시 들어온 경우"인지(#156).
+ *
+ * 백엔드는 인가 요청(state)을 세션에 두고, 로그아웃은 그 세션을 폐기한다. 로그아웃 뒤 브라우저
+ * 뒤로 가기로 방문 기록 속 카카오 인가 페이지에 다시 들어가면, 카카오가 새 code와 옛 state로
+ * 백엔드에 되돌려 보내고 백엔드는 짝이 되는 요청을 찾지 못해 실패로 리다이렉트한다. 유저가 로그인을
+ * 시도한 것이 아니므로 "로그인에 실패했어요"를 띄우지 않고 로그인 화면으로 보낸다.
+ */
+export function isStaleAuthorizationRequest(reason: string | undefined): boolean {
+  return reason?.includes(STALE_AUTHORIZATION_REQUEST_CODE) ?? false;
+}
+
+/**
  * 베이스 URL(env)이 배선돼 인가 이동이 가능한 상태인지.
  * 미배선이면 클릭해도 이동할 수 없으므로, UI에서 연결된 버튼을 비활성화해 죽은 클릭을 막는다.
  */

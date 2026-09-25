@@ -10,6 +10,7 @@ import { ERROR_ACTION_CLASS, ErrorScreen } from '@/components/ui/ErrorScreen';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ERROR_SCREEN_RETRY_LABEL } from '@/constants/commonMessages';
 import { ORDER_LIST_TABS, type OrderListTabKey } from '@/constants/orderStatus';
+import { useRedirectOnUnauthorized } from '@/features/auth/session';
 import { useOrderList } from '@/features/order/hooks/useOrders';
 import { useInfiniteScrollSentinel } from '@/hooks/useInfiniteScrollSentinel';
 import { cn } from '@/lib/cn';
@@ -45,6 +46,7 @@ export function OrderList({ detailHrefBase }: OrderListProps) {
   const [tab, setTab] = useState<OrderListTabKey>('all');
   const {
     data,
+    error,
     isError,
     refetch,
     hasNextPage,
@@ -52,6 +54,8 @@ export function OrderList({ detailHrefBase }: OrderListProps) {
     isFetchingNextPage,
     isFetchNextPageError,
   } = useOrderList(tab);
+  // 세션 만료(401)는 재시도해도 소용없어 오류 화면 대신 로그인 화면으로 보낸다(#159).
+  const isRedirectingToLogin = useRedirectOnUnauthorized(error);
 
   // 목록 끝이 화면에 가까워지면 다음 20건을 받는다(`BR-B21-01-11`). 이어 받기가 실패하면 감지를
   // 멈추고 목록 아래 재시도 버튼을 기다린다. 감지 로직은 참여 목록과 공유한다
@@ -60,7 +64,8 @@ export function OrderList({ detailHrefBase }: OrderListProps) {
   const sentinelRef = useInfiniteScrollSentinel(canLoadMore, fetchNextPage);
 
   // 첫 조회 실패. 이어 받기 실패는 받은 목록을 지우지 않고 목록 아래에서 따로 알린다.
-  if (data === undefined && isError) {
+  // 401로 로그인 화면에 보내는 동안은 아래 스켈레톤으로 넘긴다(깜빡임 방지).
+  if (data === undefined && isError && !isRedirectingToLogin) {
     return (
       <ErrorScreen>
         <button className={ERROR_ACTION_CLASS} onClick={() => void refetch()} type="button">
@@ -110,7 +115,9 @@ export function OrderList({ detailHrefBase }: OrderListProps) {
 
   // 첫 조회 중. '전체' 탭은 주문이 0건이면 탭이 통째로 사라지므로(빈 상태 시안) 결과를 알기 전에
   // 진짜 탭을 그리지 않는다. 다른 탭은 이미 탭이 보이는 상태에서 넘어온 것이라 탭을 유지한다.
-  if (data === undefined) {
+  // 401로 로그인 화면에 보내는 중이면 받은 목록이 있어도(이어 받기·재조회 중 만료) 스켈레톤을
+  // 그린다. 이동이 끝날 때까지 이전 목록과 재시도 UI가 비치지 않게 한다.
+  if (data === undefined || isRedirectingToLogin) {
     if (tab === 'all') {
       return <OrderListSkeleton withHeader />;
     }

@@ -57,6 +57,11 @@ export const SEARCH_RESULT_CARD = {
   dday: (days: number) => `D-${days}`,
   /** 진행 중인 수요가 없는 상품의 배지. */
   noDemand: '수요 없음',
+  /**
+   * 모이는 중인 수요보드가 있는 상품의 배지. 시안에 없는 문구로, 9/25 PM 공지(P1 범위)가 정했다.
+   * P1에서는 이 배지가 마감 D-day 배지 자리를 대신한다.
+   */
+  demandCount: (count: number) => `${count}개 모집중`,
   /** 상태 배지. 시안 `badge` 컴포넌트. */
   gathering: '모집중',
   closing: '마감임박',

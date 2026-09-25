@@ -23,7 +23,7 @@ import type { ProductSearchResult, SearchFilterKey } from '@/types/search';
 // 조회에 실패하면(미로그인 · 미배선 · 색인 없음) 목으로 떨어진다. `ProductDetailView`와 같은 방침이다.
 // 검색이 아예 안 되는 것과 결과가 0건인 것은 화면이 달라야 해서, 목 대체는 '실패'로 세지 않는다.
 //
-// 검색 응답에 수요보드 정보가 없어, 카드의 수요 값(마감·상태·건수·인원·희망가)은 카드마다
+// 검색 응답에 수요보드 정보가 없어, 카드의 수요 값(마감·상태·건수·인원)은 카드마다
 // 수요보드 조회로 채운다(`useCatalogDemandSummaries`, #173). 필터도 그 값으로 거른다.
 
 /** 검색 응답을 화면 타입으로 옮긴다. 수요 관련 값은 응답에 없어 비워 두고 수요보드 조회로 채운다. */
@@ -137,8 +137,12 @@ export function SearchResultsView({ query, productHrefBase }: SearchResultsViewP
   // 감춘다. 그 상태로 칩을 그리면 '모집중'을 눌렀을 때 결과가 통째로 사라지고 '찾는 상품이 없어요'가
   // 뜬다. 검색은 성공했는데 검색어를 바꾸라고 안내하는 셈이다.
   //
+  // 수요 요약 조회가 하나라도 진행 중이면 역시 감춘다. 그 사이 칩을 누르면 아직 값이 없는 카드가
+  // 필터에 걸려 빠졌다가 조회가 끝나면 다시 나타난다.
+  //
   // 검색이 0건일 때도 감춘다. 빈 상태 시안(`1153:72790`)에 칩이 없고, 거를 대상도 없다.
-  const canFilter = results.some((item) => item.demandStatus !== undefined);
+  const canFilter =
+    demand.pendingIds.size === 0 && results.some((item) => item.demandStatus !== undefined);
 
   // 칩을 감춘 상태에서는 이전에 고른 필터가 남아 있어도 무시한다(재조회로 값이 사라진 경우).
   const visible =

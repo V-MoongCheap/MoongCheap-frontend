@@ -16,8 +16,6 @@ import type { ProductSearchResult } from '@/types/search';
 // 수요 값은 검색 응답에 없어 수요보드 조회로 채운다(#173). 조회 중에는 마감 배지 자리에 자리표시자를,
 // 조회가 실패하면 배지를 빼서 '수요 없음'으로 잘못 보이지 않게 한다.
 //
-// 희망가 범위는 시안 카드에 자리가 없는데 명세(TC-B06-01-02)가 요구한다. 규격 아래 한 줄로 둔다.
-//
 // ⚠️ 상태 배지 배경도 필터 칩과 같은 오바인딩이다(SearchFilterTabs 주석 참고). 이름이 아니라
 //    실제 채움값을 따라 `surface-visibility` · `surface-error`에 맞췄다.
 //
@@ -122,12 +120,6 @@ export function SearchResultCard({ product, href, demandLoadState }: SearchResul
 
           {product.spec !== undefined && (
             <span className="text-label-13 text-content-quarternary w-full">{product.spec}</span>
-          )}
-
-          {product.desiredPriceLabel !== undefined && (
-            <span className="text-label-13 text-content-primary w-full">
-              {product.desiredPriceLabel}
-            </span>
           )}
 
           {hasFooter && (

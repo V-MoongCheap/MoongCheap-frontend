@@ -3,7 +3,7 @@
  *
  * 검색 자체는 백엔드 `GET /api/products-search/search`(OpenSearch)로 실데이터를 받는다
  * ([[lib/productSearchApi]]). 다만 시안 카드가 요구하는 값 중 **수요 관련 값**
- * (마감 D-day · 모집중/마감임박 배지 · 진행중인 퀵 참여 건수 · 참여 인원 · 희망가 범위)은 검색 응답에
+ * (마감 D-day · 모집중/마감임박 배지 · 진행중인 퀵 참여 건수 · 참여 인원)은 검색 응답에
  * 없다. 검색 문서는 상품 도감(`ProductCatalog`)만 색인하고 수요보드를 보지 않기 때문이다.
  *
  * 그래서 카드마다 `GET /api/demand-boards/catalog/{catalogId}`를 불러 채운다(#173). **카탈로그
@@ -43,12 +43,10 @@ export interface ProductSearchResult {
   quickDealCount?: number;
   /** 참여 인원 = 모이는 중인 수요보드들의 확정 인원 합. */
   participantCount?: number;
-  /** 희망가 범위. 시안 카드에는 자리가 없고 명세(TC-B06-01-02)가 요구한다. 예: `2만~10만원`. */
-  desiredPriceLabel?: string;
 }
 
 /** 수요보드 조회로 채우는 검색 결과 카드의 수요 값([[lib/demandBoardApi]] `toSearchDemandSummary`). */
 export type SearchDemandSummary = Pick<
   ProductSearchResult,
-  'dday' | 'demandStatus' | 'quickDealCount' | 'participantCount' | 'desiredPriceLabel'
+  'dday' | 'demandStatus' | 'quickDealCount' | 'participantCount'
 >;

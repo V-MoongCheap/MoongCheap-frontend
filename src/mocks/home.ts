@@ -104,8 +104,8 @@ export async function mockGetHomeBanners(): Promise<readonly HomeBanner[]> {
  * ⚠️ 시안 3번 카드만 희망가격대가 `3만원이하`로 띄어쓰기가 빠져 있다. 같은 목록 안 표기
  * 불일치라 실수로 보고 `3만원 이하`로 통일했다. 문구가 아니라 표기 규칙이라 판단.
  *
- * `deadline`은 화면 확인용으로 현재 시각 기준 상대값을 만든다. 정적 렌더라 빌드 시각이
- * 기준이 되므로, 실제 마감 시각은 API 연동 때 서버 값으로 바뀐다.
+ * `deadline`은 화면 확인용으로 현재 시각 기준 상대값을 만든다. 홈 페이지가 `connection()`으로
+ * 요청 시점에 렌더하므로 요청 시각이 기준이 된다. 실제 마감 시각은 API 연동 때 서버 값으로 바뀐다.
  */
 function hoursFromNow(hours: number): string {
   return new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();

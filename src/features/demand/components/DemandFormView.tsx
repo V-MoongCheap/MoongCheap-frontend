@@ -20,8 +20,12 @@ import { ProductSummarySection } from '@/features/demand/components/sections/Pro
 import { SubstituteSection } from '@/features/demand/components/sections/SubstituteSection';
 import { useCreateDemand } from '@/features/demand/hooks/useCreateDemand';
 import { useProductCatalogOverlay } from '@/features/product/hooks/useProductCatalogOverlay';
+import {
+  pickPaymentMethodForDemand,
+  usePaymentMethods,
+} from '@/features/user/hooks/usePaymentMethods';
 import { ApiError } from '@/lib/api';
-import { DEMAND_ERROR_CODE, TEMPORARY_PAY_METHOD_ID, toDemandCreateRequest } from '@/lib/demandApi';
+import { DEMAND_ERROR_CODE, toDemandCreateRequest } from '@/lib/demandApi';
 import { toCatalogId } from '@/lib/productApi';
 import type { DemandFormValues } from '@/types/demandForm';
 import type { ProductDetail } from '@/types/product';
@@ -39,8 +43,6 @@ const EMPTY_VALUES: DemandFormValues = {
   quantity: ORDER_QUANTITY_DEFAULT,
   addressId: null,
   priceBand: null,
-  paymentMethod: null,
-  easyPayProvider: null,
   substituteAgreed: null,
   substituteNote: '',
   consents: {
@@ -75,6 +77,8 @@ interface DemandFormViewProps {
   backHref: string;
   /** 등록 후 이동할 내 참여 목록(B-17). 라우트는 호출부(page)가 정한다. */
   participationListHref: string;
+  /** 결제수단이 없을 때 보내는 결제수단 관리(B-14). 라우트는 호출부(page)가 정한다. */
+  paymentMethodsHref: string;
   /**
    * 없는 상품(404)에서 돌아갈 히스토리가 없을 때 갈 곳. `backHref`(상품 상세)는 같은 상품이라
    * 역시 404이므로 따로 받는다. 라우트는 호출부(page)가 정한다.
@@ -86,12 +90,18 @@ export function DemandFormView({
   product: initialProduct,
   backHref,
   participationListHref,
+  paymentMethodsHref,
   notFoundHref,
 }: DemandFormViewProps) {
   // 상품 요약을 도감 실데이터로 덮는다. B-08과 같은 조회라 두 화면이 같은 상품을 보여 준다.
   // 서버에서 받은 mock은 모르는 id에 코어맥스 상품을 돌려주므로, 덮지 않으면 다른 상품이 보인다.
   // 없는 상품이면 404를 그리고, 판정 전에는 mock 상품을 그리지 않는다(#151, B-08과 같은 기준).
   const { product, status } = useProductCatalogOverlay(initialProduct);
+  // 이번 수요에 쓸 결제수단. 본인 목록에서 고른다(`pickPaymentMethodForDemand`). B-14와 같은
+  // 캐시를 써서 B-14에서 기본을 바꾸고 돌아오면 바뀐 기본이 보인다.
+  const paymentMethods = usePaymentMethods();
+  const payMethod =
+    paymentMethods.methods === null ? null : pickPaymentMethodForDemand(paymentMethods.methods);
   const [values, setValues] = useState<DemandFormValues>(EMPTY_VALUES);
   const { showToast } = useToast();
   const router = useRouter();
@@ -109,14 +119,15 @@ export function DemandFormView({
   // (`toDemandCreateRequest`도 구간 미선택이면 던진다), 가격대 없는 수요는 성립하지 않는다. 버튼
   // 활성 조건과 매핑의 전제를 일치시켜, 가격대 없이 눌러 예외가 나는 일을 막는다.
   //
-  // 결제수단은 조건에 넣지 않는다. 결제수단 등록 화면(B-14)이 없어 `payMethodId`를
-  // `TEMPORARY_PAY_METHOD_ID`로 고정해 보내므로, 화면에서 고르는 값이 요청에 쓰이지 않는다.
+  // 쓸 결제수단이 있어야 한다(FN-B09-02 '결제수단 등록 완료자만 접수 가능'). 조회 중·조회 실패·
+  // 미등록이면 잠근다. 결제수단 섹션이 각 상태를 안내한다.
   //
   // 상품 id가 백엔드 도감 id로 바뀌지 않으면(홈 목 카드의 `demand-1` 등) 버튼을 잠근다. 보내 봐야
   // `catalogId`가 null로 나가 400이 확정이다. 목 상품이라 안내 문구는 따로 두지 않는다.
   const catalogId = toCatalogId(product.id);
   const canSubmit =
     catalogId !== null &&
+    payMethod !== null &&
     values.priceBand !== null &&
     DEMAND_FORM_CONSENTS.every(({ key }) => values.consents[key]);
   const isSubmitting = createDemand.isPending;
@@ -128,7 +139,7 @@ export function DemandFormView({
    * 수요 등록 제출(FN-B09-04, #148). `POST /api/members/me/demand`.
    *
    * 카탈로그 id는 이 화면의 상품 id(라우트 `productId`)를 숫자로 바꾼 값이다(`toCatalogId`).
-   * 결제수단 id는 임시로 고정한다(`TEMPORARY_PAY_METHOD_ID` 주석).
+   * 결제수단 id는 결제수단 섹션에 보여 준 그 결제수단의 id다.
    *
    * 성공·중복 모두 내 참여 목록(B-17)으로 replace한다. push로 쌓으면 목록에서 뒤로 가기가 이미
    * 제출한 폼으로 돌아와, 같은 값을 다시 눌러 409를 받게 된다. replace면 상품 상세로 돌아간다.
@@ -143,7 +154,7 @@ export function DemandFormView({
 
     const request = toDemandCreateRequest(values, {
       catalogId,
-      payMethodId: TEMPORARY_PAY_METHOD_ID,
+      payMethodId: payMethod.id,
     });
 
     submittingRef.current = true;
@@ -160,6 +171,10 @@ export function DemandFormView({
         // (FN-B09-04 예외처리 '이미 접수한 상태 → 안내 후 B-17 이동').
         if (error instanceof ApiError && error.code === DEMAND_ERROR_CODE.ALREADY_EXISTS) {
           router.replace(participationListHref);
+        }
+        // 보여 준 결제수단이 그사이 삭제·비활성됐다. 목록을 다시 받아 섹션과 제출 조건을 맞춘다.
+        if (error instanceof ApiError && error.code === DEMAND_ERROR_CODE.PAY_METHOD_NOT_FOUND) {
+          paymentMethods.refetch();
         }
       },
     });
@@ -209,10 +224,11 @@ export function DemandFormView({
         />
 
         <PaymentMethodSection
-          easyPayProvider={values.easyPayProvider}
-          onEasyPayProviderChange={(provider) => update('easyPayProvider', provider)}
-          onPaymentMethodChange={(method) => update('paymentMethod', method)}
-          paymentMethod={values.paymentMethod}
+          hasError={paymentMethods.error !== null}
+          isLoading={paymentMethods.isLoading}
+          method={payMethod}
+          onRetry={paymentMethods.refetch}
+          registerHref={paymentMethodsHref}
         />
 
         <SubstituteSection

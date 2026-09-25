@@ -27,6 +27,7 @@ export default async function DemandFormPage({
       // 없는 상품(404)이면 backHref(상품 상세)도 404라 홈을 출구로 준다.
       notFoundHref="/"
       participationListHref="/waiting"
+      paymentMethodsHref="/mypage/payment-methods"
       product={product}
     />
   );

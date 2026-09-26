@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { connection } from 'next/server';
 
 import { HOME_SECTIONS } from '@/constants/homeMessages';
 import { BannerCarousel } from '@/features/home/components/BannerCarousel';
@@ -34,6 +35,10 @@ export const metadata: Metadata = {
 //
 // 섹션 순서와 이름은 시안의 `card-list-1` ~ `card-list-8` 순서 그대로다.
 export default async function HomePage() {
+  // 목의 마감 시각(`deadline`)은 현재 시각 기준 상대값이다. 정적 프리렌더되면 빌드 시각에
+  // 굳어 배포 후 몇 시간 지나면 카운트다운이 전부 `00:00:00`이 되므로(#170) 요청 시점에 렌더한다.
+  await connection();
+
   const [
     banners,
     demandProducts,

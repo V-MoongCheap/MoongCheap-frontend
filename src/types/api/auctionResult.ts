@@ -47,3 +47,14 @@ export interface AuctionResultDto {
   /** 낙찰 사유(AI 판정). 화면 표기 위치가 아직 정해지지 않아 쓰지 않는다. */
   awardReason: string | null;
 }
+
+/**
+ * `GET /api/demand-boards/{demandBoardId}` 응답(`DemandBoardDto`) 중 낙찰 결과가 쓰는 희망 가격대만.
+ *
+ * 낙찰 결과 응답에 희망가가 없어 보드 단건 조회로 보충한다(#187). 전체 모양은 수요 상세(B-12, #184)가
+ * `types/api/demandBoard.ts`에 들이므로, 그 PR이 머지되면 이 타입을 지우고 그쪽을 쓴다.
+ */
+export interface DemandBoardPriceDto {
+  desiredPriceMin: number | null;
+  desiredPriceMax: number | null;
+}

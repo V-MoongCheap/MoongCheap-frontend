@@ -30,8 +30,12 @@ export function GoBackButton({ children, className, fallbackHref }: GoBackButton
   const handleClick = () => {
     // 첫 진입(공유 링크·새 탭 등)이라 돌아갈 앱 내 항목이 없으면, fallbackHref가 있으면 그리로
     // 이동한다. 없으면(404 등) 기존처럼 back()에 맡긴다.
+    //
+    // push가 아니라 replace다(#165). push면 직접 진입한 화면이 fallback 화면 뒤에 남아, fallback
+    // 화면의 뒤로 가기(back)가 그 화면을 다시 열고 거기서 또 fallback을 push해 두 화면을 무한히
+    // 오간다(예: B-06 직접 진입 → B-05 → B-06 → …).
     if (fallbackHref !== undefined && !canGoBackInApp()) {
-      router.push(fallbackHref);
+      router.replace(fallbackHref);
       return;
     }
     router.back();

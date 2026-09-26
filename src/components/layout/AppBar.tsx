@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { ChevronLeft } from 'lucide-react';
+import Link from 'next/link';
 
 import { GoBackButton } from '@/components/ui/GoBackButton';
 
@@ -19,6 +20,10 @@ import { GoBackButton } from '@/components/ui/GoBackButton';
 //
 // `onBack`을 주면 이동을 호출부에 맡긴다. 입력 중인 폼이 이탈 확인 다이얼로그를 먼저 띄워야 하는
 // 경우다(B-30 배송지 폼, #164). 함수 prop이라 이 경우 호출부는 client여야 한다.
+//
+// `backToHref`를 주면 히스토리와 무관하게 항상 `backHref`로 간다. GNB 탭의 첫 화면(B-17 대기)처럼
+// '직전 화면'이 아니라 홈이 돌아갈 곳인 경우다(#165 QA). 탭을 오갈 때마다 히스토리가 쌓이지 않게
+// push가 아니라 replace로 이동한다.
 
 interface AppBarProps {
   title: string;
@@ -29,11 +34,13 @@ interface AppBarProps {
   action?: ReactNode;
   /** 뒤로 가기를 가로챈다. 주면 `backHref`로 이동하지 않고 이 함수만 부른다. */
   onBack?: () => void;
+  /** 히스토리 대신 항상 `backHref`로 간다(replace). GNB 탭 첫 화면용. */
+  backToHref?: boolean;
 }
 
 const BACK_BUTTON_CLASS = 'text-content-tertiary flex h-13 w-10 shrink-0 items-center px-2';
 
-export function AppBar({ title, backHref, action, onBack }: AppBarProps) {
+export function AppBar({ title, backHref, action, onBack, backToHref = false }: AppBarProps) {
   const backIcon = (
     <>
       <ChevronLeft aria-hidden className="size-6" />
@@ -45,14 +52,18 @@ export function AppBar({ title, backHref, action, onBack }: AppBarProps) {
     <header className="border-divider-default flex h-13 w-full shrink-0 items-center border-b">
       {/* 시안의 chevron-left는 #575757(content/tertiary)이다. B-24에 인라인으로 짤 때
           content/primary로 넣었던 것을 여기서 바로잡는다. */}
-      {onBack === undefined ? (
-        <GoBackButton className={BACK_BUTTON_CLASS} fallbackHref={backHref}>
-          {backIcon}
-        </GoBackButton>
-      ) : (
+      {onBack !== undefined ? (
         <button className={BACK_BUTTON_CLASS} onClick={onBack} type="button">
           {backIcon}
         </button>
+      ) : backToHref ? (
+        <Link className={BACK_BUTTON_CLASS} href={backHref} replace>
+          {backIcon}
+        </Link>
+      ) : (
+        <GoBackButton className={BACK_BUTTON_CLASS} fallbackHref={backHref}>
+          {backIcon}
+        </GoBackButton>
       )}
       {/* 시안 `818:9980` - 제목과 액션이 한 줄을 나눠 쓴다(justify-between). 액션이 없어도
           제목 위치가 바뀌면 안 되므로 flex-1은 이 줄이 갖는다. */}

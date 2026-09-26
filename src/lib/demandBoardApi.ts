@@ -1,9 +1,16 @@
 import { IMMINENT_THRESHOLD_HOURS, PRICE_BANDS } from '@/constants/businessRules';
-import type { CatalogDemandBoardCardDto, CatalogDemandBoardListDto } from '@/types/api/demandBoard';
+import type {
+  CatalogDemandBoardCardDto,
+  CatalogDemandBoardListDto,
+  DemandBoardDetailDto,
+  DemandBoardJoinRequestDto,
+} from '@/types/api/demandBoard';
+import type { DemandBoardDetail } from '@/types/demandBoard';
+import type { DemandFormValues } from '@/types/demandForm';
 import type { ProductQuickDeal } from '@/types/product';
 import type { SearchDemandSummary } from '@/types/search';
 
-import { apiFetch } from './api';
+import { apiFetch, parseCreatedId } from './api';
 import { computeDday } from './demandApi';
 
 /**
@@ -144,4 +151,165 @@ export async function fetchCatalogDemandBoards(
     }
   }
   return boards;
+}
+
+/* ── 수요 상세(B-12)·퀵 참여(FN-B12-02) ─────────────────────────────────────── */
+
+/**
+ * 화면이 분기하는 퀵 참여·수요 상세 에러 코드(백엔드 `ErrorCode`). `ApiError.code`로 온다.
+ * - `DEMAND_004`: 없는 수요보드(404)
+ * - `DEMAND_006`: 마감된 수요보드(400). 참여 제출 시점에 마감이 지났다
+ * - `DEMAND_001`: 이미 진행 중인 수요가 있음(409). 같은 상품의 다른 보드에 참여·접수 중인 경우 포함
+ * - `PAY_001`   : 유효한 결제수단이 없음(404). 보여 준 결제수단이 그사이 삭제·비활성됐다
+ */
+export const DEMAND_BOARD_ERROR_CODE = {
+  NOT_FOUND: 'DEMAND_004',
+  CLOSED: 'DEMAND_006',
+  ALREADY_EXISTS: 'DEMAND_001',
+  PAY_METHOD_NOT_FOUND: 'PAY_001',
+} as const;
+
+/**
+ * 라우트의 수요보드 id를 백엔드 id(Long)로 바꾼다. 숫자가 아니거나 안전 정수를 넘으면 null.
+ * `toCatalogId`(lib/productApi)와 같은 규칙이다.
+ */
+export function toDemandBoardId(id: string): number | null {
+  if (!/^\d+$/.test(id)) {
+    return null;
+  }
+  const demandBoardId = Number(id);
+  return Number.isSafeInteger(demandBoardId) ? demandBoardId : null;
+}
+
+/**
+ * 마감 이만큼 전부터 참여를 막는다. 명세 MC-B12-02 '마감 시각 도달 시(마감 1분 전) 참여 버튼을 즉시
+ * 비활성화한다(마감 직전 경합 처리)'.
+ */
+const JOIN_CUTOFF_MS = 60 * 1000;
+
+/**
+ * 참여를 받을 수 없는 보드인지. 마감 시각이 없거나 `now` 기준 1분 안쪽이면 마감으로 본다.
+ * `now`는 조회 시각을 넘긴다. 명세가 '인원·남은 시간은 조회 시점 스냅숏, 마감 도달은 재조회 시점에
+ * 화면 반영'이라 화면을 띄운 채 시간이 흘러도 다시 조회하기 전에는 바꾸지 않는다.
+ */
+export function isDemandBoardClosed(saleEndAt: string | undefined, now: number): boolean {
+  if (saleEndAt === undefined) {
+    return true;
+  }
+  const end = new Date(saleEndAt).getTime();
+  return Number.isNaN(end) || end - now <= JOIN_CUTOFF_MS;
+}
+
+/** 요일 한 글자. `Date.getDay()` 순서(일요일 0)다. */
+const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
+
+/**
+ * 마감 일시 표기. `2026-09-30T12:49:05` → `9월 30일 (수) 오후 12:49`. 모양이 다르면 받은 값을
+ * 그대로 쓴다. `09.30 12:49`처럼 숫자만 두면 월·일과 오전·오후가 한눈에 읽히지 않아 풀어 쓴다.
+ *
+ * 백엔드 값은 시간대 없는 `LocalDateTime`이라 `Date`로 파싱하지 않고 글자에서 바로 꺼낸다(요일만
+ * 날짜로 계산한다). 파싱하면 브라우저 시간대에 따라 날짜가 밀릴 수 있다.
+ */
+export function formatDemandBoardDeadline(saleEndAt: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(saleEndAt);
+  if (match === null) {
+    return saleEndAt;
+  }
+  const [, year, month, day, hourText, minute] = match;
+  const hour = Number(hourText);
+  const weekday = WEEKDAYS[new Date(Number(year), Number(month) - 1, Number(day)).getDay()];
+  const period = hour < 12 ? '오전' : '오후';
+  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${Number(month)}월 ${Number(day)}일 (${weekday}) ${period} ${hour12}:${minute}`;
+}
+
+/**
+ * 남은 시간. 1시간 이상이면 D-day(`computeDday`와 같은 달력일 기준), 1시간 미만이면 분 단위
+ * (명세 MC-B12-01 '1시간 미만이면 분 단위 표기'). 올림해서 '0분'은 만들지 않는다.
+ */
+export function remainingUntil(
+  saleEndAt: string,
+  now: number,
+): { kind: 'dday'; days: number } | { kind: 'minutes'; minutes: number } {
+  const diff = new Date(saleEndAt).getTime() - now;
+  if (diff < 60 * 60 * 1000) {
+    return { kind: 'minutes', minutes: Math.max(1, Math.ceil(diff / (60 * 1000))) };
+  }
+  return { kind: 'dday', days: computeDday(saleEndAt) };
+}
+
+function toDemandBoardDetail(dto: DemandBoardDetailDto): DemandBoardDetail {
+  return {
+    id: String(dto.demandBoardId),
+    catalogId: String(dto.catalogId),
+    catalogName: dto.catalogName,
+    thumbnailUrl: dto.thumbnailUrl ?? undefined,
+    participantCount: dto.participantCount ?? 0,
+    sellerCount: dto.sellerCount ?? 0,
+    desiredPriceLabel: formatBoardPriceLabel(dto.desiredPriceMin, dto.desiredPriceMax),
+    saleEndAt: dto.saleEndAt ?? undefined,
+    isParticipating: dto.isParticipating,
+  };
+}
+
+/**
+ * 수요보드 단건(MC-B12-01). 404(`DEMAND_004`)면 `ApiError`로 올라온다.
+ *
+ * `GET /api/demand-boards/{demandBoardId}`
+ */
+export async function fetchDemandBoard(demandBoardId: number): Promise<DemandBoardDetail> {
+  const response = await apiFetch(
+    `/api/demand-boards/${encodeURIComponent(String(demandBoardId))}`,
+  );
+  return toDemandBoardDetail((await response.json()) as DemandBoardDetailDto);
+}
+
+/** 퀵 참여 폼 값. 수요 등록 폼(`DemandFormValues`) 중 퀵 참여가 받는 것만 쓴다(MC-B12-02 입력 항목). */
+export type QuickJoinValues = Pick<
+  DemandFormValues,
+  'quantity' | 'substituteAgreed' | 'substituteNote' | 'consents'
+>;
+
+/**
+ * 퀵 참여 폼 값을 참여 바디로 옮긴다. 수요 등록의 `toDemandCreateRequest`와 같은 규칙이다.
+ * 대체 상품 가능 범위는 동의했고 값이 있을 때만 보내고, 동의 4종은 1:1로 옮긴다.
+ */
+export function toDemandBoardJoinRequest(
+  values: QuickJoinValues,
+  payMethodId: number,
+): DemandBoardJoinRequestDto {
+  const isSubstitutable = values.substituteAgreed ?? false;
+  const note = values.substituteNote.trim();
+
+  return {
+    payMethodId,
+    quantity: values.quantity,
+    isSubstitutable,
+    extraRequirement: isSubstitutable && note !== '' ? note : undefined,
+    autoPaymentAgreed: values.consents.autoPayment,
+    privacyCollectionAgreed: values.consents.privacyCollection,
+    privacyThirdPartyAgreed: values.consents.privacyThirdParty,
+    paymentAgencyTermsAgreed: values.consents.pgTerms,
+  };
+}
+
+/**
+ * 퀵 참여 제출(FN-B12-02). 성공하면 생성된 수요 id를 돌려준다. 수요는 미배정 없이 바로 이 보드에
+ * 편입된다(배정완료). 실패 코드는 `DEMAND_BOARD_ERROR_CODE`.
+ *
+ * `POST /api/demand-boards/{demandBoardId}/join` → `{ id }`
+ */
+export async function joinDemandBoard(
+  demandBoardId: number,
+  request: DemandBoardJoinRequestDto,
+): Promise<string> {
+  const response = await apiFetch(
+    `/api/demand-boards/${encodeURIComponent(String(demandBoardId))}/join`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    },
+  );
+  return parseCreatedId(response);
 }

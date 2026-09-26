@@ -2,11 +2,11 @@ import { DEMAND_GUIDE_ASSETS } from '@/constants/assets';
 import type { DemandGuideStep } from '@/types/demand';
 
 /**
- * 수요 상세(B-12) '뭉치 진행 과정' 화면의 고정 카피와 단계 목록. Figma node 981:15479.
+ * '뭉치 진행 과정' 안내 화면의 고정 카피와 단계 목록. Figma node 981:15479.
  *
  * 이 화면은 특정 수요 데이터를 그리지 않고 공구 진행 방식을 안내하는 정적 화면이라, 문구를 여기
- * 한곳에 모은다(다른 화면의 *Messages.ts와 같은 방침). B-08 상품 상세의 퀵 참여 딜 카드에서
- * 진입하며 하단 '확인'으로 닫는다(뒤로가기). 단계 타입은 [[types/demand]]에 있다.
+ * 한곳에 모은다(다른 화면의 *Messages.ts와 같은 방침). 수요 등록(B-09)과 퀵 참여(B-12) 직전에
+ * 거치고, 하단 '확인'으로 다음 화면에 간다(`DemandGuideView`). 단계 타입은 [[types/demand]]에 있다.
  */
 export const DEMAND_GUIDE = {
   title: '뭉치 진행 과정',

@@ -30,6 +30,17 @@ export const PRODUCT_DETAIL = {
   viewMore: '자세히 보기',
   collapse: '접기',
 
-  /** 하단 고정 CTA. 수요 등록/참여(B-09)로 이동 — 아직 화면 부재. */
+  /** 하단 고정 CTA. 일정 타임라인 → 수요 등록(B-09)으로 이동. */
   participateCta: '뭉치 참여하기',
+
+  /**
+   * 이 상품에 이미 진행 중 수요가 있을 때의 CTA. 탭하면 내 대기(B-17)로 간다(#191·#192).
+   * 참여 중·접수 완료는 명세 문구 그대로다. 수요 상세(B-12)의 참여 중 문구와 같다.
+   */
+  myDemandCta: {
+    participating: '참여 중 · 내 대기에서 확인',
+    received: '접수 완료 · 내 대기에서 확인',
+    /** 판단: 대체상품 제안(`SUBSTITUTE_OFFERED`)은 명세에 문구가 없어 B-17 탭 이름을 따랐다. */
+    actionRequired: '확인 필요 · 내 대기에서 확인',
+  },
 } as const;

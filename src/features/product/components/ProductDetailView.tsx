@@ -15,6 +15,7 @@ import { PRODUCT_DETAIL } from '@/constants/productMessages';
 import { WishButton } from '@/features/home/components/WishButton';
 import { QuickDealCard } from '@/features/product/components/QuickDealCard';
 import { useCatalogQuickDeals } from '@/features/product/hooks/useCatalogDemandBoards';
+import { useMyCatalogDemandCta } from '@/features/product/hooks/useMyCatalogDemand';
 import { useProductCatalogOverlay } from '@/features/product/hooks/useProductCatalogOverlay';
 import { cn } from '@/lib/cn';
 import { isRenderableImageSrc } from '@/lib/imageSource';
@@ -38,6 +39,9 @@ import type { ProductDetail } from '@/types/product';
 // 미구현 진입점은 노출하되 탭 시 '준비 중' 토스트다(ComingSoonButton).
 //  - 비슷한 상품(Full) · 찜(시안 전용)
 
+/** 하단 고정 CTA의 공통 모양. 색은 분기(참여하기 / 내 대기에서 확인)마다 붙인다. */
+const CTA_CLASS = 'text-button-15 rounded-8 flex h-12 w-full items-center justify-center';
+
 /** 상품설명 접힘 높이(px). 이보다 길면 자세히 보기 버튼과 하단 페이드를 노출한다. */
 const DESCRIPTION_COLLAPSED_MAX = 240;
 
@@ -47,6 +51,8 @@ interface ProductDetailViewProps {
   participateHref: string;
   /** 없는 상품(404)에서 돌아갈 히스토리가 없을 때 갈 곳. 라우트는 호출부(page)가 정한다. */
   notFoundHref: string;
+  /** 이 상품에 이미 진행 중 수요가 있을 때 CTA가 갈 내 대기(B-17). 라우트는 호출부(page)가 정한다. */
+  participationListHref: string;
   /** 퀵 참여 카드가 갈 수요 상세(B-12) 경로의 앞부분. 여기에 `/{수요보드 id}`를 붙인다. */
   quickDealHrefBase: string;
 }
@@ -56,12 +62,15 @@ export function ProductDetailView({
   participateHref,
   notFoundHref,
   quickDealHrefBase,
+  participationListHref,
 }: ProductDetailViewProps) {
   // 상품 도감 상세를 실데이터로 덮는다. 실패(미로그인·미배선·네트워크)면 mock 유지.
   // 수요 등록(B-09)도 같은 상품을 보여 줘야 해서 훅으로 뺐다.
   const { product, status } = useProductCatalogOverlay(initialProduct);
   // 모이는 중인 수요보드. 도감 조회와 동시에 보낸다. 홈 목 카드(문자열 id)는 조회하지 않는다.
   const catalogQuickDeals = useCatalogQuickDeals(toCatalogId(initialProduct.id));
+  // 이 상품에 대한 내 진행 중 수요. 있으면 하단 CTA가 참여 대신 내 대기로 보낸다(#191·#192).
+  const myDemandCta = useMyCatalogDemandCta(toCatalogId(initialProduct.id));
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [descriptionOverflows, setDescriptionOverflows] = useState(false);
   const descriptionRef = useRef<HTMLParagraphElement>(null);
@@ -302,14 +311,28 @@ export function ProductDetailView({
       </div>
 
       {/* 하단 고정 CTA → 일정 타임라인(FN-B09-05) → [확인] → 수요 등록(B-09). 경로는 page가 준다.
-          수요 등록 화면도 `useProductCatalogOverlay`로 같은 조회를 해서 여기와 같은 상품이 나온다. */}
+          수요 등록 화면도 `useProductCatalogOverlay`로 같은 조회를 해서 여기와 같은 상품이 나온다.
+          이 상품에 이미 진행 중 수요가 있으면 내 대기(B-17)로 보낸다(#191·#192). 색은 수요 상세(B-12)의
+          '참여 중' 버튼과 같은 tertiary다. */}
       <footer className="bg-background-default sticky bottom-0 w-full p-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
-        <Link
-          className="bg-surface-button-primary-default text-content-oncolor text-button-15 active:bg-surface-button-primary-pressed rounded-8 flex h-12 w-full items-center justify-center"
-          href={participateHref}
-        >
-          {PRODUCT_DETAIL.participateCta}
-        </Link>
+        {myDemandCta === 'none' ? (
+          <Link
+            className={cn(
+              CTA_CLASS,
+              'bg-surface-button-primary-default text-content-oncolor active:bg-surface-button-primary-pressed',
+            )}
+            href={participateHref}
+          >
+            {PRODUCT_DETAIL.participateCta}
+          </Link>
+        ) : (
+          <Link
+            className={cn(CTA_CLASS, 'bg-surface-button-tertiary-default text-content-inverse')}
+            href={participationListHref}
+          >
+            {PRODUCT_DETAIL.myDemandCta[myDemandCta]}
+          </Link>
+        )}
       </footer>
     </>
   );

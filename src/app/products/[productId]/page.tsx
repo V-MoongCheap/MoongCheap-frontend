@@ -33,6 +33,8 @@ export default async function ProductDetailPage({
       // 없는 상품(404)은 공유·직접 진입이 많아 뒤로 갈 곳이 없을 수 있다. 홈을 출구로 준다.
       notFoundHref="/"
       participateHref={`/products/${encodeURIComponent(productId)}/timeline`}
+      // 이 상품에 이미 진행 중 수요가 있으면 CTA가 내 대기(B-17)로 보낸다(#191·#192).
+      participationListHref="/waiting"
       product={product}
       // 퀵 참여 카드 → 수요 상세(B-12). 카드 id는 수요보드 id다.
       quickDealHrefBase="/demand-boards"

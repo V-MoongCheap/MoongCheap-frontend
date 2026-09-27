@@ -263,6 +263,42 @@ export async function fetchMyDemands(
   };
 }
 
+/**
+ * 진행 중 수요를 훑을 최대 페이지 수. 한 페이지가 20건이라 100건까지 본다. 진행 중 수요는 상품당
+ * 1건이라(아래 주석) 한 사람이 100개 상품에 동시에 참여 중일 일은 없다고 보고 멈춘다.
+ */
+const MAX_ACTIVE_DEMAND_PAGES = 5;
+
+/**
+ * 이 상품(도감)에 대한 **내 진행 중 수요의 상태**. 없으면 null이다. B-08 하단 CTA가 참여 중·접수 완료를
+ * 가르는 데 쓴다(#191·#192).
+ *
+ * 백엔드는 같은 도감에 진행 중 수요를 하나만 허용한다(`DemandService.create`가 진행 중 4종이 있으면
+ * 409 `DEMAND_001`). 그래서 도감 id로 찾으면 많아야 1건이다. 상품 조회 응답에 내 수요 상태가 없어
+ * 참여 목록에서 찾는다(백엔드가 상품 응답에 넣어 주면 이 함수를 지운다).
+ *
+ * `statuses`를 넘기지 않으면 백엔드가 진행 중 4종(`UNASSIGNED`·`SUBSTITUTE_OFFERED`·`ASSIGNED`·
+ * `PAYMENT_PENDING`)만 준다. 완료(`CLOSED`)는 다시 참여할 수 있으니 빠지는 게 맞다.
+ *
+ * `GET /api/members/me/demand?page=&size=`
+ */
+export async function fetchMyActiveDemandStatus(
+  catalogId: number,
+): Promise<DemandStatusDto | null> {
+  for (let page = 0; page < MAX_ACTIVE_DEMAND_PAGES; page += 1) {
+    const response = await apiFetch(`/api/members/me/demand?page=${page}&size=${LIST_PAGE_SIZE}`);
+    const body = (await response.json()) as DemandListDto;
+    const mine = body.demands.find((dto) => dto.catalog.id === catalogId);
+    if (mine !== undefined) {
+      return mine.status;
+    }
+    if (!body.hasNext) {
+      break;
+    }
+  }
+  return null;
+}
+
 /* ── 대체상품 제안 조회·수락·거절(B-16, FN-B16-01) ─────────────────────────────── */
 
 /**

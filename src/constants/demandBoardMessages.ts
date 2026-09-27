@@ -58,3 +58,6 @@ export const QUICK_JOIN = {
 
 /** 섹션 제목 id. `DemandFormSection`이 제목에 붙인다. */
 export const QUICK_JOIN_SECTION_ID = 'quick-join-condition';
+
+/** 수요 상세 '뭉치 진행 과정'(일정 타임라인) 섹션 제목 id. 제목 문구는 `DEMAND_GUIDE.title`(시안). */
+export const DEMAND_BOARD_TIMELINE_TITLE_ID = 'demand-board-timeline';

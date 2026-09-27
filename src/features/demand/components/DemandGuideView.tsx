@@ -1,23 +1,23 @@
-import Image from 'next/image';
 import Link from 'next/link';
 
 import { GoBackButton } from '@/components/ui/GoBackButton';
-import { DEMAND_GUIDE, DEMAND_GUIDE_STEPS } from '@/constants/demandGuide';
+import { DEMAND_GUIDE } from '@/constants/demandGuide';
+import { DemandGuideSteps } from '@/features/demand/components/DemandGuideSteps';
 
 // 일정 타임라인 안내(FN-B09-05) 화면 본문. 시안 node 1153:71172("뭉치 진행 과정").
 //
 // 특정 수요 데이터를 그리지 않고 공구 진행 방식을 5단계 카드로 안내하는 정적 화면이다. 그래서
-// API·mock 없이 constants/demandGuide.ts의 고정 카피만 렌더한다.
+// API·mock 없이 constants/demandGuide.ts의 고정 카피만 렌더한다. 단계 목록은 수요 상세(B-12)도
+// 같이 써서 `DemandGuideSteps`로 뺐다.
 //
-// 명세상 수요 접수·참여 직전에 거치는 화면이다. 진입점이 둘이고 [확인]이 가는 곳이 다르다.
-//   B-08 [CTA]           → 이 화면 → [확인] → B-09 수요 등록   (`/products/[productId]/timeline`)
-//   B-12 [함께 신청하기] → 이 화면 → [확인] → 퀵 참여          (`/demand-boards/[demandBoardId]/timeline`)
-// 그래서 다음 화면 경로(`nextHref`)는 호출부 페이지가 정한다.
+// 수요 접수 직전에 거치는 화면이다.
+//   B-08 [CTA] → 이 화면 → [확인] → B-09 수요 등록   (`/products/[productId]/timeline`)
+// 다음 화면 경로(`nextHref`)는 호출부 페이지가 정한다.
 //
-// `nextHref`를 넘기지 않으면 [확인]이 뒤로 가기로 동작한다(GoBackButton). 지금은 두 진입점 모두
-// `nextHref`를 넘긴다. 예전 `/demands/[demandId]` 정적 화면은 B-12 수요 상세가 생기며 없앴다(#176).
+// B-12 [함께 신청하기]는 이 화면을 거치지 않는다. 수요 상세가 같은 단계 목록을 이미 보여 주고,
+// 명세 MC-B12-02도 [함께 신청하기]에서 바로 참여 확인으로 간다(#188).
 //
-// 단계 번호는 배열 순서(index+1)로 매긴다. 순서 있는 안내라 <ol>/<li>로 의미를 준다.
+// `nextHref`를 넘기지 않으면 [확인]이 뒤로 가기로 동작한다(GoBackButton).
 
 /**
  * 하단 [확인] 버튼 클래스. 검정 tertiary 버튼이다. hover·active·focus 상태 클래스는 다른 tertiary
@@ -41,24 +41,7 @@ export function DemandGuideView({ nextHref }: DemandGuideViewProps) {
           <p className="text-body-14 text-content-tertiary">{DEMAND_GUIDE.subtitle}</p>
         </section>
 
-        <ol className="flex flex-col gap-4 px-4">
-          {DEMAND_GUIDE_STEPS.map((step, index) => (
-            <li
-              key={step.title}
-              className="bg-surface-primary rounded-12 flex items-center gap-2 p-4"
-            >
-              <span className="relative size-12 shrink-0">
-                <Image alt="" className="object-contain" fill sizes="48px" src={step.icon} />
-              </span>
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="text-title-17 text-content-primary">
-                  {index + 1}. {step.title}
-                </span>
-                <span className="text-body-14 text-content-tertiary">{step.description}</span>
-              </span>
-            </li>
-          ))}
-        </ol>
+        <DemandGuideSteps className="px-4" />
       </div>
 
       {/* 하단 고정 CTA. `nextHref`가 있으면 다음 화면으로 넘어가고(BR-B09-05-01), 없으면 뒤로 가기로

@@ -26,8 +26,8 @@ export default async function DemandBoardDetailPage({
       // 공유·직접 진입이면 뒤로 갈 곳이 없어 홈을 준다(명세 '홈 복귀').
       backHref="/"
       demandBoardId={demandBoardId}
-      // [함께 신청하기] → 뭉치 진행 과정 안내 → 퀵 참여. 수요 등록(B-08 → 안내 → B-09)과 같은 흐름이다.
-      joinHref={`${base}/timeline`}
+      // [함께 신청하기] → 퀵 참여. 일정 타임라인은 상세에서 이미 보여 줘 안내 화면을 거치지 않는다(#188).
+      joinHref={`${base}/join`}
       notFoundHref="/"
       participationListHref="/waiting"
       productHrefBase="/products"

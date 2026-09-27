@@ -26,6 +26,11 @@ export interface PaymentMethodsState {
   /** 조회 전·실패 시 null. 성공하면 배열(0건이면 빈 배열)이다. */
   methods: PaymentMethod[] | null;
   isLoading: boolean;
+  /**
+   * 첫 조회·재조회 모두 요청 중이면 true. 재조회 중에는 `methods`가 직전 목록 그대로라, 제출 화면은
+   * 이 값으로 버튼을 잠근다(삭제된 결제수단 id를 다시 보내지 않게).
+   */
+  isFetching: boolean;
   /** 조회 실패 사유. 화면이 문구를 고르도록 ApiError 그대로 올린다. */
   error: ApiError | null;
   refetch: () => void;
@@ -71,6 +76,7 @@ export function usePaymentMethods(): PaymentMethodsState {
     // 결제수단으로 수요를 등록하려 할 수 있다.
     methods: settledError !== null ? null : (data ?? null),
     isLoading: isPending,
+    isFetching,
     error: settledError,
     refetch: () => {
       void refetch();

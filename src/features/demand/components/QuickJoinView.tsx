@@ -118,13 +118,15 @@ export function QuickJoinView({
     board !== undefined && isDemandBoardClosed(board.saleEndAt, boardQuery.dataUpdatedAt);
 
   // 참여 확정 활성 조건(명세 화면 상태 '동의 미체크 → 참여 확정 비활성, 미등록자는 배너 + 비활성 유지').
-  // 대체 상품 동의는 선택 항목이라 조건에 넣지 않는다.
+  // 대체 상품 동의는 선택 항목이라 조건에 넣지 않는다. 결제수단 재조회 중에도 잠근다. PAY_001 뒤
+  // 재조회가 끝나기 전에는 직전 목록의 삭제된 결제수단이 그대로 보여, 다시 누르면 같은 id가 나간다.
   const canSubmit =
     boardId !== null &&
     board !== undefined &&
     !board.isParticipating &&
     !isClosed &&
     payMethod !== null &&
+    !paymentMethods.isFetching &&
     DEMAND_FORM_CONSENTS.every(({ key }) => values.consents[key]);
   const isSubmitting = joinDemandBoard.isPending;
 

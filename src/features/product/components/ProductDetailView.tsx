@@ -315,7 +315,10 @@ export function ProductDetailView({
           이 상품에 이미 진행 중 수요가 있으면 내 대기(B-17)로 보낸다(#191·#192). 색은 수요 상세(B-12)의
           '참여 중' 버튼과 같은 tertiary다. */}
       <footer className="bg-background-default sticky bottom-0 w-full p-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
-        {myDemandCta === 'none' ? (
+        {myDemandCta === 'pending' ? (
+          // 내 수요를 확인하기 전에는 버튼 자리만 잡는다(참여하기가 먼저 보였다 바뀌지 않게).
+          <Skeleton className="rounded-8 h-12 w-full" />
+        ) : myDemandCta === 'none' ? (
           <Link
             className={cn(
               CTA_CLASS,

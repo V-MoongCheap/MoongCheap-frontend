@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -30,6 +30,14 @@ export function SearchView({ resultsHref, initialQuery = '' }: SearchViewProps) 
   const router = useRouter();
   const { keywords, add, remove, clear } = useRecentSearches();
   const [query, setQuery] = useState(initialQuery);
+
+  // 검색 실행은 `router.push`라 `Link`처럼 결과 경로를 미리 받아 두지 않는다. 그러면 결과 화면의
+  // 로딩 화면(`search/results/loading.tsx`)을 모르는 채로 이동해, 서버 응답이 늦을 때 바깥쪽
+  // 로딩 화면(`search/loading.tsx`, 검색 입력 모양)이 결과 주소에 잠깐 뜬다(#167). 들어오자마자
+  // 결과 경로를 미리 받아 두어 결과 모양의 로딩 화면이 바로 뜨게 한다.
+  useEffect(() => {
+    router.prefetch(resultsHref);
+  }, [router, resultsHref]);
 
   const canSubmit = query.trim().length >= SEARCH_QUERY_MIN_LENGTH;
 

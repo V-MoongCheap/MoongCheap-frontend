@@ -35,3 +35,45 @@ export interface CatalogDemandBoardListDto {
   hasNext: boolean;
   page: number;
 }
+
+/**
+ * 수요보드 단건(`DemandBoardDto`). `GET /api/demand-boards/{demandBoardId}` 응답.
+ *
+ * 백엔드 조회 쿼리가 상태로 거르지 않아 마감·종료된 보드도 온다. 보드 상태 필드는 없으므로 화면은
+ * `saleEndAt`이 지났는지로 마감을 가른다. `Integer` 필드는 JSON에서 null일 수 있다.
+ */
+export interface DemandBoardDetailDto {
+  demandBoardId: number;
+  catalogId: number;
+  thumbnailUrl: string | null;
+  catalogName: string;
+  /** 확정 수요 인원. */
+  participantCount: number | null;
+  /** 응찰 중인 상품 수 = 응찰한 판매자 수. */
+  sellerCount: number | null;
+  desiredPriceMin: number | null;
+  desiredPriceMax: number | null;
+  /** 마감 시각(`LocalDateTime`, 시간대 없음). */
+  saleEndAt: string | null;
+  /** 본인이 이 보드에 참여 중(`ASSIGNED`·`PAYMENT_PENDING`)인지. */
+  isParticipating: boolean;
+}
+
+/**
+ * 퀵 참여 요청 바디(`DemandBoardJoinRequestDto`). `POST /api/demand-boards/{demandBoardId}/join`.
+ *
+ * 희망 가격대·마감일은 보드 조건을 그대로 따르므로 보내지 않는다(서버가 보드 값으로 채운다).
+ * 동의 4종은 전부 `@AssertTrue`라 true여야 한다. 수요 등록(`DemandCreateRequestDto`)과 같은 규칙이다.
+ */
+export interface DemandBoardJoinRequestDto {
+  payMethodId: number;
+  /** 수량(1~99). */
+  quantity: number;
+  isSubstitutable: boolean;
+  /** 대체 상품 가능 범위. 동의했고 값이 있을 때만 보낸다. */
+  extraRequirement?: string;
+  autoPaymentAgreed: boolean;
+  privacyCollectionAgreed: boolean;
+  privacyThirdPartyAgreed: boolean;
+  paymentAgencyTermsAgreed: boolean;
+}

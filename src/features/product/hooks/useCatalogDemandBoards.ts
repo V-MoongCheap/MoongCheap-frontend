@@ -19,9 +19,11 @@ import type { SearchDemandSummary } from '@/types/search';
  * 화면마다 필요한 모양은 `select`로 만든다. 검색 결과에서 상품 상세로 들어가면 같은 캐시를 다시 쓴다.
  */
 
-/** 수요보드 캐시 키. 퀵 참여 후 무효화할 때도 이 키를 쓴다. */
+/** 수요보드 캐시 키. 퀵 참여 후에는 `all`로 한꺼번에 무효화한다(인원·참여 여부가 바뀐다). */
 export const DEMAND_BOARD_QUERY_KEYS = {
+  all: ['demandBoards'] as const,
   catalog: (catalogId: number | null) => ['demandBoards', 'catalog', catalogId] as const,
+  detail: (demandBoardId: number | null) => ['demandBoards', 'detail', demandBoardId] as const,
 };
 
 export interface CatalogQuickDealsState {

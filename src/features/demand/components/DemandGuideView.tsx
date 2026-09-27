@@ -11,12 +11,11 @@ import { DEMAND_GUIDE, DEMAND_GUIDE_STEPS } from '@/constants/demandGuide';
 //
 // 명세상 수요 접수·참여 직전에 거치는 화면이다. 진입점이 둘이고 [확인]이 가는 곳이 다르다.
 //   B-08 [CTA]           → 이 화면 → [확인] → B-09 수요 등록   (`/products/[productId]/timeline`)
-//   B-12 [함께 신청하기] → 이 화면 → [확인] → 퀵 참여 화면     (B-12 작업에서 연결)
+//   B-12 [함께 신청하기] → 이 화면 → [확인] → 퀵 참여          (`/demand-boards/[demandBoardId]/timeline`)
 // 그래서 다음 화면 경로(`nextHref`)는 호출부 페이지가 정한다.
 //
-// `nextHref`를 넘기지 않으면 [확인]이 뒤로 가기로 동작한다. B-08 퀵 참여 딜 카드가 여는
-// `/demands/[demandId]` 경로가 아직 이 방식이라 남겨 둔다(B-12 수요 상세가 생기면 정리한다).
-// router.back()이 필요한 버튼이라 GoBackButton을 재사용하고 페이지는 서버 컴포넌트로 둔다.
+// `nextHref`를 넘기지 않으면 [확인]이 뒤로 가기로 동작한다(GoBackButton). 지금은 두 진입점 모두
+// `nextHref`를 넘긴다. 예전 `/demands/[demandId]` 정적 화면은 B-12 수요 상세가 생기며 없앴다(#176).
 //
 // 단계 번호는 배열 순서(index+1)로 매긴다. 순서 있는 안내라 <ol>/<li>로 의미를 준다.
 

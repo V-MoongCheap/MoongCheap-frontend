@@ -43,18 +43,21 @@ export function useMyCatalogDemandCta(catalogId: number | null): MyCatalogDemand
   const { isAuthenticated, isPending: isSessionPending } = useSession();
   const enabled = isAuthenticated && catalogId !== null;
 
-  const { data, isPending } = useQuery({
+  const { data, isPending, isFetching } = useQuery({
     queryKey: [...DEMAND_QUERY_KEYS.all, 'catalog', catalogId] as const,
     queryFn:
       isAuthenticated && catalogId !== null
         ? () => fetchMyActiveDemandStatus(catalogId)
         : skipToken,
     retry: shouldRetryQuery,
+    // 재조회 중에도 자리만 잡으므로(아래), 창 포커스마다 CTA가 스켈레톤으로 깜빡이지 않게 끈다.
+    refetchOnWindowFocus: false,
   });
 
   // mock 상품은 세션과 무관하게 기본 CTA다. 실상품이면 세션 판정 → 내 수요 조회 순으로 기다린다.
   // skipToken 쿼리도 isPending이 true라 조회를 켠 경우(enabled)에만 기다린다.
-  if (catalogId !== null && (isSessionPending || (enabled && isPending))) {
+  // 재조회(isFetching)도 기다린다. 참여 직후 무효화된 캐시(null)로 '뭉치 참여하기'를 잠깐 그리지 않게.
+  if (catalogId !== null && (isSessionPending || (enabled && (isPending || isFetching)))) {
     return 'pending';
   }
   if (!enabled || data === undefined || data === null) {

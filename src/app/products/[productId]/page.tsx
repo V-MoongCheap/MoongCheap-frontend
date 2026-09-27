@@ -34,6 +34,8 @@ export default async function ProductDetailPage({
       notFoundHref="/"
       participateHref={`/products/${encodeURIComponent(productId)}/timeline`}
       product={product}
+      // 퀵 참여 카드 → 수요 상세(B-12). 카드 id는 수요보드 id다.
+      quickDealHrefBase="/demand-boards"
     />
   );
 }

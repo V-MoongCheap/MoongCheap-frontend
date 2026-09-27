@@ -120,7 +120,8 @@ export function DemandFormView({
   // 활성 조건과 매핑의 전제를 일치시켜, 가격대 없이 눌러 예외가 나는 일을 막는다.
   //
   // 쓸 결제수단이 있어야 한다(FN-B09-02 '결제수단 등록 완료자만 접수 가능'). 조회 중·조회 실패·
-  // 미등록이면 잠근다. 결제수단 섹션이 각 상태를 안내한다.
+  // 미등록이면 잠근다. 결제수단 섹션이 각 상태를 안내한다. PAY_001 뒤 재조회 중에도 잠근다. 재조회가
+  // 끝나기 전에는 직전 목록의 삭제된 결제수단이 그대로 보여, 다시 누르면 같은 id가 나간다.
   //
   // 상품 id가 백엔드 도감 id로 바뀌지 않으면(홈 목 카드의 `demand-1` 등) 버튼을 잠근다. 보내 봐야
   // `catalogId`가 null로 나가 400이 확정이다. 목 상품이라 안내 문구는 따로 두지 않는다.
@@ -128,6 +129,7 @@ export function DemandFormView({
   const canSubmit =
     catalogId !== null &&
     payMethod !== null &&
+    !paymentMethods.isFetching &&
     values.priceBand !== null &&
     DEMAND_FORM_CONSENTS.every(({ key }) => values.consents[key]);
   const isSubmitting = createDemand.isPending;

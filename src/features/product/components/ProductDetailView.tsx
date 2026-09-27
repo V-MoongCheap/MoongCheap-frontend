@@ -47,12 +47,15 @@ interface ProductDetailViewProps {
   participateHref: string;
   /** 없는 상품(404)에서 돌아갈 히스토리가 없을 때 갈 곳. 라우트는 호출부(page)가 정한다. */
   notFoundHref: string;
+  /** 퀵 참여 카드가 갈 수요 상세(B-12) 경로의 앞부분. 여기에 `/{수요보드 id}`를 붙인다. */
+  quickDealHrefBase: string;
 }
 
 export function ProductDetailView({
   product: initialProduct,
   participateHref,
   notFoundHref,
+  quickDealHrefBase,
 }: ProductDetailViewProps) {
   // 상품 도감 상세를 실데이터로 덮는다. 실패(미로그인·미배선·네트워크)면 mock 유지.
   // 수요 등록(B-09)도 같은 상품을 보여 줘야 해서 훅으로 뺐다.
@@ -227,7 +230,7 @@ export function ProductDetailView({
                   {quickDeals.map((deal) => (
                     <QuickDealCard
                       deal={deal}
-                      href={`/demands/${encodeURIComponent(deal.id)}`}
+                      href={`${quickDealHrefBase}/${encodeURIComponent(deal.id)}`}
                       key={deal.id}
                     />
                   ))}

@@ -1,6 +1,6 @@
 import { apiFetch } from '@/lib/api';
-import { formatBoardPriceLabel } from '@/lib/demandBoardApi';
-import type { AuctionResultDto, DemandBoardPriceDto } from '@/types/api/auctionResult';
+import { fetchDemandBoard, formatDemandBoardDeadline } from '@/lib/demandBoardApi';
+import type { AuctionResultDto } from '@/types/api/auctionResult';
 import type { AwardResult } from '@/types/awardResult';
 
 /**
@@ -13,8 +13,6 @@ import type { AwardResult } from '@/types/awardResult';
  * ⚠️ 명세에 있지만 응답에 없는 값: **낙찰 날짜**(`judged_at`은 `+48시간` 계산에만 쓰고 안 내려옴)·
  *    **응찰 건수**·**브랜드**(이슈 #137·#187로 백엔드에 요청).
  */
-
-const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
 
 /**
  * 결제 예정 금액. 명세 FN-B19-01의 `낙찰 단가 × 내 수량 + 배송비`다.
@@ -29,40 +27,13 @@ function computeExpectedPayment(dto: AuctionResultDto): number | undefined {
 }
 
 /**
- * 자동결제 예정 시각 표기. `2026-09-28T21:05:00` → `9월 28일 (월) 오후 9:05`.
- *
- * 백엔드 값이 시간대 없는 `LocalDateTime`이라 `Date`로 파싱하지 않고 글자에서 꺼낸다(브라우저
- * 시간대에 따라 시각이 밀리지 않게). 요일은 날짜만으로 구하므로 UTC로 계산해도 같다.
- * 모양이 다르면 undefined(호출부가 기본 안내 문구를 쓴다).
- */
-export function formatPaymentDeadline(localDateTime: string | null): string | undefined {
-  if (localDateTime === null) {
-    return undefined;
-  }
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(localDateTime);
-  if (match === null) {
-    return undefined;
-  }
-  const [, year, month, day, hour, minute] = match;
-  const weekday = WEEKDAYS[new Date(Date.UTC(+year, +month - 1, +day)).getUTCDay()];
-  const hour24 = Number(hour);
-  const meridiem = hour24 < 12 ? '오전' : '오후';
-  const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
-  return `${Number(month)}월 ${Number(day)}일 (${weekday}) ${meridiem} ${hour12}:${minute}`;
-}
-
-/**
  * 응답을 화면 타입으로 옮긴다. null 필드는 키를 넣지 않아 화면이 그 줄을 숨긴다.
- * 희망가는 보드 조회 결과를 따로 받는다(없으면 undefined).
+ *
+ * 희망가는 보드 조회(`fetchDemandBoard`)의 라벨을 따로 받는다. 빈 문자열이면 줄을 숨긴다.
+ * 자동결제 시각은 수요 상세(B-12)의 마감 일시와 같은 표기(`9월 28일 (월) 오후 9:05`)로 쓴다.
  */
-export function toAwardResult(
-  dto: AuctionResultDto,
-  board: DemandBoardPriceDto | null,
-): AwardResult {
+export function toAwardResult(dto: AuctionResultDto, desiredPriceLabel: string): AwardResult {
   const expected = computeExpectedPayment(dto);
-  const desiredPriceLabel =
-    board === null ? '' : formatBoardPriceLabel(board.desiredPriceMin, board.desiredPriceMax);
-  const paymentDeadlineLabel = formatPaymentDeadline(dto.paymentDeadlineAt);
 
   return {
     productName: dto.catalogName,
@@ -76,36 +47,27 @@ export function toAwardResult(
       totalParticipantQuantity: dto.totalParticipantQuantity,
     }),
     ...(expected !== undefined && { expectedPaymentPrice: expected }),
-    ...(paymentDeadlineLabel !== undefined && { paymentDeadlineLabel }),
+    ...(dto.paymentDeadlineAt !== null && {
+      paymentDeadlineLabel: formatDemandBoardDeadline(dto.paymentDeadlineAt),
+    }),
   };
-}
-
-/**
- * 보드 희망 가격대. 낙찰 결과 응답에 희망가가 없어 보드 단건 조회로 보충한다.
- * 보조 정보라 실패해도 화면 전체를 실패시키지 않고 null을 돌려준다(희망가 줄만 숨김).
- *
- * `GET /api/demand-boards/{demandBoardId}`
- */
-async function fetchBoardPrice(demandBoardId: string): Promise<DemandBoardPriceDto | null> {
-  try {
-    const response = await apiFetch(`/api/demand-boards/${encodeURIComponent(demandBoardId)}`);
-    return (await response.json()) as DemandBoardPriceDto;
-  } catch {
-    return null;
-  }
 }
 
 /**
  * 낙찰 결과 조회(FN-B19-01). `GET /api/demand-boards/{demandBoardId}/auction-result`.
  *
  * `GB_ACTION_REQUIRED` 상태의 보드에서 **본인** 낙찰 결과를 돌려준다. 다른 상태이거나 내 수요가
- * 없는 보드면 백엔드가 404(`DEMAND_004`)로 거절하고 `apiFetch`가 throw한다. 희망가 보충 조회는
- * 병렬로 보낸다.
+ * 없는 보드면 백엔드가 404(`DEMAND_004`)로 거절하고 `apiFetch`가 throw한다.
+ *
+ * 낙찰 결과 응답에 희망가가 없어 보드 단건(`GET /api/demand-boards/{id}`)을 병렬로 불러 보충한다.
+ * 보조 정보라 그 조회가 실패해도 화면 전체를 실패시키지 않고 희망가 줄만 숨긴다.
  */
-export async function fetchAwardResult(demandBoardId: string): Promise<AwardResult> {
-  const [response, board] = await Promise.all([
-    apiFetch(`/api/demand-boards/${encodeURIComponent(demandBoardId)}/auction-result`),
-    fetchBoardPrice(demandBoardId),
+export async function fetchAwardResult(demandBoardId: number): Promise<AwardResult> {
+  const [response, desiredPriceLabel] = await Promise.all([
+    apiFetch(`/api/demand-boards/${encodeURIComponent(String(demandBoardId))}/auction-result`),
+    fetchDemandBoard(demandBoardId)
+      .then((board) => board.desiredPriceLabel)
+      .catch(() => ''),
   ]);
-  return toAwardResult((await response.json()) as AuctionResultDto, board);
+  return toAwardResult((await response.json()) as AuctionResultDto, desiredPriceLabel);
 }

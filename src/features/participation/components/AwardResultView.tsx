@@ -17,6 +17,7 @@ import { ERROR_SCREEN_RETRY_LABEL } from '@/constants/commonMessages';
 import { useRedirectOnUnauthorized } from '@/features/auth/session';
 import { useAwardResult } from '@/features/participation/hooks/useAwardResult';
 import { ApiError } from '@/lib/api';
+import { toDemandBoardId } from '@/lib/demandBoardApi';
 import { formatWon } from '@/lib/formatPrice';
 import { isRenderableImageSrc } from '@/lib/imageSource';
 
@@ -93,8 +94,8 @@ export function AwardResultView({ demandBoardId, listHref }: AwardResultViewProp
   const { showToast } = useToast();
   const router = useRouter();
 
-  const isValidId = /^\d+$/.test(demandBoardId);
-  const { data: result, error, isError, isPending, refetch } = useAwardResult(demandBoardId);
+  const boardId = toDemandBoardId(demandBoardId);
+  const { data: result, error, isError, isPending, refetch } = useAwardResult(boardId);
   // 세션 만료(401)는 재시도해도 소용없어 오류 화면 대신 로그인 화면으로 보낸다(#159).
   const isRedirectingToLogin = useRedirectOnUnauthorized(error);
 
@@ -105,7 +106,8 @@ export function AwardResultView({ demandBoardId, listHref }: AwardResultViewProp
   }
 
   // 결과 없음: 숫자가 아닌 주소, 또는 백엔드 404(없는 보드·낙찰 전·내 수요 없음).
-  const isNotFound = !isValidId || (error instanceof ApiError && error.status === NOT_FOUND_STATUS);
+  const isNotFound =
+    boardId === null || (error instanceof ApiError && error.status === NOT_FOUND_STATUS);
   if (isNotFound) {
     return (
       <EmptyState

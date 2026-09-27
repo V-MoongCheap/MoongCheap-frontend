@@ -12,8 +12,13 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { GoBackButton } from '@/components/ui/GoBackButton';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { ERROR_SCREEN_RETRY_LABEL } from '@/constants/commonMessages';
-import { DEMAND_BOARD_DETAIL } from '@/constants/demandBoardMessages';
+import {
+  DEMAND_BOARD_DETAIL,
+  DEMAND_BOARD_TIMELINE_TITLE_ID,
+} from '@/constants/demandBoardMessages';
+import { DEMAND_GUIDE } from '@/constants/demandGuide';
 import { useRedirectOnUnauthorized } from '@/features/auth/session';
+import { DemandGuideSteps } from '@/features/demand/components/DemandGuideSteps';
 import { useDemandBoard } from '@/features/demand/hooks/useDemandBoard';
 import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/cn';
@@ -32,10 +37,11 @@ import { isRenderableImageSrc } from '@/lib/imageSource';
 // `constants/demandBoardMessages.ts`.
 //
 //   상품 요약(이미지·상품명, 탭 → 상품 상세) · 확정 수요 인원 · 남은 시간 · 마감 일시 · 희망 가격대 · 응찰 수
+//   일정 타임라인('뭉치 진행 과정' 5단계, 진행 과정 안내 화면과 같은 `DemandGuideSteps`)
 //   하단 고정 CTA: 함께 신청하기 / 참여 중 · 내 대기에서 확인 / 마감된 공구예요(비활성)
 //
-// 명세의 '일정 타임라인'은 이 화면에 그리지 않는다. [함께 신청하기]가 뭉치 진행 과정 안내
-// (`DemandGuideView`)를 거쳐 퀵 참여로 가므로 참여 직전에 같은 안내를 본다(B-08 → B-09와 같은 흐름).
+// [함께 신청하기]는 퀵 참여로 바로 간다(명세 MC-B12-02 '[함께 신청하기] → 참여 확인'). 타임라인을
+// 이 화면에서 이미 보여 주므로 진행 과정 안내 화면을 한 번 더 거치지 않는다(#188).
 //
 // 인원·남은 시간·마감 여부는 조회 시점 기준이다(명세 '조회 시점 스냅숏, 마감 도달은 재조회 시점에
 // 화면 반영'). 그래서 현재 시각 대신 조회 시각(`dataUpdatedAt`)으로 계산한다.
@@ -48,7 +54,7 @@ interface DemandBoardDetailViewProps {
   demandBoardId: string;
   /** 앱바 뒤로가기의 대체 경로(히스토리가 없을 때). 라우트는 호출부(page)가 정한다. */
   backHref: string;
-  /** [함께 신청하기]가 갈 곳(진행 과정 안내 → 퀵 참여). */
+  /** [함께 신청하기]가 갈 곳(퀵 참여). */
   joinHref: string;
   /** 참여 중일 때 CTA가 갈 내 대기(B-17). */
   participationListHref: string;
@@ -153,6 +159,17 @@ export function DemandBoardDetailView({
               </p>
             )}
           </div>
+
+          {/* 일정 타임라인(명세 '일정 타임라인 (B-09와 동일 컴포넌트)'). 제목은 카드 밖, 수요 등록
+              섹션(`DemandFormSection`)과 같은 모양이다. 단계 카드가 회색이라 흰 카드로 감싼다. */}
+          <section aria-labelledby={DEMAND_BOARD_TIMELINE_TITLE_ID} className="flex flex-col gap-3">
+            <h2 className="text-title-18 text-content-primary" id={DEMAND_BOARD_TIMELINE_TITLE_ID}>
+              {DEMAND_GUIDE.title}
+            </h2>
+            <div className="bg-background-default rounded-12 p-4">
+              <DemandGuideSteps />
+            </div>
+          </section>
         </div>
 
         {/* 하단 고정 CTA. 명세의 세 상태(참여 가능 / 마감 / 참여 중)를 가른다. 참여 중이 마감보다

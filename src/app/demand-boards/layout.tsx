@@ -1,6 +1,6 @@
 import { MobileScreenShell } from '@/components/layout/MobileScreenShell';
 
-// 수요보드 화면 셸(B-12 수요 상세 · 진행 과정 안내 · 퀵 참여). 모바일 전용 컬럼이라 상품·수요 셸과
+// 수요보드 화면 셸(B-12 수요 상세 · 퀵 참여). 모바일 전용 컬럼이라 상품·수요 셸과
 // 같은 폭으로 중앙 고정한다. 하단 고정 CTA가 이 컬럼 안에서 붙으므로 BottomNav 그룹에 두지 않는다.
 //
 // `/demands/[demandId]`가 아니라 이 세그먼트에 두는 이유: `/demands/[demandId]/substitute`(B-16)의

@@ -10,6 +10,26 @@ import { ApiError, apiFetch } from './api';
  */
 
 /**
+ * 아이디 로그인. `POST /api/auth/login`
+ *
+ * 성공하면 백엔드가 기존 세션을 버리고 새 SID 쿠키를 심는다(`AuthSessionManager.bindPrincipal`).
+ * 응답 본문(`SessionPrincipal`)은 쓰지 않는다. 회원 정보는 전역 세션 조회(getMe)가 다시 받는다.
+ * 화면에 로그인 유지 선택이 없어 `rememberMe`는 false로 보낸다(세션 기본 유효기간 24시간).
+ *
+ * 실패는 그대로 던진다. 백엔드가 주는 실패는 셋이다.
+ * - 401 `AUTH_006` 아이디·비밀번호 불일치(없는 아이디 포함)
+ * - 400 `AUTH_002` 아이디 형식 위반(백엔드 규칙 `^[a-z][a-z0-9_]{3,19}$`, 계정 조회 전에 거른다)
+ * - 423 `AUTH_007` 같은 아이디로 5회 연속 실패해 10분 잠김
+ */
+export async function login(loginId: string, password: string): Promise<void> {
+  await apiFetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ loginId, password, rememberMe: false }),
+  });
+}
+
+/**
  * 소셜 최초 로그인 완료 요청 바디. 백엔드 `SocialSignupCompleteRequestDto`와 필드가 일치한다.
  * - termsAgreed  : [필수] 이용약관 동의
  * - policyAgreed : [필수] 개인정보 수집·이용 동의

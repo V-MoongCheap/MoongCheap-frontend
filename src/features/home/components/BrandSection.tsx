@@ -2,6 +2,7 @@ import Image from 'next/image';
 
 import { ComingSoonButton } from '@/components/ui/ComingSoonButton';
 import { HOME_SECTIONS } from '@/constants/homeMessages';
+import { ROUTES } from '@/constants/routes';
 import { BrandProductRow } from '@/features/home/components/BrandProductRow';
 import { SectionHeader } from '@/features/home/components/SectionHeader';
 import { cn } from '@/lib/cn';
@@ -59,7 +60,7 @@ export function BrandSection({ brands, products }: BrandSectionProps) {
 
         <div className="flex w-full flex-col gap-3">
           {products.map((product) => (
-            <BrandProductRow key={product.id} product={product} href={`/products/${product.id}`} />
+            <BrandProductRow key={product.id} product={product} href={ROUTES.product(product.id)} />
           ))}
         </div>
       </div>

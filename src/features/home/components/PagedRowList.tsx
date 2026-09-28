@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 
+import { ROUTES } from '@/constants/routes';
 import { ProductRow } from '@/features/home/components/ProductRow';
 import { cn } from '@/lib/cn';
 import type { HomeProductCard } from '@/types/home';
@@ -56,7 +57,7 @@ export function PagedRowList({ products }: PagedRowListProps) {
             key={rows[0]?.id ?? 'empty'}
           >
             {rows.map((product) => (
-              <ProductRow key={product.id} product={product} href={`/products/${product.id}`} />
+              <ProductRow key={product.id} product={product} href={ROUTES.product(product.id)} />
             ))}
           </div>
         ))}

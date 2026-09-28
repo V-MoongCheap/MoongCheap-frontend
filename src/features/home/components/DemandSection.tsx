@@ -1,5 +1,6 @@
 import { ComingSoonButton } from '@/components/ui/ComingSoonButton';
 import { HOME_DEMAND_MORE_BUTTON, HOME_SECTIONS } from '@/constants/homeMessages';
+import { ROUTES } from '@/constants/routes';
 import { HorizontalScroller } from '@/features/home/components/HorizontalScroller';
 import { ProductCard } from '@/features/home/components/ProductCard';
 import { SectionHeader } from '@/features/home/components/SectionHeader';
@@ -20,7 +21,7 @@ export function DemandSection({ products }: DemandSectionProps) {
         <SectionHeader title={HOME_SECTIONS.demand.title} />
         <HorizontalScroller className="gap-5">
           {products.map((product) => (
-            <ProductCard key={product.id} product={product} href={`/products/${product.id}`} />
+            <ProductCard key={product.id} product={product} href={ROUTES.product(product.id)} />
           ))}
         </HorizontalScroller>
       </div>

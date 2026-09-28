@@ -1,3 +1,4 @@
+import { ROUTES } from '@/constants/routes';
 import { HorizontalScroller } from '@/features/home/components/HorizontalScroller';
 import { ProductCard } from '@/features/home/components/ProductCard';
 import { SectionHeader } from '@/features/home/components/SectionHeader';
@@ -23,7 +24,7 @@ export function CardListSection({ title, products, variant }: CardListSectionPro
           <ProductCard
             key={product.id}
             product={product}
-            href={`/products/${product.id}`}
+            href={ROUTES.product(product.id)}
             variant={variant}
           />
         ))}

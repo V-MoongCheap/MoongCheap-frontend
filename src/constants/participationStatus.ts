@@ -90,3 +90,18 @@ export const PARTICIPATION_TABS: readonly { key: ParticipationTab; label: string
   { key: 'ACTION_REQUIRED', label: PARTICIPATION_STATUS.ACTION_REQUIRED.tabLabel },
   { key: 'DONE', label: PARTICIPATION_STATUS.DONE.tabLabel },
 ];
+
+/**
+ * 참여 카드(B-17)의 마감 표기 문구. 기준 시각은 `ParticipationItem.deadline`.
+ *
+ * - 12시간(`IMMINENT_THRESHOLD_HOURS`) 넘게 남음: `D-N`
+ * - 12시간 미만: '마감 임박' + `HH:MM:SS` 카운트다운(BR-B17-01-13, TC-B17-01-04)
+ * - 마감 도달: 서버 재조회 없이 '마감'으로 바꾼다(TC-B17-01-04). 낙찰 전(`ASSIGNED`)이면 판정 중임을
+ *   함께 적는다(TC-B17-01-12). 판단: 시안에 없는 문구라 명세 설명을 그대로 옮겼다.
+ */
+export const PARTICIPATION_DEADLINE = {
+  dday: (days: number) => `D-${days}`,
+  imminent: '마감 임박',
+  closed: '마감',
+  awarding: '마감 · 낙찰 판정 중',
+} as const;

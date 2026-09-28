@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 
 import { getParticipationStatusMeta } from '@/constants/participationStatus';
+import { ParticipationDeadline } from '@/features/participation/components/ParticipationDeadline';
 import { cn } from '@/lib/cn';
 import type { ParticipationItem } from '@/types/participation';
 
 // B-17 내 뭉치 참여 카드 한 건. 시안 구성:
-//  [썸네일 + 상태배지 오버레이]  [D-N 배지 · N명 참여 배지]
+//  [썸네일 + 상태배지 오버레이]  [마감 표기(D-N·마감 임박 카운트다운·마감) · N명 참여 배지]
 //                               상품명(볼드)
 //                               규격 요약 | 수량 : N개
 //  가격 라벨(상태별 priceHeading — 완료='낙찰가', 그 외='희망가격대')
@@ -47,7 +48,12 @@ export function ParticipationCard({ item, onOpenDetail, action }: ParticipationC
 
         <div className="flex min-w-0 flex-1 flex-col gap-0.5 text-left">
           <div className="flex items-center gap-1.5">
-            <span className="text-label-13 text-content-error">D-{item.dday}</span>
+            {item.deadline !== undefined && (
+              <ParticipationDeadline
+                deadline={item.deadline}
+                isAwaitingAward={item.isAwaitingAward}
+              />
+            )}
             {/* 참여 인원은 보드가 배정된 뒤에만 있다. 아직 보드가 없는 '모이는 중' 수요는 배지 생략. */}
             {item.participantCount !== undefined && (
               <span className="text-caption-10 bg-surface-visibility text-content-visibility rounded-round px-1.5 py-0.5">

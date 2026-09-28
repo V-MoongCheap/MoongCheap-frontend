@@ -10,7 +10,8 @@ import { useEffect, useState } from 'react';
 // 남은 시간을 깎지 않고 매초 `Date.now()`로 다시 계산한다. 백그라운드 탭에서 setInterval이
 // 스로틀돼도 복귀 시 값이 저절로 맞는다.
 
-function formatRemaining(ms: number): string {
+/** 남은 밀리초 → `HH:MM:SS`. 지난 시각은 `00:00:00`. 참여 목록 카드(B-17)도 같은 표기를 쓴다. */
+export function formatRemaining(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
   const hours = Math.floor(total / 3600);
   const minutes = Math.floor((total % 3600) / 60);

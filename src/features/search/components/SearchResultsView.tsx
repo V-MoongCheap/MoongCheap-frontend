@@ -9,6 +9,7 @@ import { useCatalogDemandSummaries } from '@/features/product/hooks/useCatalogDe
 import { SearchEmptyState } from '@/features/search/components/SearchEmptyState';
 import { SearchFilterTabs } from '@/features/search/components/SearchFilterTabs';
 import { SearchResultCard } from '@/features/search/components/SearchResultCard';
+import { SearchResultsSkeleton } from '@/features/search/components/SearchResultsSkeleton';
 import { ApiError } from '@/lib/api';
 import { searchProducts } from '@/lib/productSearchApi';
 import { mockSearchProducts } from '@/mocks/search';
@@ -121,10 +122,11 @@ export function SearchResultsView({ query, productHrefBase }: SearchResultsViewP
     );
   }
 
-  // 첫 조회 중에는 필터도 목록도 그리지 않는다. 개수를 알기 전에 필터를 그리면 칩을 누를 수 있는데
-  // 거를 대상이 없다.
+  // 첫 조회 중에는 필터 없이 카드 자리표시자만 그린다. 개수를 알기 전에 필터를 그리면 칩을 누를 수
+  // 있는데 거를 대상이 없다. 아무것도 안 그리면 검색 응답이 늦을 때(dev DB 폴백 약 3초) 빈 화면으로
+  // 멈춘 것처럼 보인다(TC-B06-01-10, #167).
   if (currentResults === null) {
-    return null;
+    return <SearchResultsSkeleton />;
   }
 
   // 수요 요약을 카드 값에 얹는다. 조회 전·실패면 검색 응답 값 그대로 둔다(목 결과는 목 값 그대로).

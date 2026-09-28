@@ -3,12 +3,15 @@
 import { useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useForm, useWatch, type SubmitErrorHandler } from 'react-hook-form';
 
 import { AlertDialog } from '@/components/ui/AlertDialog';
+import { AUTH_ERROR_MESSAGES } from '@/constants/authMessages';
+import { ApiError } from '@/lib/api';
+import { login } from '@/lib/authApi';
 import { cn } from '@/lib/cn';
-import { mockLogin } from '@/mocks/auth';
 import { loginSchema, type LoginValues } from '@/schemas/auth';
 
 // 공통 UI 프리미티브(src/components/ui) 규약이 확정되기 전이라 입력칸은 네이티브 요소로 작성한다.
@@ -51,6 +54,7 @@ function ClearButton({ hasError, label, onClear }: ClearButtonProps) {
 
 export function LoginForm() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   // 검증·로그인 실패 안내는 모달로 띄운다. 메시지가 있으면 열린 상태.
   const [dialogMessage, setDialogMessage] = useState<string | null>(null);
   // 로그인 실패(자격증명 불일치)는 어느 쪽이 틀렸는지 특정하지 않으므로 두 필드를 함께 빨갛게 한다.
@@ -79,17 +83,30 @@ export function LoginForm() {
   const passwordField = register('password');
 
   const onValid = async (values: LoginValues) => {
-    const result = await mockLogin(values);
-
-    if (!result.ok) {
+    try {
+      await login(values.id, values.password);
+    } catch (error) {
+      if (!(error instanceof ApiError)) {
+        throw error;
+      }
       // 로그인 실패는 어느 쪽이 틀렸는지 알려주지 않는다. 계정 존재 여부가 드러나기 때문이다.
-      setHasCredentialsError(true);
-      setDialogMessage(result.message);
+      // 아이디 형식 위반(400)도 같은 문구로 접는다. 폼은 형식을 검사하지 않고(필수만) 백엔드가
+      // 계정 조회 전에 형식부터 거르므로, 사용자에게는 틀린 아이디와 다르지 않다.
+      if (error.status === 401 || error.status === 400) {
+        setHasCredentialsError(true);
+        setDialogMessage(AUTH_ERROR_MESSAGES.login.credentials);
+        return;
+      }
+      // 잠김(423)·네트워크·서버 오류는 입력값 문제가 아니라 칸을 빨갛게 하지 않고 백엔드 문구를 띄운다.
+      setDialogMessage(error.message);
       return;
     }
 
-    // 로그인 성공: 홈으로 이동한다. replace로 히스토리를 남기지 않아 뒤로가기가 로그인으로 돌아오지 않는다.
-    // TODO: 백엔드 인증 규격 확정 후 세션 확립(토큰/쿠키) 처리 추가. 이동 목적지도 이후 화면에 맞춰 조정한다.
+    // 🔒 로그인 전(비회원)에 받은 조회 캐시를 버린다. 수요보드 참여 여부(`isParticipating`)처럼
+    // 회원마다 다른 값이 비회원 기준으로 남아 있으면 로그인 직후 화면에 잘못 그려진다. 세션 캐시도
+    // 함께 지워지므로 홈이 getMe로 새 세션을 다시 받는다.
+    queryClient.clear();
+    // 홈으로 이동한다. replace로 히스토리를 남기지 않아 뒤로가기가 로그인으로 돌아오지 않는다.
     router.replace('/');
   };
 

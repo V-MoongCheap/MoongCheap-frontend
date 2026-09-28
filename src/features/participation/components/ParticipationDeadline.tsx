@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 
 import { IMMINENT_THRESHOLD_HOURS } from '@/constants/businessRules';
 import { PARTICIPATION_DEADLINE } from '@/constants/participationStatus';
-import { formatRemaining } from '@/features/home/components/CountdownTimer';
 import { computeDday } from '@/lib/demandApi';
+import { formatRemaining } from '@/lib/formatCountdown';
 
 // B-17 참여 카드의 마감 표기. 문구 규칙은 `PARTICIPATION_DEADLINE` 주석 참고.
 //

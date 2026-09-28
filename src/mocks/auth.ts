@@ -1,5 +1,5 @@
 import { AUTH_ERROR_MESSAGES } from '@/constants/authMessages';
-import type { LoginValues, SignupMode, SignupValues } from '@/schemas/auth';
+import type { SignupMode, SignupValues } from '@/schemas/auth';
 import type { AuthResult, SessionUser } from '@/types/auth';
 
 /**
@@ -15,13 +15,6 @@ const MOCK_LATENCY_MS = 600;
 /** 이미 사용 중인 것으로 취급할 아이디. 중복확인 실패(에러) 화면을 확인하기 위한 값이다. */
 const TAKEN_ID = 'moongchi';
 
-/**
- * 목 로그인에 성공하는 데모 계정. 백엔드 인증 규격 확정 전, 로그인 이후 화면
- * (마이페이지·배송지·주문 등)으로 진입해 확인하기 위한 값이다. 이 계정 외의 자격증명은
- * 실패로 돌려 시안의 에러 모달을 그대로 확인할 수 있게 한다.
- */
-const DEMO_CREDENTIALS = { id: 'moongchi', password: 'moongchi1!' };
-
 const mockUser: SessionUser = {
   id: 'u_00000000',
   nickname: '뭉치',
@@ -33,19 +26,6 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
-}
-
-export async function mockLogin(values: LoginValues): Promise<AuthResult<SessionUser>> {
-  await delay(MOCK_LATENCY_MS);
-
-  // 백엔드 인증이 아직 없어, 데모 계정만 성공시켜 로그인 이후 화면을 확인할 수 있게 한다.
-  // 그 외 자격증명은 실패로 돌려 시안의 에러 모달을 그대로 노출한다.
-  // 실제 API 연동 시 이 함수 본문만 교체하면 성공/실패 분기가 살아난다(반환 타입은 유지).
-  if (values.id === DEMO_CREDENTIALS.id && values.password === DEMO_CREDENTIALS.password) {
-    return { ok: true, data: mockUser };
-  }
-
-  return { ok: false, message: '아이디 또는 비밀번호가 일치하지 않습니다.' };
 }
 
 /**

@@ -20,6 +20,10 @@ export const AUTH_ERROR_MESSAGES = {
   email: {
     invalid: '올바른 이메일 형식이 아닙니다',
   },
+  login: {
+    /** 로그인 실패(아이디·비밀번호 불일치). 로그인 화면(#13) 때부터 쓰던 문구. */
+    credentials: '아이디 또는 비밀번호가 일치하지 않습니다.',
+  },
   password: {
     required: '비밀번호를 입력해 주세요',
     /**

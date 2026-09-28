@@ -22,7 +22,7 @@ interface DemandFormSectionProps {
   titleId: string;
   /** 제목 오른쪽에 붙는 것. 대체 상품 동의의 물음표 아이콘처럼. */
   titleAction?: ReactNode;
-  /** 카드 아래에 붙는 회색 안내문. `최대 48시간 동안 낙찰대기돼요!` 같은 것. */
+  /** 카드 아래에 붙는 회색 안내문. `최대 48시간 동안 낙찰대기돼요!` 같은 것. 오른쪽 정렬(디자인 QA 9/28). */
   note?: string;
   children: ReactNode;
 }
@@ -45,7 +45,9 @@ export function DemandFormSection({
 
       <div className="bg-background-default rounded-12 flex w-full flex-col p-4">{children}</div>
 
-      {note !== undefined && <p className="text-caption-12 text-content-tertiary">{note}</p>}
+      {note !== undefined && (
+        <p className="text-caption-12 text-content-tertiary text-right">{note}</p>
+      )}
     </section>
   );
 }

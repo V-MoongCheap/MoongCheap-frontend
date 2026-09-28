@@ -18,9 +18,13 @@ interface LinkButtonProps {
 }
 
 /** quarternary 링크 버튼의 생김새. 같은 행에 놓이는 액션 버튼(NicknameChangeButton)이 모양을
- *  맞추도록 내보낸다. */
+ *  맞추도록 내보낸다.
+ *
+ *  `flex-1`은 가로 행(프로필 설정의 두 버튼)에서 폭을 나누려는 것이다. 세로로 쌓이는 곳(마이페이지)에서는
+ *  같은 `flex-1`이 높이 기준을 0으로 만들어 버튼이 글자 높이로 눌린다. `min-h-11`로 높이 44를 지킨다
+ *  (디자인 QA 9/28 'CTA 수정'). */
 export const LINK_BUTTON_CLASS =
-  'bg-surface-button-quarternary-default border-border-button-quarternary text-button-14 text-content-primary rounded-8 active:bg-surface-button-quarternary-pressed flex h-11 w-full flex-1 items-center justify-center border px-3 text-center';
+  'bg-surface-button-quarternary-default border-border-button-quarternary text-button-14 text-content-primary rounded-8 active:bg-surface-button-quarternary-pressed flex h-11 min-h-11 w-full flex-1 items-center justify-center border px-3 text-center';
 
 export function LinkButton({ label, href }: LinkButtonProps) {
   if (href === undefined) {

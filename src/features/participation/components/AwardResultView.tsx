@@ -217,6 +217,12 @@ export function AwardResultView({ demandBoardId, listHref }: AwardResultViewProp
         {result.expectedPaymentPrice !== undefined && (
           <>
             <div className="border-divider-default my-4 border-t" />
+            {/* 배송비를 합계 바로 위에 두어 '낙찰가 × 수량 + 배송비 = 결제 예정 금액'이 읽히게 한다(#209). */}
+            {result.shippingFee !== undefined && (
+              <div className="mb-3">
+                <SummaryRow label="배송비" value={formatWon(result.shippingFee)} />
+              </div>
+            )}
             <div className="flex items-center justify-between gap-3">
               <span className="text-heading-18 text-content-primary">결제 예정 금액</span>
               <span className="text-heading-18 text-content-brand">

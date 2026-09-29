@@ -18,6 +18,7 @@ import {
   PARTICIPATION_TABS,
   type ParticipationTab,
 } from '@/constants/participationStatus';
+import { ROUTES } from '@/constants/routes';
 import { useRedirectOnUnauthorized } from '@/features/auth/session';
 import { ParticipationCard } from '@/features/participation/components/ParticipationCard';
 import { useMyDemands } from '@/features/participation/hooks/useMyDemands';
@@ -177,12 +178,9 @@ export function ParticipationList({ awardResultBaseHref }: ParticipationListProp
             <li key={item.id}>
               <ParticipationCard
                 action={renderAction(item, inFilteredTab, {
-                  // B-16 경로는 여기서 직접 만든다(다른 href는 page가 주입하는 것과 다르게). 페이지
-                  // (서버 컴포넌트)는 경로 생성 '함수'를 클라이언트 컴포넌트로 넘길 수 없고(RSC 경계:
-                  // "Functions cannot be passed directly to Client Components"), 수요 id는 이 목록만
-                  // 안다. 동적 경로를 클라이언트에서 인라인 구성하는 ProductDetailView와 같은 방식이다.
-                  onSubstitute: () =>
-                    router.push(`/demands/${encodeURIComponent(item.id)}/substitute`),
+                  // B-16 경로는 id 뒤에 세그먼트가 붙어 앞부분 prop으로 주입할 수 없고, 페이지(서버
+                  // 컴포넌트)는 경로 생성 함수를 넘길 수 없어 ROUTES에서 가져온다.
+                  onSubstitute: () => router.push(ROUTES.substitute(item.id)),
                   onCancel: showComingSoon,
                 })}
                 item={item}

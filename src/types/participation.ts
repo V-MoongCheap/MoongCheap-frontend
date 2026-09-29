@@ -17,7 +17,9 @@ export interface ParticipationItem {
   readonly demandBoardId?: number;
   /**
    * 상품명. 시안 카드 제목(볼드). 출처: 들어간 보드의 상품(`demandBoard.catalog.name`), 없으면
-   * 신청 상품(`catalog.name`). 대체상품을 수락한 수요는 둘이 다르다(`lib/demandApi.ts` `joinedCatalog`).
+   * 신청 상품(`catalog.name`). 대체상품을 수락한 수요는 둘이 다르다. 제안만 받은 상태
+   * (`SUBSTITUTE_OFFERED`)는 보드 상품이 와도 아직 들어가지 않았으므로 신청 상품이다
+   * (`lib/demandApi.ts` `joinedCatalog`).
    */
   readonly productName: string;
   /** 규격 요약. 시안 카드 부제. 출처는 상품명과 같은 상품의 `specSummary`. 없으면 undefined(부제 생략). */

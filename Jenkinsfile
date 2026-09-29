@@ -22,11 +22,17 @@ pipeline {
         GITOPS_REPO_URL = 'https://github.com/V-MoongCheap/MoongCheap-Cloud.git'
         DOCKERFILE_PATH = 'Dockerfile'
 
+        GITOPS_PR_NUMBER = ''
+        GITOPS_PR_URL = ''
+        GITOPS_PR_STATUS = ''
+        GITOPS_BRANCH_STATUS = ''
+        GITOPS_PR_CREATED = 'false'
+
         // NEXT_PUBLIC_ 값은 Next.js 빌드 시 이미지에 고정됨.
         // develop API URL은 Cloud 프론트엔드 관리본의 기존 설정을 사용함.
         DEV_API_URL  = 'https://api.moongcheap.shop'
         // 운영 URL 확인 전에는 main/prod 빌드를 막음. 확인 후 설정할 것.
-        PROD_API_URL = ''
+        PROD_API_URL = 'https://api.moongcheap.shop'
     }
 
     stages {
@@ -56,6 +62,19 @@ pipeline {
                         returnStdout: true
                     ).trim()
 
+                    env.GIT_FULL_SHA = sh(
+                        script: 'git rev-parse HEAD',
+                        returnStdout: true
+                    ).trim()
+
+                    env.GIT_AUTHOR = sh(
+                        script: 'git log -1 --pretty=format:%an',
+                        returnStdout: true
+                    ).trim()
+
+                    env.GIT_COMMIT_URL =
+                        "https://github.com/V-MoongCheap/MoongCheap-frontend/commit/${env.GIT_FULL_SHA}"
+
                     env.IMAGE_TAG = "${env.ENVIRONMENT}-${env.GIT_SHORT_SHA}"
 
                     env.NEXT_PUBLIC_API_BASE_URL =
@@ -68,6 +87,28 @@ pipeline {
                     echo "Git Commit SHA: ${env.GIT_SHORT_SHA}"
                     echo "Image Tag: ${env.IMAGE_TAG}"
                     echo "API Base URL: ${env.NEXT_PUBLIC_API_BASE_URL}"
+
+                    try {
+                        withCredentials([
+                            string(
+                                credentialsId: 'discord-webhook-ci',
+                                variable: 'DISCORD_WEBHOOK'
+                            )
+                        ]) {
+                            discordSend(
+                                webhookURL: env.DISCORD_WEBHOOK,
+                                title: "🚀 Frontend CI 시작",
+                                description: """
+                                  **Branch**  ${env.BRANCH_NAME}
+                                  **Build**   #${env.BUILD_NUMBER}
+
+                                  🔗 [Jenkins Build](${env.BUILD_URL})
+                                  """.stripIndent()
+                            )
+                        }
+                    } catch (Exception e) {
+                        echo "Discord CI 시작 알림 전송 실패: ${e.getClass().getSimpleName()}"
+                    }
                 }
 
                 container('builder') {
@@ -497,44 +538,112 @@ pipeline {
 
                             echo "GitOps PR 생성 완료: #${PR_NUMBER}"
 
+                            echo "$PR_NUMBER" > ../gitops-pr-number.txt
+                            echo "https://github.com/V-MoongCheap/MoongCheap-Cloud/pull/${PR_NUMBER}" > ../gitops-pr-url.txt
+                            echo "true" > ../gitops-pr-created.txt
+
                             # ----------------------------------------
-                            # develop 대상 GitOps PR만 Auto-merge
+                            # PR  Auto-merge
                             # ----------------------------------------
 
-                            if [ "$BASE_BRANCH" = "develop" ]; then
+                            echo "GitOps PR Auto-merge 활성화: #${PR_NUMBER} → ${BASE_BRANCH}"
 
-                                echo "develop 대상 PR Auto-merge 활성화"
+                            AUTO_MERGE_RESPONSE="$(curl --fail-with-body \
+                              -sS \
+                              -X POST \
+                              -H "Authorization: Bearer ${GIT_TOKEN}" \
+                              -H 'Content-Type: application/json' \
+                              https://api.github.com/graphql \
+                              -d "$(printf \
+                                '{"query":"mutation { enablePullRequestAutoMerge(input: {pullRequestId: \\"%s\\", mergeMethod: SQUASH}) { pullRequest { number autoMergeRequest { enabledAt } } } }"}' \
+                                "$PR_NODE_ID")")"
 
-                                GRAPHQL_QUERY="$(printf \
-                                  '{"query":"mutation { enablePullRequestAutoMerge(input: {pullRequestId: \\"%s\\", mergeMethod: SQUASH}) { pullRequest { number autoMergeRequest { enabledAt } } } }"}' \
-                                  "$PR_NODE_ID")"
+                            echo "Auto-merge 활성화 완료: PR #${PR_NUMBER} → ${BASE_BRANCH}"
 
-                                MERGE_RESPONSE="$(curl --fail-with-body \
+                            # ----------------------------------------
+                            #  GitOps PR Merge 완료 대기
+                            # ----------------------------------------
+
+                            echo "GitOps PR Merge 완료 대기: #${PR_NUMBER}"
+
+                            MAX_RETRIES=30
+                            RETRY_INTERVAL=10
+                            RETRY_COUNT=0
+                            MERGED="false"
+
+                            while true; do
+
+                                PR_STATUS="$(curl --fail-with-body \
                                   -sS \
-                                  -X POST \
                                   -H "Authorization: Bearer ${GIT_TOKEN}" \
                                   -H 'Accept: application/vnd.github+json' \
-                                  "https://api.github.com/graphql" \
-                                  -d "$GRAPHQL_QUERY")"
+                                  "https://api.github.com/repos/${GITOPS_API_REPO}/pulls/${PR_NUMBER}")"
 
-                                printf '%s' "$MERGE_RESPONSE" | node -e '
-                                  const fs = require("fs");
-                                  const result = JSON.parse(fs.readFileSync(0, "utf8"));
+                                MERGED="$(printf '%s' "$PR_STATUS" | node -pe \
+                                  'JSON.parse(require("fs").readFileSync(0, "utf8")).merged')"
 
-                                  if (result.errors || !result.data?.enablePullRequestAutoMerge?.pullRequest?.autoMergeRequest) {
-                                    console.error(JSON.stringify(result));
-                                    process.exit(1);
-                                  }
-                                '
+                                if [ "$MERGED" = "true" ]; then
+                                    echo "GitOps PR Merge 완료: #${PR_NUMBER}"
+                                    break
+                                fi
 
-                                echo "Auto-merge 활성화 완료: PR #${PR_NUMBER}"
+                                RETRY_COUNT=$((RETRY_COUNT + 1))
+
+                                if [ "$RETRY_COUNT" -ge "$MAX_RETRIES" ]; then
+                                    echo "GitOps PR Merge 대기 시간 초과"
+                                    echo "임시 브랜치는 삭제하지 않습니다."
+                                    break
+                                fi
+
+                                echo "아직 Merge되지 않았습니다. ${RETRY_INTERVAL}초 후 재확인..."
+                                sleep "$RETRY_INTERVAL"
+
+                            done
+
+                            # ----------------------------------------
+                            # Merge 완료 시 임시 브랜치 삭제
+                            # ----------------------------------------
+
+                            if [ "$MERGED" = "true" ]; then
+
+                                echo "GitOps 임시 브랜치 삭제: ${BRANCH_NAME}"
+
+                                git -c credential.helper= push origin --delete "$BRANCH_NAME"
+
+                                echo "GitOps 임시 브랜치 삭제 완료: ${BRANCH_NAME}"
+
+                                echo "Merged" > ../gitops-pr-status.txt
+                                echo "Deleted" > ../gitops-branch-status.txt
 
                             else
 
-                                echo "main 대상 PR은 수동 Merge 유지"
+                                echo "Pending" > ../gitops-pr-status.txt
+                                echo "Retained" > ../gitops-branch-status.txt
 
                             fi
                         '''
+                        script {
+                            if (fileExists('gitops-pr-number.txt')) {
+                                env.GITOPS_PR_NUMBER = readFile('gitops-pr-number.txt').trim()
+                            }
+
+                            if (fileExists('gitops-pr-url.txt')) {
+                                env.GITOPS_PR_URL = readFile('gitops-pr-url.txt').trim()
+                            }
+
+                            if (fileExists('gitops-pr-status.txt')) {
+                                env.GITOPS_PR_STATUS = readFile('gitops-pr-status.txt').trim()
+                            }
+
+                            if (fileExists('gitops-branch-status.txt')) {
+                                env.GITOPS_BRANCH_STATUS = readFile('gitops-branch-status.txt').trim()
+                            }
+                            
+                            if (fileExists('gitops-pr-created.txt')) {
+                                env.GITOPS_PR_CREATED = readFile('gitops-pr-created.txt').trim()
+                            }
+
+                        }
                     }
                 }
             }
@@ -542,7 +651,57 @@ pipeline {
     }
 
     post {
-        always {
+        success {
+            script {
+
+                // GitOps PR 생성 여부에 따라 알림 내용 변경
+                def gitopsInfo = ""
+
+                if (env.GITOPS_PR_CREATED == 'true') {
+                    gitopsInfo = """
+                    **GitOps PR**    #${env.GITOPS_PR_NUMBER ?: '-'} ${env.GITOPS_PR_STATUS ?: '-'}
+                    **Temp Branch**  ${env.GITOPS_BRANCH_STATUS ?: '-'}
+
+                    🔗 [GitOps PR](${env.GITOPS_PR_URL})
+                    """
+                            } else {
+                                gitopsInfo = """
+                    **GitOps PR**    Skipped
+                    """
+                }
+
+                try {
+                    withCredentials([
+                        string(
+                            credentialsId: 'discord-webhook-ci',
+                            variable: 'DISCORD_WEBHOOK'
+                        )
+                    ]) {
+                        discordSend(
+                            webhookURL: env.DISCORD_WEBHOOK,
+                            title: "✅ Frontend CI 성공",
+                            description: """
+                            **Environment**  ${env.ENVIRONMENT ?: '-'}
+                            **Branch**       ${env.BRANCH_NAME ?: '-'}
+                            **Triggered**    ${env.GIT_AUTHOR ?: '-'}
+                            **Commit**       ${env.GIT_SHORT_SHA ?: '-'}
+                            **Image**        ${env.IMAGE_TAG ?: '-'}
+                            **Build**        #${env.BUILD_NUMBER}
+
+                            ${gitopsInfo}
+                            🔗 [GitHub Commit](${env.GIT_COMMIT_URL})
+                            🔗 [Jenkins Build](${env.BUILD_URL})
+                            """.stripIndent(),
+                            result: 'SUCCESS'
+                        )
+                    }
+                } catch (Exception e) {
+                    echo "Discord CI 알림 전송 실패: ${e.getClass().getSimpleName()}"
+                }
+            }
+        }
+
+        failure {
             script {
                 try {
                     withCredentials([
@@ -553,26 +712,52 @@ pipeline {
                     ]) {
                         discordSend(
                             webhookURL: env.DISCORD_WEBHOOK,
-                            title: "Frontend CI #${env.BUILD_NUMBER}",
-                            description: "CI 결과: ${currentBuild.currentResult} / 환경: ${env.ENVIRONMENT ?: '미설정'} / 이미지: ${env.IMAGE_TAG ?: '미생성'}",
-                            result: currentBuild.currentResult
+                            title: "❌ Frontend CI 실패",
+                            description: """
+                              **Environment**  ${env.ENVIRONMENT ?: '-'}
+                              **Branch**       ${env.BRANCH_NAME ?: '-'}
+                              **Triggered**    ${env.GIT_AUTHOR ?: '-'}
+                              **Commit**       ${env.GIT_SHORT_SHA ?: '-'}
+                              **Build**        #${env.BUILD_NUMBER}
+
+                              🔗 [GitHub Commit](${env.GIT_COMMIT_URL ?: 'https://github.com/V-MoongCheap/MoongCheap-frontend'})
+                              🔗 [Jenkins Build](${env.BUILD_URL})
+                              """.stripIndent(),
+                            result: 'FAILURE'
                         )
                     }
-
-                    echo 'Discord CI 알림 전송 완료'
-
                 } catch (Exception e) {
                     echo "Discord CI 알림 전송 실패: ${e.getClass().getSimpleName()}"
                 }
             }
         }
 
-        success {
-            echo "Frontend CI 완료: ${ECR_REPO}:${IMAGE_TAG}. GitOps PR Merge 후 ArgoCD Sync 진행."
-        }
+        aborted {
+            script {
+                try {
+                    withCredentials([
+                        string(
+                            credentialsId: 'discord-webhook-ci',
+                            variable: 'DISCORD_WEBHOOK'
+                        )
+                    ]) {
+                        discordSend(
+                            webhookURL: env.DISCORD_WEBHOOK,
+                            title: "⚠️ Frontend CI 중단",
+                            description: """
+                              **Branch**       ${env.BRANCH_NAME ?: '-'}
+                              **Triggered**    ${env.GIT_AUTHOR ?: '-'}
+                              **Build**        #${env.BUILD_NUMBER}
 
-        failure {
-            echo 'Frontend CI 실패 — Jenkins 로그에서 실패 Stage 확인 필요.'
+                              🔗 [Jenkins Build](${env.BUILD_URL})
+                              """.stripIndent(),
+                            result: 'ABORTED'
+                        )
+                    }
+                } catch (Exception e) {
+                    echo "Discord CI 알림 전송 실패: ${e.getClass().getSimpleName()}"
+                }
+            }
         }
     }
 }

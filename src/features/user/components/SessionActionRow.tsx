@@ -2,11 +2,10 @@
 
 import { useState } from 'react';
 
-import { useRouter } from 'next/navigation';
-
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { useToast } from '@/components/ui/Toast';
 import { SETTINGS_ROW_PRESSABLE_CLASS } from '@/features/user/components/SettingsRow';
+import { useProgressRouter } from '@/hooks/useProgressRouter';
 import { ApiError } from '@/lib/api';
 
 // B-24 계정 설정에서 확인 다이얼로그를 거쳐 세션을 폐기하는 행. 로그아웃(#70)·회원탈퇴(#91)가
@@ -68,7 +67,7 @@ export function SessionActionRow({
   failureMessage,
   mutation,
 }: SessionActionRowProps) {
-  const router = useRouter();
+  const router = useProgressRouter();
   const { showToast } = useToast();
   const { mutate, isPending } = mutation;
   const [isOpen, setIsOpen] = useState(false);

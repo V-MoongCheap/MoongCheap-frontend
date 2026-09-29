@@ -4,7 +4,6 @@ import { useState } from 'react';
 
 import { ArrowDown, PackageOpen } from 'lucide-react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -24,6 +23,7 @@ import {
   useRejectSubstituteOffer,
   useSubstituteOffer,
 } from '@/features/participation/hooks/useSubstituteOffer';
+import { useProgressRouter } from '@/hooks/useProgressRouter';
 import { ApiError } from '@/lib/api';
 import { SUBSTITUTE_OFFER_ERROR_CODE } from '@/lib/demandApi';
 import { formatBoardPriceLabel, isDemandBoardClosed, remainingUntil } from '@/lib/demandBoardApi';
@@ -116,7 +116,7 @@ interface SubstituteOfferViewProps {
 }
 
 export function SubstituteOfferView({ demandId, listHref }: SubstituteOfferViewProps) {
-  const router = useRouter();
+  const router = useProgressRouter();
   const { showToast } = useToast();
   const [isAcceptOpen, setIsAcceptOpen] = useState(false);
   const [isRejectOpen, setIsRejectOpen] = useState(false);

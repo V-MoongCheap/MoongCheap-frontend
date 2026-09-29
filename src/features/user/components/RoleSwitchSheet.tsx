@@ -2,8 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 
-import { useRouter } from 'next/navigation';
-
+import { useProgressRouter } from '@/hooks/useProgressRouter';
 import { cn } from '@/lib/cn';
 import type { ActiveRole } from '@/types/user';
 
@@ -52,7 +51,7 @@ export function RoleSwitchSheet({
   sellerApplyHref,
   onClose,
 }: RoleSwitchSheetProps) {
-  const router = useRouter();
+  const router = useProgressRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {

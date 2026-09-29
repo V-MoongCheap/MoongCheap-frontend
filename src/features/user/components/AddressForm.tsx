@@ -3,7 +3,6 @@
 import { useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRouter } from 'next/navigation';
 import { useForm, useWatch } from 'react-hook-form';
 
 import { AppBar } from '@/components/layout/AppBar';
@@ -17,6 +16,7 @@ import {
   AddressField,
 } from '@/features/user/components/AddressField';
 import { toFullAddress, useDaumPostcode } from '@/hooks/useDaumPostcode';
+import { useProgressRouter } from '@/hooks/useProgressRouter';
 import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { canGoBackInApp } from '@/lib/navigationHistory';
@@ -93,7 +93,7 @@ export function AddressForm({
   savedContact,
   onSave,
 }: AddressFormProps) {
-  const router = useRouter();
+  const router = useProgressRouter();
   const { open } = useDaumPostcode();
   const { showToast } = useToast();
   const [isSaving, setIsSaving] = useState(false);

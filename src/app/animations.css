@@ -77,6 +77,46 @@
   display: none;
 }
 
+/* ── 화면 전환 진행 바(#215, `NavigationProgress`) ── */
+
+/*
+ * 세 단계를 `data-phase`로 나눈다.
+ *   - idle: 안 보인다. 다음 이동에서 처음부터 차오르도록 폭을 0으로 되돌려 둔다.
+ *   - loading: 10%에서 90%까지 점점 느려지며 찬다(8초). 응답이 늦어도 끝까지 차지 않게 90%에서
+ *     멈춘다. 100ms 안에 끝나는 이동(미리 받아 둔 화면)은 깜빡이지 않도록 보이기 시작을 100ms 늦춘다.
+ *   - done: 바로 끝까지 채우고 200ms 뒤 300ms 동안 흐려진다. 합계 500ms로 `NavigationProgress`의
+ *     FADE_OUT_MS와 같다. 차오르던 애니메이션이 빠지는 순간이라 폭에 전환을 걸어도 이어지지 않고
+ *     튀므로(크롬 확인) 폭은 전환 없이 바꾼다.
+ *
+ * 스플래쉬 진행바처럼 width가 아니라 scaleX를 움직인다.
+ */
+@keyframes nav-progress-fill {
+  from {
+    transform: scaleX(0.1);
+  }
+  to {
+    transform: scaleX(0.9);
+  }
+}
+
+.nav-progress-fill {
+  transform: scaleX(0);
+  transform-origin: left center;
+  opacity: 0;
+}
+
+.nav-progress-fill[data-phase='loading'] {
+  opacity: 1;
+  transition: opacity 150ms ease 100ms;
+  animation: nav-progress-fill 8s cubic-bezier(0.1, 0.7, 0.2, 1) forwards;
+}
+
+.nav-progress-fill[data-phase='done'] {
+  transform: scaleX(1);
+  opacity: 0;
+  transition: opacity 300ms ease 200ms;
+}
+
 /* ── 동작 최소화 설정 ── */
 
 /*
@@ -103,5 +143,11 @@
 
   .splash-dot:first-child {
     background-color: var(--content-oncolor);
+  }
+
+  /* 진행 바는 차오르지 않고 꽉 찬 채로 보였다가 사라진다. 탭 피드백 자체는 남긴다. */
+  .nav-progress-fill[data-phase='loading'] {
+    animation: none;
+    transform: scaleX(1);
   }
 }

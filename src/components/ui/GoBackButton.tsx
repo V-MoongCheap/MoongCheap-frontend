@@ -2,8 +2,7 @@
 
 import type { ReactNode } from 'react';
 
-import { useRouter } from 'next/navigation';
-
+import { useProgressRouter } from '@/hooks/useProgressRouter';
 import { canGoBackInApp } from '@/lib/navigationHistory';
 
 // 브라우저 히스토리의 이전 항목으로 돌아가는 버튼. 404(not-found.tsx)·수요 상세(B-12) '확인'이 쓴다.
@@ -25,7 +24,7 @@ interface GoBackButtonProps {
 }
 
 export function GoBackButton({ children, className, fallbackHref }: GoBackButtonProps) {
-  const router = useRouter();
+  const router = useProgressRouter();
 
   const handleClick = () => {
     // 첫 진입(공유 링크·새 탭 등)이라 돌아갈 앱 내 항목이 없으면, fallbackHref가 있으면 그리로

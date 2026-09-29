@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 import { ComingSoonButton } from '@/components/ui/ComingSoonButton';
 import {
@@ -13,6 +13,7 @@ import {
   SELLER_APPLY_INTRO,
   SELLER_APPLY_STEPS,
 } from '@/constants/sellerMessages';
+import { useProgressRouter } from '@/hooks/useProgressRouter';
 import { cn } from '@/lib/cn';
 import { mockVerifyBusinessNumber } from '@/mocks/seller';
 import { BUSINESS_NUMBER_LENGTH, businessNumberSchema } from '@/schemas/seller';
@@ -85,7 +86,7 @@ interface SellerApplyWizardProps {
 }
 
 export function SellerApplyWizard({ exitHref }: SellerApplyWizardProps) {
-  const router = useRouter();
+  const router = useProgressRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 

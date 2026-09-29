@@ -3,8 +3,8 @@
 import { useEffect, useRef } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
 
+import { useProgressRouter } from '@/hooks/useProgressRouter';
 import { ApiError } from '@/lib/api';
 import { getMe, logout, updateNickname, withdraw } from '@/lib/authApi';
 import type { SessionUser } from '@/types/auth';
@@ -92,7 +92,7 @@ function useSessionClearingMutation(mutationFn: () => Promise<void>) {
  * 그려 깜빡임을 막는다(`SessionProfileCard`와 같은 방침).
  */
 export function useRedirectOnUnauthorized(error: Error | null): boolean {
-  const router = useRouter();
+  const router = useProgressRouter();
   const queryClient = useQueryClient();
   const isUnauthorized = error instanceof ApiError && error.status === 401;
   // 한 번만 처리한다. `clear()`가 지금 떠 있는 목록 쿼리까지 지워, 이동 전에 다시 그려지면 쿼리가

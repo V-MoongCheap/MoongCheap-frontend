@@ -1,4 +1,5 @@
 import { HOME_SECTIONS } from '@/constants/homeMessages';
+import { ROUTES } from '@/constants/routes';
 import { HorizontalScroller } from '@/features/home/components/HorizontalScroller';
 import { SectionHeader } from '@/features/home/components/SectionHeader';
 import { WideProductRow } from '@/features/home/components/WideProductRow';
@@ -28,7 +29,11 @@ export function PopularSection({ products }: PopularSectionProps) {
         {columns.map((column) => (
           <div className="flex shrink-0 flex-col gap-4" key={column[0]?.id}>
             {column.map((product) => (
-              <WideProductRow key={product.id} product={product} href={`/products/${product.id}`} />
+              <WideProductRow
+                key={product.id}
+                product={product}
+                href={ROUTES.product(product.id)}
+              />
             ))}
           </div>
         ))}

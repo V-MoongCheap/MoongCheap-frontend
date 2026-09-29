@@ -16,7 +16,12 @@ import { OrderProgressSummary } from '@/features/user/components/OrderProgressSu
 // 세션을 보고 로그인 화면으로 돌리므로, 둘이 같이 이동을 걸면 중복이 된다. 401도 다른 조회 실패와
 // 같이 다룬다.
 
-export function SessionOrderProgressSummary() {
+interface SessionOrderProgressSummaryProps {
+  /** 주문 내역(B-21) 경로. 단계를 누르면 여기에 `?tab=`을 붙여 이동한다. */
+  ordersHref: string;
+}
+
+export function SessionOrderProgressSummary({ ordersHref }: SessionOrderProgressSummaryProps) {
   const { data, isPending, isError, refetch } = useOrderProgressCounts();
 
   if (isPending) {
@@ -28,7 +33,7 @@ export function SessionOrderProgressSummary() {
     return <ErrorState className="py-6" onRetry={() => void refetch()} />;
   }
 
-  return <OrderProgressSummary counts={data} />;
+  return <OrderProgressSummary counts={data} ordersHref={ordersHref} />;
 }
 
 /** `OrderProgressSummary`와 같은 칸 수·크기의 자리표시자. 숫자 자리와 라벨 자리를 나눠 둔다. */

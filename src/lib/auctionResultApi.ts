@@ -46,6 +46,7 @@ export function toAwardResult(dto: AuctionResultDto, desiredPriceLabel: string):
     ...(dto.totalParticipantQuantity !== null && {
       totalParticipantQuantity: dto.totalParticipantQuantity,
     }),
+    ...(dto.shippingFee !== null && { shippingFee: dto.shippingFee }),
     ...(expected !== undefined && { expectedPaymentPrice: expected }),
     ...(dto.paymentDeadlineAt !== null && {
       paymentDeadlineLabel: formatDemandBoardDeadline(dto.paymentDeadlineAt),

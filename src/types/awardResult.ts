@@ -30,6 +30,8 @@ export interface AwardResult {
   readonly participantCount?: number;
   /** 보드 전체 참여 수량(개). 화면 '총 참여 수량'. */
   readonly totalParticipantQuantity?: number;
+  /** 배송비(원). 결제 예정 금액 바로 위에 따로 보여 합계의 내역을 드러낸다(#209). */
+  readonly shippingFee?: number;
   /** 결제 예정 금액(원) = 낙찰 단가 × 내 수량 + 배송비(FN-B19-01). */
   readonly expectedPaymentPrice?: number;
   /** 자동결제 예정 시각 표기(예: `9월 28일 (월) 오후 9:05`). 상단 안내 문구에 쓴다. */

@@ -15,9 +15,12 @@ export interface ParticipationItem {
    * 보드 미배정(방금 등록한 모이는 중) 수요는 `demandBoard`가 null이라 undefined다.
    */
   readonly demandBoardId?: number;
-  /** 상품명. 시안 카드 제목(볼드). 출처: `catalog.name`. */
+  /**
+   * 상품명. 시안 카드 제목(볼드). 출처: 들어간 보드의 상품(`demandBoard.catalog.name`), 없으면
+   * 신청 상품(`catalog.name`). 대체상품을 수락한 수요는 둘이 다르다(`lib/demandApi.ts` `joinedCatalog`).
+   */
   readonly productName: string;
-  /** 규격 요약. 시안 카드 부제. 출처: `catalog.specSummary`. 없으면 undefined(부제 생략). */
+  /** 규격 요약. 시안 카드 부제. 출처는 상품명과 같은 상품의 `specSummary`. 없으면 undefined(부제 생략). */
   readonly specSummary?: string;
   /** 참여 수량(개). 출처: `quantity`. DTO상 null 허용이라 미확정이면 undefined(수량 문구 생략). */
   readonly quantity?: number;

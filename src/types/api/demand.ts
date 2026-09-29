@@ -46,6 +46,8 @@ export interface CatalogDto {
  * 에는 `demand_board_id`가 없어 **item 전체가 null**이다(`DemandQueryRepositoryImpl` LEFT JOIN).
  *
  * `catalog`(대체 상품)는 수요 상태가 `SUBSTITUTE_OFFERED`일 때만 조인되어 채워진다.
+ * ⚠️ 대체상품을 수락한 뒤(`ASSIGNED`)에도 보드 상품이 있어야 카드가 들어간 상품명을 보인다(#213).
+ *    조건이 풀리면 카드가 그 상품명을 쓴다(`lib/demandApi.ts` `joinedCatalog`).
  */
 export interface DemandBoardDto {
   id: number;

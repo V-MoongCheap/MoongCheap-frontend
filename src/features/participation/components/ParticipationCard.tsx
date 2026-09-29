@@ -13,7 +13,7 @@ import type { ParticipationItem } from '@/types/participation';
 //  가격(볼드)
 //  [상태별 액션 버튼(선택)]
 //
-// 상태별 하단 액션(대체상품 확인하기·낙찰 취소하기)은 호출부(client)가 action 슬롯으로 주입한다.
+// 상태별 하단 액션(대체상품 확인하기·참여 취소)은 호출부(client)가 action 슬롯으로 주입한다.
 // 카드 본문 탭 → 수요 상세(B-12)는 onOpenDetail로 받는다(라우트 부재 시 호출부가 토스트 처리).
 //
 // 상품 이미지는 아직 목 데이터에 원본이 없어 회색 placeholder로 둔다. 실제 썸네일 연동 시

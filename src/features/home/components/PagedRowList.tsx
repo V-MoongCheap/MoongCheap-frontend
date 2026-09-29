@@ -13,12 +13,8 @@ import type { HomeProductCard } from '@/types/home';
 //    5건뿐이다. 없는 상품을 지어내지 않으려고 목은 시안의 5건만 담았고, 도트 개수는 데이터에서
 //    계산한다. 그래서 지금 화면에는 도트가 1개만 보인다. 실제 건수는 API 연동 때 채워진다.
 //
-// 도트 색은 시안이 토큰에 묶지 않은 생 hex(#4F4F4F / #D9D9D9)다. #D9D9D9는 피그마 기본
-// 도형 색이라 스타일을 지정하지 않은 것으로 보여, 팔레트에서 가장 가까운 값으로 맞췄다
-// (#575757 / #d6d6d6, 차이 3~8/255).
-//
-// 시맨틱 토큰이 아니라 프리미티브를 쓴 이유는, 이 두 값에 대응하는 시맨틱 토큰이 없기 때문이다
-// (#d6d6d6은 border 계열에만 있어 배경으로 쓰기에 맞지 않는다). 시안에서 색이 확정되면 교체한다.
+// 도트 색은 디자인 QA(9/28 '인디케이터 누락')에서 정해졌다. 활성 `surface/quinary`, 비활성
+// `surface/tertiary` 베리어블이다. 그 전에는 시안이 생 hex만 줘서 가까운 프리미티브를 썼다.
 
 /** 시안: 한 장에 5행. */
 const ROWS_PER_PAGE = 5;
@@ -69,7 +65,7 @@ export function PagedRowList({ products }: PagedRowListProps) {
             aria-hidden
             className={cn(
               'size-1.5 rounded-full',
-              index === page ? 'bg-coolgray-600' : 'bg-coolgray-300',
+              index === page ? 'bg-surface-quinary' : 'bg-surface-tertiary',
             )}
             key={rows[0]?.id ?? index}
           />

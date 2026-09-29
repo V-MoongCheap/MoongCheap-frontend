@@ -33,8 +33,8 @@ export const DEMAND_FORM_MESSAGES = {
   editAddress: '수정',
   deleteAddress: '삭제',
 
-  /** 결제수단 카드 아래 안내. */
-  autoPaymentNote: '낙찰이 확정되면 등록된 결제수단으로 자동 결제돼요',
+  /** 결제수단 카드 아래 안내. 문장 부호를 위 `auctionWaitNote`와 맞춰 `!`로 끝낸다(디자인 QA 9/28). */
+  autoPaymentNote: '낙찰이 확정되면 등록된 결제수단으로 자동 결제돼요!',
   /**
    * 쓸 수 있는 결제수단이 없을 때의 배너와 버튼(FN-B09-02 '결제수단 상태 배너 (미등록 시)').
    * 문구는 기능명세서 그대로다. 시안에 이 상태가 없다.

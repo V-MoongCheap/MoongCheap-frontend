@@ -69,8 +69,9 @@ export default async function HomePage() {
       <BannerCarousel banners={banners} />
       <CategoryGrid />
 
-      {/* 섹션 사이 간격은 시안 실측 96px로 일정하다. */}
-      <div className="flex w-full flex-col gap-24">
+      {/* 섹션 사이 간격은 시안 실측 96px로 일정하다. 카테고리와 첫 섹션 사이는 20px이다(디자인 QA 9/28
+          '요소 간 gap 누락'). */}
+      <div className="mt-5 flex w-full flex-col gap-24">
         <DemandSection products={demandProducts} />
 
         <RowListSection

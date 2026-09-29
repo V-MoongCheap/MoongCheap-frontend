@@ -4,12 +4,13 @@ import { useState } from 'react';
 
 import { ChevronRight, Search } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 import { ComingSoonButton } from '@/components/ui/ComingSoonButton';
 import { ERROR_ACTION_CLASS, ErrorScreen } from '@/components/ui/ErrorScreen';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ERROR_SCREEN_RETRY_LABEL } from '@/constants/commonMessages';
-import { ORDER_LIST_TABS, type OrderListTabKey } from '@/constants/orderStatus';
+import { ORDER_LIST_TABS, toOrderListTabKey, type OrderListTabKey } from '@/constants/orderStatus';
 import { useRedirectOnUnauthorized } from '@/features/auth/session';
 import { useOrderList } from '@/features/order/hooks/useOrders';
 import { useInfiniteScrollSentinel } from '@/hooks/useInfiniteScrollSentinel';
@@ -43,7 +44,10 @@ interface OrderListProps {
 }
 
 export function OrderList({ detailHrefBase }: OrderListProps) {
-  const [tab, setTab] = useState<OrderListTabKey>('all');
+  // 첫 탭은 주소의 `?tab=`에서 정한다. 마이페이지 진행 단계 숫자가 그 단계가 속한 탭으로 연다(#199).
+  // 이후 탭 전환은 화면 상태로만 한다.
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<OrderListTabKey>(() => toOrderListTabKey(searchParams.get('tab')));
   const {
     data,
     error,

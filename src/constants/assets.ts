@@ -33,16 +33,15 @@ export const CATALOG_SEARCH_ASSETS = {
  * 회원가입 완료(B-01 / 10.가입완료) 전용 일러스트. public/images/signup/.
  *
  * Figma 최종(08.27 로그인·회원가입) 확정 3D 일러스트(인물 카드 + 코랄 체크 + 반짝이).
- * 편집자가 export/복사를 막아 벡터를 못 뽑아, 다크 시안(#1a1a1a 배경) 스크린샷에서 배경을
- * flood-fill로 제거해 투명 WebP로 만든 것이다(흰 카드 ↔ 검정 배경 대비가 커 깔끔히 분리됨).
- * 라이트 시안 스샷은 흰 카드가 흰 배경과 안 나뉘어 못 쓴다. 투명이라 라이트·다크 양쪽에서
- * 그대로 쓴다(테마별 파일 스왑 불필요 — 이 앱 다크는 media/class 이중이라 Tailwind dark:
- * 스왑이 OS-다크+data-theme 미설정에서 어긋난다). 원본 확정 벡터를 받으면 교체한다.
+ * 디자인 QA(9/28 'gap 수정', 피그마 `2042:27845`)에서 시안 원본 에셋(투명 PNG 1312x1199)을 받아
+ * 교체했다. 그 전 파일은 다크 시안 스크린샷에서 배경을 지워 만든 것이라 크롭 비율이 시안(317x289)과
+ * 달랐다. 투명이라 라이트·다크 양쪽에서 그대로 쓴다(테마별 파일 스왑 불필요: 이 앱 다크는
+ * media/class 이중이라 Tailwind dark: 스왑이 OS 다크 + data-theme 미설정에서 어긋난다).
  */
 export const SIGNUP_ASSETS = {
   /**
    * 가입 완료 축하 삽화. 공용 `SignupCompleteScreen`에서 사용하며, 로컬 회원가입 위저드(/signup)와
-   * 소셜 가입 완료(/oauth/complete) 양쪽 진입점이 이를 공유한다. 원본 379x322(투명).
+   * 소셜 가입 완료(/oauth/complete) 양쪽 진입점이 이를 공유한다. 951x867(표시 317x289의 3배수, 투명). 시안 틀에 맞춰 위아래 2px를 잘랐다.
    */
   complete: '/images/signup/complete.webp',
 } as const;

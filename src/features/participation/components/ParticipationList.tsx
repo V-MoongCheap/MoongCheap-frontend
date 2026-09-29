@@ -5,14 +5,12 @@ import { useMemo, useState } from 'react';
 import { PackageOpen, SearchX } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { AlertDialog } from '@/components/ui/AlertDialog';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ERROR_ACTION_CLASS, ErrorScreen } from '@/components/ui/ErrorScreen';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SegmentControl } from '@/components/ui/SegmentControl';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useToast } from '@/components/ui/Toast';
-import { CANCEL_AWARD_DIALOG } from '@/constants/awardCancel';
 import { ERROR_SCREEN_RETRY_LABEL } from '@/constants/commonMessages';
 import {
   getParticipationStatusMeta,
@@ -33,7 +31,8 @@ import type { ParticipationItem } from '@/types/participation';
 //
 // 상태별 카드 액션(시안): **해당 필터 탭에서만** 카드 아래 버튼이 뜬다('전체' 탭엔 없음).
 //  · 확인필요(ACTION_REQUIRED) — '대체상품 확인하기' → 대체상품 수락/거절(B-16). AI 대체 제안에 응답하는 진입점.
-//  · 배정완료(ALLOCATED)   — '낙찰 취소하기' → 파괴적 확인 다이얼로그. 아직 mock(아래 주석).
+//  · 배정완료(ALLOCATED)   — '참여 취소' → '준비 중인 기능이에요' 토스트(명세 BR-B17-01-15, #185).
+//    참여 취소 API가 MVP 범위 밖이라 진입점만 노출한다. B-19의 '뭉치 낙찰 취소하기'와는 별개다.
 //
 // ⚠️ 첫 로딩·조회 실패·이어 받기·이어 받기 실패는 시안이 없다(명세 `🖌️ 디자인 필요`). 주문 목록
 //    (`features/order/components/OrderList.tsx`)과 같은 방침으로 공용 ErrorScreen·ErrorState·Skeleton을
@@ -84,12 +83,7 @@ interface ParticipationListProps {
 
 export function ParticipationList({ awardResultBaseHref }: ParticipationListProps) {
   const [tab, setTab] = useState<ParticipationTab>(PARTICIPATION_TAB_ALL);
-  const [cancelTarget, setCancelTarget] = useState<ParticipationItem | null>(null);
-  // 낙찰 취소는 아직 mock이다(백엔드 DELETE는 "MVP 범위 X"·별도 이슈 후속). 확정 시 취소한 수요를
-  // 세션 동안 목록에서 감추기 위해 id를 모아 두고 클라이언트에서 걸러 낸다. 실연동되면 이 상태를
-  // 지우고 mutation + 캐시 무효화로 바꾼다.
-  const [cancelledIds, setCancelledIds] = useState<ReadonlySet<string>>(new Set());
-  const { showComingSoon, showToast } = useToast();
+  const { showComingSoon } = useToast();
   const router = useRouter();
 
   const {
@@ -123,21 +117,7 @@ export function ParticipationList({ awardResultBaseHref }: ParticipationListProp
     showComingSoon();
   }
 
-  // 낙찰 취소 확정(mock). 대상 항목을 감추고 안내 토스트를 띄운다. 실제 상태 전이는 BE 연동 시.
-  function handleConfirmCancel() {
-    if (cancelTarget === null) {
-      return;
-    }
-    const removed = cancelTarget.id;
-    setCancelledIds((prev) => new Set(prev).add(removed));
-    setCancelTarget(null);
-    showToast(CANCEL_AWARD_DIALOG.successToast);
-  }
-
-  const items = useMemo(() => {
-    const all = data?.pages.flatMap((page) => page.items) ?? [];
-    return cancelledIds.size === 0 ? all : all.filter((item) => !cancelledIds.has(item.id));
-  }, [data, cancelledIds]);
+  const items = useMemo(() => data?.pages.flatMap((page) => page.items) ?? [], [data]);
 
   const sortedItems = useMemo(() => sortByDeadline(items), [items]);
 
@@ -145,7 +125,7 @@ export function ParticipationList({ awardResultBaseHref }: ParticipationListProp
   const inFilteredTab = tab !== PARTICIPATION_TAB_ALL;
 
   // 본문은 네 상태로 갈린다: 첫 조회 실패 → 전체화면 오류, 첫 조회 중 → 스켈레톤, 결과 없음 → 빈 상태,
-  // 그 외 → 목록. SegmentControl(탭)과 취소 다이얼로그는 어느 상태에서나 유지한다.
+  // 그 외 → 목록. SegmentControl(탭)은 어느 상태에서나 유지한다.
   // 401로 로그인 화면에 보내는 동안은 오류 화면 대신 스켈레톤을 유지한다(깜빡임 방지).
   let content;
   if (data === undefined && isError && !isRedirectingToLogin) {
@@ -170,8 +150,8 @@ export function ParticipationList({ awardResultBaseHref }: ParticipationListProp
     );
   } else if (sortedItems.length === 0 && !hasNextPage) {
     // 결과 없음. '전체' 탭이 비면 참여 이력 자체가 없는 것(콜드스타트), 특정 탭이 비면 그 탭 결과 없음.
-    // ⚠️ 다음 페이지가 남아 있으면(예: 낙찰취소 mock으로 현재 페이지 항목이 전부 숨겨진 경우) 빈 상태로
-    //    끊지 않고 아래 목록 분기로 떨어뜨려 sentinel을 그려 이어받기를 계속한다.
+    // ⚠️ 다음 페이지가 남아 있으면 빈 상태로 끊지 않고 아래 목록 분기로 떨어뜨려 sentinel을 그려
+    //    이어받기를 계속한다.
     // 아이콘은 exception 일러스트(#60) 병합 전까지 lucide placeholder를 쓴다.
     content =
       tab === PARTICIPATION_TAB_ALL ? (
@@ -201,7 +181,7 @@ export function ParticipationList({ awardResultBaseHref }: ParticipationListProp
                   // B-16 경로는 id 뒤에 세그먼트가 붙어 앞부분 prop으로 주입할 수 없고, 페이지(서버
                   // 컴포넌트)는 경로 생성 함수를 넘길 수 없어 ROUTES에서 가져온다.
                   onSubstitute: () => router.push(ROUTES.substitute(item.id)),
-                  onCancel: () => setCancelTarget(item),
+                  onCancel: showComingSoon,
                 })}
                 item={item}
                 onOpenDetail={() => openDetail(item)}
@@ -235,16 +215,6 @@ export function ParticipationList({ awardResultBaseHref }: ParticipationListProp
       />
 
       {content}
-
-      <AlertDialog
-        cancelLabel={CANCEL_AWARD_DIALOG.cancelLabel}
-        confirmLabel={CANCEL_AWARD_DIALOG.confirmLabel}
-        isOpen={cancelTarget !== null}
-        message={CANCEL_AWARD_DIALOG.message}
-        onClose={() => setCancelTarget(null)}
-        onConfirm={handleConfirmCancel}
-        title={CANCEL_AWARD_DIALOG.title}
-      />
     </div>
   );
 }
@@ -267,7 +237,7 @@ function renderAction(item: ParticipationItem, inFilteredTab: boolean, handlers:
     item.status === 'ACTION_REQUIRED'
       ? '대체상품 확인하기'
       : item.status === 'ALLOCATED'
-        ? '낙찰 취소하기'
+        ? '참여 취소'
         : null;
   if (label === null) {
     return undefined;

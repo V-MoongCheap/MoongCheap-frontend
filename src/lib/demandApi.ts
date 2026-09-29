@@ -141,19 +141,6 @@ function toParticipationStatus(value: DemandStatusDto): ParticipationStatus | un
     : undefined;
 }
 
-/** `2026-08-10T13:24:00` → 시안 표기 `2026.08.10`. 모양이 다르면 받은 값을 그대로 쓴다. */
-function formatRequestedAt(iso: string | null): string {
-  if (iso === null) {
-    return '';
-  }
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
-  if (match === null) {
-    return iso;
-  }
-  const [, year, month, day] = match;
-  return `${year}.${month}.${day}`;
-}
-
 /**
  * 마감(`desireEndAt`)까지 남은 일수. 오늘 자정 기준 달력일 차이로 세고, 지난 마감은 0으로 둔다.
  * 시각까지 빼면 같은 날 오전·오후에 D-0/D-1이 갈려 표기가 흔들려서, 날짜만 비교한다.
@@ -223,8 +210,8 @@ function toParticipationItem(dto: DemandItemDto): ParticipationItem | null {
     quantity: dto.quantity ?? undefined,
     priceLabel: formatPriceLabel(dto, status),
     participantCount: dto.demandBoard?.participantCount,
-    dday: computeDday(dto.desireEndAt),
-    requestedAt: formatRequestedAt(dto.createdAt),
+    deadline: dto.demandBoard?.saleEndAt ?? dto.desireEndAt ?? undefined,
+    isAwaitingAward: dto.status === 'ASSIGNED',
     status,
   };
 }

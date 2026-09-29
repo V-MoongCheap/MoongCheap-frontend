@@ -27,7 +27,7 @@ import { useInfiniteScrollSentinel } from '@/hooks/useInfiniteScrollSentinel';
 import type { ParticipationItem } from '@/types/participation';
 
 // B-17 내 뭉치 참여 목록의 상호작용 셸(client). 탭(=상태 필터)마다 실API를 따로 조회하고
-// (`useMyDemands`), 받은 목록을 날짜별로 묶어 보여 준다. 조회가 클라이언트인 이유는
+// (`useMyDemands`), 받은 목록을 마감 임박순으로 보여 준다. 조회가 클라이언트인 이유는
 // `lib/demandApi.ts` 주석 참고(SID httpOnly 쿠키는 브라우저만 갖고 있다).
 //
 // 상태별 카드 액션(시안): **해당 필터 탭에서만** 카드 아래 버튼이 뜬다('전체' 탭엔 없음).
@@ -38,32 +38,35 @@ import type { ParticipationItem } from '@/types/participation';
 //    (`features/order/components/OrderList.tsx`)과 같은 방침으로 공용 ErrorScreen·ErrorState·Skeleton을
 //    재사용한다.
 
-interface DateGroup {
-  date: string;
-  items: ParticipationItem[];
+/**
+ * 마감 임박순 정렬 키. 아직 안 끝난 것(마감 가까운 순) → 이미 마감된 것(최근 마감 순) → 마감 없음.
+ * 마감이 지난 카드가 임박 카드보다 위에 오면 '임박순'으로 읽히지 않아 뒤로 보낸다.
+ */
+function deadlineSortKey(item: ParticipationItem, now: number): [number, number] {
+  const time = item.deadline === undefined ? NaN : new Date(item.deadline).getTime();
+  if (Number.isNaN(time)) {
+    return [2, 0];
+  }
+  return time > now ? [0, time] : [1, -time];
+}
+
+function compareDeadline(a: ParticipationItem, b: ParticipationItem, now: number): number {
+  const [rankA, timeA] = deadlineSortKey(a, now);
+  const [rankB, timeB] = deadlineSortKey(b, now);
+  return rankA - rankB || timeA - timeB;
 }
 
 /**
- * 목록을 날짜별로 묶는다. 서버가 이미 마감 임박순(`desire_end_at ASC`)으로 주지만, 화면은 최근
- * 접수일이 위로 오도록 날짜 내림차순으로 다시 정렬해 묶는다('YYYY.MM.DD'는 zero-pad라 문자열 비교가
- * 곧 날짜 비교). JS sort는 안정 정렬이라 같은 날짜 안의 원래 순서(응답 순서)는 보존된다.
+ * 목록 전체를 마감 임박순으로 둔다(명세 FN-B17-01 '마감 임박순', #189). 시안의 접수일 그룹 헤더는
+ * 날짜를 넘어 임박순이 깨져 쓰지 않는다(2026-09-28 결정).
+ *
+ * 서버 정렬(`desire_end_at ASC`)은 수요 마감 기준이라 보드 마감과 순서가 어긋날 수 있어, 카드가
+ * 실제로 표기하는 마감(`deadline`, 보드 우선)으로 다시 정렬한다. 정렬은 목록을 받을 때 한 번만 하고
+ * 카운트다운이 0이 돼도 카드를 옮기지 않는다(보던 카드가 갑자기 움직이지 않게).
  */
-function groupByDate(items: ParticipationItem[]): DateGroup[] {
-  const groups: DateGroup[] = [];
-  const indexByDate = new Map<string, number>();
-
-  const sorted = [...items].sort((a, b) => b.requestedAt.localeCompare(a.requestedAt));
-  for (const item of sorted) {
-    const existing = indexByDate.get(item.requestedAt);
-    if (existing === undefined) {
-      indexByDate.set(item.requestedAt, groups.length);
-      groups.push({ date: item.requestedAt, items: [item] });
-    } else {
-      groups[existing].items.push(item);
-    }
-  }
-
-  return groups;
+function sortByDeadline(items: ParticipationItem[]): ParticipationItem[] {
+  const now = Date.now();
+  return [...items].sort((a, b) => compareDeadline(a, b, now));
 }
 
 interface ParticipationListProps {
@@ -135,7 +138,7 @@ export function ParticipationList({ awardResultBaseHref }: ParticipationListProp
     return cancelledIds.size === 0 ? all : all.filter((item) => !cancelledIds.has(item.id));
   }, [data, cancelledIds]);
 
-  const groups = useMemo(() => groupByDate(items), [items]);
+  const sortedItems = useMemo(() => sortByDeadline(items), [items]);
 
   // 시안: 액션 버튼은 해당 상태 필터 탭에서만 노출('전체' 제외).
   const inFilteredTab = tab !== PARTICIPATION_TAB_ALL;
@@ -164,7 +167,7 @@ export function ParticipationList({ awardResultBaseHref }: ParticipationListProp
         ))}
       </div>
     );
-  } else if (groups.length === 0 && !hasNextPage) {
+  } else if (sortedItems.length === 0 && !hasNextPage) {
     // 결과 없음. '전체' 탭이 비면 참여 이력 자체가 없는 것(콜드스타트), 특정 탭이 비면 그 탭 결과 없음.
     // ⚠️ 다음 페이지가 남아 있으면(예: 낙찰취소 mock으로 현재 페이지 항목이 전부 숨겨진 경우) 빈 상태로
     //    끊지 않고 아래 목록 분기로 떨어뜨려 sentinel을 그려 이어받기를 계속한다.
@@ -189,35 +192,25 @@ export function ParticipationList({ awardResultBaseHref }: ParticipationListProp
     // 목록. 실제 목록을 그릴 때만 트리를 만든다.
     content = (
       <div className="flex w-full flex-col">
-        {groups.map((group, index) => (
-          <section key={group.date} className="flex w-full flex-col">
-            {/* 날짜 그룹 사이 회색 구분 밴드(첫 그룹 제외). */}
-            {index > 0 && <div aria-hidden className="bg-surface-secondary h-2 w-full" />}
-            {/* createdAt이 비어 date가 ''인 방어적 경우엔 빈 헤더를 그리지 않는다. */}
-            {group.date !== '' && (
-              <h2 className="text-heading-18 text-content-primary px-4 pt-4 pb-2">{group.date}</h2>
-            )}
-            <ul className="flex w-full flex-col gap-3 px-4 pb-2">
-              {group.items.map((item) => (
-                <li key={item.id}>
-                  <ParticipationCard
-                    action={renderAction(item, inFilteredTab, {
-                      // B-16 경로는 여기서 직접 만든다(다른 href는 page가 주입하는 것과 다르게). 페이지
-                      // (서버 컴포넌트)는 경로 생성 '함수'를 클라이언트 컴포넌트로 넘길 수 없고(RSC 경계:
-                      // "Functions cannot be passed directly to Client Components"), 수요 id는 이 목록만
-                      // 안다. 동적 경로를 클라이언트에서 인라인 구성하는 ProductDetailView와 같은 방식이다.
-                      onSubstitute: () =>
-                        router.push(`/demands/${encodeURIComponent(item.id)}/substitute`),
-                      onCancel: () => setCancelTarget(item),
-                    })}
-                    item={item}
-                    onOpenDetail={() => openDetail(item)}
-                  />
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
+        <ul className="flex w-full flex-col gap-3 px-4 pt-4 pb-2">
+          {sortedItems.map((item) => (
+            <li key={item.id}>
+              <ParticipationCard
+                action={renderAction(item, inFilteredTab, {
+                  // B-16 경로는 여기서 직접 만든다(다른 href는 page가 주입하는 것과 다르게). 페이지
+                  // (서버 컴포넌트)는 경로 생성 '함수'를 클라이언트 컴포넌트로 넘길 수 없고(RSC 경계:
+                  // "Functions cannot be passed directly to Client Components"), 수요 id는 이 목록만
+                  // 안다. 동적 경로를 클라이언트에서 인라인 구성하는 ProductDetailView와 같은 방식이다.
+                  onSubstitute: () =>
+                    router.push(`/demands/${encodeURIComponent(item.id)}/substitute`),
+                  onCancel: () => setCancelTarget(item),
+                })}
+                item={item}
+                onOpenDetail={() => openDetail(item)}
+              />
+            </li>
+          ))}
+        </ul>
 
         {isFetchingNextPage && (
           <div aria-busy className="px-4 pt-3" role="status">

@@ -21,6 +21,8 @@ export const DEMAND_BOARD_DETAIL = {
   deadlineAtLabel: '마감 일시',
   /** 판단: 명세 '1시간 미만이면 분 단위 표기'를 `12분 남음`으로 적는다. */
   minutesLeft: (minutes: number) => `${minutes}분 남음`,
+  /** 판단: 마감이 지난 보드(낙찰 판정 중 등)의 남은 시간 칸. 명세 화면 상태 '마감'을 그대로 쓴다. */
+  closedRemaining: '마감',
   /** 명세 구성 요소 '희망 가격대 표기'. */
   priceLabel: '희망 가격대',
   /** 명세 예시 '5천원~1만원대에서 모이는 중'. */

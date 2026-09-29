@@ -138,9 +138,13 @@ export function DemandBoardDetailView({
               {board.saleEndAt !== undefined && remaining !== null && (
                 <>
                   <InfoRow label={DEMAND_BOARD_DETAIL.remainingLabel}>
-                    {remaining.kind === 'minutes'
-                      ? DEMAND_BOARD_DETAIL.minutesLeft(remaining.minutes)
-                      : `D-${remaining.days}`}
+                    {/* 마감이 지나면 남은 시간 대신 마감으로 적는다(#197). remainingUntil은 지난
+                        시각도 1분으로 올려 '1분 남음'이 되기 때문이다. */}
+                    {isClosed
+                      ? DEMAND_BOARD_DETAIL.closedRemaining
+                      : remaining.kind === 'minutes'
+                        ? DEMAND_BOARD_DETAIL.minutesLeft(remaining.minutes)
+                        : `D-${remaining.days}`}
                   </InfoRow>
                   <InfoRow label={DEMAND_BOARD_DETAIL.deadlineAtLabel}>
                     {formatDemandBoardDeadline(board.saleEndAt)}
@@ -149,7 +153,10 @@ export function DemandBoardDetailView({
               )}
               {board.desiredPriceLabel !== '' && (
                 <InfoRow label={DEMAND_BOARD_DETAIL.priceLabel}>
-                  {DEMAND_BOARD_DETAIL.gatheringAt(board.desiredPriceLabel)}
+                  {/* 마감된 보드는 더 모이지 않으니 '모이는 중'을 떼고 가격대만 적는다(#197). */}
+                  {isClosed
+                    ? board.desiredPriceLabel
+                    : DEMAND_BOARD_DETAIL.gatheringAt(board.desiredPriceLabel)}
                 </InfoRow>
               )}
             </dl>

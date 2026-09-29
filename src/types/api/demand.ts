@@ -80,7 +80,7 @@ export interface DemandItemDto {
   quantity: number | null;
   extraRequirement: string | null;
   isSubstitutable: boolean;
-  /** 수요 접수 시각(`LocalDateTime`). 목록의 날짜 그룹 헤더 기준. */
+  /** 수요 접수 시각(`LocalDateTime`). 화면은 현재 쓰지 않는다(목록 날짜 그룹 제거, 2026-09-28). */
   createdAt: string | null;
   catalog: CatalogDto;
   /** 보드 미배정 시 null(위 주석). */

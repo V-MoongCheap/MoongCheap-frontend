@@ -31,10 +31,18 @@ export interface ParticipationItem {
    * 보드 미배정(방금 등록한 모이는 중) 수요는 보드가 없어 **undefined**다 → 배지 생략.
    */
   readonly participantCount?: number;
-  /** 마감까지 남은 일수. 시안의 'D-N' 배지. 출처: `desireEndAt`(오늘 기준 남은 일수, 최소 0). */
-  readonly dday: number;
-  /** 참여(접수) 날짜 'YYYY.MM.DD'. 목록의 날짜 그룹 헤더 기준. 출처: `createdAt`. */
-  readonly requestedAt: string;
+  /**
+   * 마감 시각(ISO, 시간대 없음). 카드의 D-N·마감 임박 카운트다운·마감 표기와 마감 임박순 정렬의 기준.
+   * 출처: 보드가 있으면 `demandBoard.saleEndAt`(실제 공구 마감), 보드 미배정이면 `desireEndAt`
+   * (수요 희망 마감). 수요 마감은 등록 시 now+2일로 고정이라 보드가 있는데 이걸 쓰면 D-N이 보드 마감과
+   * 어긋난다(#189). 둘 다 없으면 undefined(마감 표기 생략).
+   */
+  readonly deadline?: string;
+  /**
+   * 보드에 배정됐지만 아직 낙찰 전인지(DTO `ASSIGNED`). 마감이 지났는데 이 값이 참이면 낙찰 판정 중이다
+   * (보드 `GB_AWARDING`, #190). 낙찰 후 결제 대기(`PAYMENT_PENDING`)도 배정완료 탭이지만 판정은 끝났다.
+   */
+  readonly isAwaitingAward: boolean;
   /** 참여 상태. 카드 배지·탭 필터·액션이 참조한다. 출처: `status`(DTO→화면 매핑). */
   readonly status: ParticipationStatus;
 }

@@ -192,6 +192,28 @@ function formatPriceLabel(dto: DemandItemDto, status: ParticipationStatus): stri
 }
 
 /**
+ * 카드에 보일 상품. 수요가 **실제로 들어간 보드의 상품**이다.
+ *
+ * 대체상품을 수락하면(B-16) 백엔드는 상태만 `ASSIGNED`로 바꾸고 수요의 `catalog`는 처음 신청한 상품
+ * 그대로 둔다(`Demand.acceptOffer`). 들어간 보드의 상품은 `demandBoard.catalog`라 그쪽이 있으면
+ * 먼저 쓴다(#213). 제안만 받은 상태(`SUBSTITUTE_OFFERED`)는 아직 보드에 들어가지 않았으므로 신청
+ * 상품을 그대로 쓴다.
+ *
+ * ⚠️ 지금 백엔드는 `demandBoard.catalog`를 `SUBSTITUTE_OFFERED`일 때만 채운다
+ *    (`DemandQueryRepositoryImpl`의 조건부 LEFT JOIN). 그 조건이 풀리기 전까지는 이 함수가 늘
+ *    `catalog`를 돌려줘 수락 후 카드가 신청 상품명으로 남는다.
+ *
+ * B-08 참여 여부(`fetchMyActiveDemandStatus`)는 이 함수를 쓰지 않는다. 중복 신청을 막는 백엔드
+ * 유니크 인덱스(`uq_demand_member_catalog_active`)가 수요의 `catalog` 기준이라 판정도 그쪽에 맞춘다.
+ */
+function joinedCatalog(dto: DemandItemDto): CatalogDto {
+  if (dto.status === 'SUBSTITUTE_OFFERED') {
+    return dto.catalog;
+  }
+  return dto.demandBoard?.catalog ?? dto.catalog;
+}
+
+/**
  * 응답 한 건을 카드 모양으로 옮긴다. 상태가 화면 탭에 매핑되지 않으면 null(호출부가 걸러 낸다).
  *
  * ⚠️ 참여 인원(`demandBoard.participantCount`)은 보드가 배정된 뒤에만 있다. 방금 등록해 아직 보드가
@@ -202,11 +224,12 @@ function toParticipationItem(dto: DemandItemDto): ParticipationItem | null {
   if (status === undefined) {
     return null;
   }
+  const catalog = joinedCatalog(dto);
   return {
     id: String(dto.id),
     demandBoardId: dto.demandBoard?.id,
-    productName: dto.catalog.name,
-    specSummary: dto.catalog.specSummary ?? undefined,
+    productName: catalog.name,
+    specSummary: catalog.specSummary ?? undefined,
     quantity: dto.quantity ?? undefined,
     priceLabel: formatPriceLabel(dto, status),
     participantCount: dto.demandBoard?.participantCount,

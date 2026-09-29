@@ -55,6 +55,14 @@ const MOCK_RESULTS: readonly ProductSearchResult[] = [
 ];
 
 /**
+ * 검색 결과 목 카드 한 장. 목 카드를 눌러 들어온 상품 상세(`mocks/product.ts`)가 같은 상품을 그릴 때
+ * 쓴다(#225).
+ */
+export function findMockSearchResult(id: string): ProductSearchResult | undefined {
+  return MOCK_RESULTS.find((product) => product.id === id);
+}
+
+/**
  * 검색 결과 목. 연동 실패 시에만 쓰인다.
  *
  * 검색어로 거른다. 검색어와 무관하게 늘 같은 5장을 돌려주면 `안녕하세요`로 검색해도 락토핏이

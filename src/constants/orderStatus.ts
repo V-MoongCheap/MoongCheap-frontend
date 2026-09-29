@@ -178,3 +178,22 @@ export const ORDER_LIST_TABS = [
 
 /** 탭 키 유니온. 탭 정의에서 파생하므로 상수와 항상 일치한다. */
 export type OrderListTabKey = (typeof ORDER_LIST_TABS)[number]['key'];
+
+/**
+ * B-26 진행 단계 숫자를 누르면 열 B-21 탭(TC-B21-01-03 '해당 상태가 속한 탭 선택', #199).
+ *
+ * 묶음은 위 `ORDER_LIST_TABS` 주석의 백엔드 매핑을 따른다. 배송요청은 백엔드 요약·목록 어디에도
+ * 없는 단계라(요약에서 늘 0) 배송 전 단계들과 같은 '진행중'에 둔다.
+ */
+export const ORDER_PROGRESS_TABS: Record<OrderProgressStatus, OrderListTabKey> = {
+  PAYMENT_COMPLETED: 'inProgress',
+  DELIVERY_REQUESTED: 'inProgress',
+  PREPARING: 'inProgress',
+  SHIPPING: 'inProgress',
+  DELIVERED: 'delivered',
+};
+
+/** 주소의 `?tab=` 값을 탭 키로 바꾼다. 없거나 모르는 값이면 '전체'다. */
+export function toOrderListTabKey(value: string | null): OrderListTabKey {
+  return ORDER_LIST_TABS.find((item) => item.key === value)?.key ?? 'all';
+}

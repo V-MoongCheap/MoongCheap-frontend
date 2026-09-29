@@ -39,12 +39,12 @@ export default function MyPage() {
           sellerApplyHref="/mypage/seller-apply"
         />
 
-        {/* 진행 단계 숫자를 탭하면 해당 상태로 필터된 B-21로 가야 한다(BR-B21-01-09). 다만 명세가
-            "세부 상태까지 필터할지"를 [⚠️ 기능·화면 미확정] 11번으로 남겨 둬 숫자는 아직 링크가 아니다.
+        {/* 진행 단계 숫자를 탭하면 그 상태가 속한 탭으로 B-21을 연다(TC-B21-01-03 '해당 상태가 속한 탭
+            선택', #199). 세부 상태 필터는 명세 미확정이라 탭 단위까지만 간다.
             취소/교환/반품 조회는 MVP 미구현이라 준비 중 토스트를 유지한다(BR-B21-01-09). */}
         <SettingsSection actionHref="/orders" actionLabel="자세히보기" title="진행중인 주문내역">
           <div className="flex w-full flex-col gap-1.5">
-            <SessionOrderProgressSummary />
+            <SessionOrderProgressSummary ordersHref="/orders" />
             <LinkButton label="취소/교환/반품 조회" />
           </div>
         </SettingsSection>

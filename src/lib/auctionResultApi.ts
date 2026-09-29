@@ -36,6 +36,7 @@ export function toAwardResult(dto: AuctionResultDto, desiredPriceLabel: string):
   const expected = computeExpectedPayment(dto);
 
   return {
+    isPaid: dto.demandStatus === 'CLOSED',
     productName: dto.catalogName,
     ...(dto.thumbnail_url !== null && { thumbnailUrl: dto.thumbnail_url }),
     ...(dto.unitPrice !== null && { finalBidPrice: dto.unitPrice }),

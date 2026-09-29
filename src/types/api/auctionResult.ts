@@ -8,12 +8,7 @@
  * `GET /api/demand-boards/{demandBoardId}/auction-result`
  */
 
-/**
- * 수요보드 상태. 낙찰 결과는 `GB_ACTION_REQUIRED`(낙찰 확정, 결제 대기)에서만 의미가 있다.
- * 값 집합은 백엔드 `DemandStatus`를 그대로 옮긴 것이며, 화면은 지금 이 값을 쓰지 않는다.
- */
-export type DemandBoardStatusDto =
-  'GB_GATHERING' | 'GB_AWARDING' | 'GB_ACTION_REQUIRED' | 'GB_CLOSED' | 'GB_CANCELED';
+import type { DemandStatusDto } from '@/types/api/demand';
 
 /**
  * `GET /api/demand-boards/{demandBoardId}/auction-result` 응답(`AuctionResultDto`).
@@ -25,7 +20,11 @@ export type DemandBoardStatusDto =
  *    낙찰 시각 자체는 응답에 없다(이슈 #137의 요청 항목).
  */
 export interface AuctionResultDto {
-  demandStatus: DemandBoardStatusDto;
+  /**
+   * **내 수요**의 상태(보드 상태가 아니다). 보드가 `GB_ACTION_REQUIRED`인 동안 조회되며, 내 수요는
+   * `ASSIGNED`·`PAYMENT_PENDING`(자동결제 대기)·`CLOSED`(자동결제 완료) 중 하나다(#205).
+   */
+  demandStatus: DemandStatusDto;
   /** 상품 도감 이름. 화면 상품 카드 제목. */
   catalogName: string;
   /** 상품 도감 썸네일. 필드명이 snake_case인 것은 위 주석 참고. */

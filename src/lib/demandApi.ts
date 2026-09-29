@@ -312,6 +312,7 @@ function toSubstituteProductSummary(catalog: CatalogDto): SubstituteProductSumma
     name: catalog.name,
     specSummary: catalog.specSummary ?? undefined,
     listPrice: catalog.listPrice ?? undefined,
+    thumbnailUrl: catalog.thumbnailUrl ?? undefined,
   };
 }
 
@@ -327,12 +328,23 @@ function toSubstituteProductSummary(catalog: CatalogDto): SubstituteProductSumma
 function toSubstituteOffer(dto: DemandItemDto): SubstituteOffer {
   const substituteCatalog =
     dto.status === 'SUBSTITUTE_OFFERED' ? (dto.demandBoard?.catalog ?? null) : null;
+  // 대체상품이 있으면 demandBoard도 있다(catalog가 그 안에 있으므로).
+  const board = substituteCatalog === null ? null : dto.demandBoard;
 
   return {
     demandId: String(dto.id),
     isOffer: substituteCatalog !== null,
     requested: toSubstituteProductSummary(dto.catalog),
     substitute: substituteCatalog === null ? null : toSubstituteProductSummary(substituteCatalog),
+    offerBoard:
+      board === null
+        ? null
+        : {
+            participantCount: board.participantCount,
+            saleEndAt: board.saleEndAt ?? undefined,
+            priceMin: board.priceMin,
+            priceMax: board.priceMax,
+          },
     quantity: dto.quantity ?? undefined,
     // 낙찰 전 상태라 formatPriceLabel은 희망 가격대(구간 라벨/범위)를 돌려준다.
     desiredPriceLabel: formatPriceLabel(dto, 'ACTION_REQUIRED'),

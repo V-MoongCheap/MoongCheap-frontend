@@ -17,6 +17,22 @@ export interface SubstituteProductSummary {
   readonly specSummary?: string;
   /** 정가(원). 대체상품 카드의 참고가. 출처: `catalog.listPrice`. 없으면 undefined(표기 생략). */
   readonly listPrice?: number;
+  /** 썸네일. 출처: `catalog.thumbnailUrl`. 없으면 undefined(회색 자리만). */
+  readonly thumbnailUrl?: string;
+}
+
+/**
+ * 제안된 공구(수요보드) 현황. 명세 TC-B16-01-01 '제안 카드(확정 인원·남은 시간·희망 가격대)'.
+ * 출처: 단건 DTO의 `demandBoard`. 가격·시각 표기는 화면이 수요 상세(B-12)와 같은 헬퍼로 만든다.
+ */
+export interface SubstituteOfferBoard {
+  /** 확정 수요 인원. 출처: `demandBoard.participantCount`. */
+  readonly participantCount: number;
+  /** 모집 마감 시각(`LocalDateTime`). 출처: `demandBoard.saleEndAt`. 없으면 undefined(줄 생략). */
+  readonly saleEndAt?: string;
+  /** 공구 희망 가격대(원). 출처: `demandBoard.priceMin`·`priceMax`. */
+  readonly priceMin: number | null;
+  readonly priceMax: number | null;
 }
 
 export interface SubstituteOffer {
@@ -34,6 +50,8 @@ export interface SubstituteOffer {
    * `isOffer=false`면 null.
    */
   readonly substitute: SubstituteProductSummary | null;
+  /** 제안된 공구 현황. `isOffer=false`면 null. */
+  readonly offerBoard: SubstituteOfferBoard | null;
   /** 내 참여 수량(개). 출처: `quantity`. 미확정이면 undefined. */
   readonly quantity?: number;
   /** 내 희망 가격대 라벨(`PRICE_BANDS` 라벨 또는 범위). 출처: `desiredPrice*`. */

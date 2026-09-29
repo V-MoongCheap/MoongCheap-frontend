@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { ArrowDown, PackageOpen } from 'lucide-react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 import { AlertDialog } from '@/components/ui/AlertDialog';
@@ -11,6 +12,7 @@ import { ERROR_ACTION_CLASS, ErrorScreen } from '@/components/ui/ErrorScreen';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useToast } from '@/components/ui/Toast';
 import { ERROR_SCREEN_RETRY_LABEL, SESSION_EXPIRED_MESSAGE } from '@/constants/commonMessages';
+import { DEMAND_BOARD_DETAIL } from '@/constants/demandBoardMessages';
 import {
   ACCEPT_SUBSTITUTE_DIALOG,
   REJECT_SUBSTITUTE_DIALOG,
@@ -24,7 +26,9 @@ import {
 } from '@/features/participation/hooks/useSubstituteOffer';
 import { ApiError } from '@/lib/api';
 import { SUBSTITUTE_OFFER_ERROR_CODE } from '@/lib/demandApi';
+import { formatBoardPriceLabel, isDemandBoardClosed, remainingUntil } from '@/lib/demandBoardApi';
 import { formatWon } from '@/lib/formatPrice';
+import { isRenderableImageSrc } from '@/lib/imageSource';
 import type { SubstituteProductSummary } from '@/types/substituteOffer';
 
 // 수락/거절이 더는 유효하지 않음을 뜻하는 백엔드 비즈니스 코드(이미 처리·만료·권한·없음). 이 코드로
@@ -69,11 +73,18 @@ function offerActionErrorMessage(caught: unknown): string {
   return SUBSTITUTE_OFFER_TOAST.failed;
 }
 
-/** 상품 요약 카드(원 수요·대체상품 공통). 썸네일은 원본 미연동이라 회색 placeholder(B-19와 같은 규칙). */
+/** 상품 요약 카드(원 수요·대체상품 공통). 썸네일이 없거나 그릴 수 없으면 회색 자리만 둔다. */
 function ProductSummaryCard({ product }: { product: SubstituteProductSummary }) {
   return (
     <div className="bg-surface-secondary rounded-16 flex items-center gap-3 p-3">
-      <div aria-hidden className="bg-surface-tertiary rounded-12 size-14 shrink-0" />
+      <div
+        aria-hidden
+        className="bg-surface-tertiary rounded-12 relative size-14 shrink-0 overflow-hidden"
+      >
+        {isRenderableImageSrc(product.thumbnailUrl) && (
+          <Image alt="" className="object-contain" fill sizes="56px" src={product.thumbnailUrl} />
+        )}
+      </div>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <p className="text-body-15 text-content-primary truncate font-semibold">{product.name}</p>
         {product.specSummary !== undefined && (
@@ -110,7 +121,7 @@ export function SubstituteOfferView({ demandId, listHref }: SubstituteOfferViewP
   const [isAcceptOpen, setIsAcceptOpen] = useState(false);
   const [isRejectOpen, setIsRejectOpen] = useState(false);
 
-  const { data, isPending, isError, refetch } = useSubstituteOffer(demandId);
+  const { data, dataUpdatedAt, isPending, isError, refetch } = useSubstituteOffer(demandId);
   const acceptMutation = useAcceptSubstituteOffer(demandId);
   const rejectMutation = useRejectSubstituteOffer(demandId);
 
@@ -204,6 +215,16 @@ export function SubstituteOfferView({ demandId, listHref }: SubstituteOfferViewP
 
   // 위 가드로 substitute가 null이 아님이 확정된다(로컬 const로 좁힘을 유지).
   const substitute = data.substitute;
+  const offerBoard = data.offerBoard;
+  // 남은 시간은 수요 상세(B-12)와 같이 조회 시점 스냅숏으로 계산한다(`isDemandBoardClosed` 주석).
+  const isOfferClosed =
+    offerBoard !== null && isDemandBoardClosed(offerBoard.saleEndAt, dataUpdatedAt);
+  const remaining =
+    offerBoard?.saleEndAt === undefined
+      ? null
+      : remainingUntil(offerBoard.saleEndAt, dataUpdatedAt);
+  const offerPriceLabel =
+    offerBoard === null ? '' : formatBoardPriceLabel(offerBoard.priceMin, offerBoard.priceMax);
 
   return (
     <div className="flex w-full flex-1 flex-col">
@@ -227,6 +248,31 @@ export function SubstituteOfferView({ demandId, listHref }: SubstituteOfferViewP
           {SUBSTITUTE_OFFER_COPY.substituteLabel}
         </p>
         <ProductSummaryCard product={substitute} />
+
+        {/* 제안된 공구 현황(TC-B16-01-01). 문구는 수요 상세(B-12)와 같다. */}
+        {offerBoard !== null && (
+          <div className="bg-surface-secondary rounded-16 mt-2 flex flex-col gap-3 p-4">
+            <ConditionRow
+              label={DEMAND_BOARD_DETAIL.participantsLabel}
+              value={DEMAND_BOARD_DETAIL.participants(offerBoard.participantCount)}
+            />
+            {remaining !== null && (
+              <ConditionRow
+                label={DEMAND_BOARD_DETAIL.remainingLabel}
+                value={
+                  isOfferClosed
+                    ? DEMAND_BOARD_DETAIL.closedRemaining
+                    : remaining.kind === 'minutes'
+                      ? DEMAND_BOARD_DETAIL.minutesLeft(remaining.minutes)
+                      : `D-${remaining.days}`
+                }
+              />
+            )}
+            {offerPriceLabel !== '' && (
+              <ConditionRow label={DEMAND_BOARD_DETAIL.priceLabel} value={offerPriceLabel} />
+            )}
+          </div>
+        )}
 
         <div className="border-divider-default my-6 border-t" />
 

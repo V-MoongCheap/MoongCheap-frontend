@@ -11,8 +11,16 @@ import { extendTailwindMerge } from 'tailwind-merge';
 const isTypographyToken = (value: string) =>
   /^(body|button|caption|heading|label|section-title|title)-\d+$/.test(value);
 
+//
+// 모서리 토큰(`rounded-8`·`rounded-round` 등, globals.css `--radius-*`)도 같은 문제가 있다. 기본
+// tailwind-merge는 숫자·`round` 이름을 모서리 값으로 알아보지 못해 둘 다 남기고, 그러면 CSS 생성 순서상
+// 뒤에 오는 `rounded-round`가 이긴다. `Button`(기본 `rounded-round`)에 `rounded-8`을 넘긴 하단 CTA가
+// 알약 모양으로 나온 원인이다(디자인 QA 9/28 'CTA radius 오류'). 토큰 이름을 radius 테마로 등록한다.
 const twMerge = extendTailwindMerge({
   extend: {
+    theme: {
+      radius: ['4', '8', '12', '16', '20', '24', '28', '32', 'round'],
+    },
     classGroups: {
       'font-size': [{ text: [isTypographyToken] }],
     },

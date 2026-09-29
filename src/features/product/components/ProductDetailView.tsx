@@ -117,9 +117,11 @@ export function ProductDetailView({
       <div className="flex flex-1 flex-col">
         {/* 상품 이미지 + 실시간 열람 배지 + '비슷한 상품' 칩 */}
         <section className="relative flex h-[322px] w-full flex-col justify-end overflow-hidden px-4 py-[19px]">
+          {/* 이미지 영역 배경은 `content/oncolor`다(디자인 QA 9/28 '베리어블 누락', 시안
+              `2042:27790`). 이 토큰은 다크 모드에서도 흰색이라 영역이 모드와 무관하게 흰색이다. */}
           <div
             aria-hidden
-            className="bg-background-default absolute inset-0 flex items-center justify-center p-8"
+            className="bg-content-oncolor absolute inset-0 flex items-center justify-center p-8"
           >
             {/* 백엔드가 주는 주소는 외부 절대 URL이라 `next/image`가 거부하고 예외를 던진다.
                 이미지 한 장이 아니라 화면 전체가 오류로 바뀌므로 그릴 수 있는 경로만 통과시킨다

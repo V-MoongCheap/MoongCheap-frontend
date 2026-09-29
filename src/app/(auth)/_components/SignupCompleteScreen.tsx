@@ -31,14 +31,15 @@ export function SignupCompleteScreen({
 }: SignupCompleteScreenProps) {
   return (
     <ScreenColumn>
-      <div className="flex flex-col gap-8">
+      {/* 글과 삽화 사이 16, 삽화 317×289는 디자인 QA(9/28 'gap 수정') 지시다. */}
+      <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <h1 className="text-heading-20">가입이 완료되었습니다!</h1>
           <p className="text-content-quarternary text-body-14">뭉치와 함께 알뜰한 쇼핑하세요</p>
         </div>
 
         <div className="flex justify-center">
-          <Image src={SIGNUP_ASSETS.complete} alt="" width={240} height={204} priority />
+          <Image src={SIGNUP_ASSETS.complete} alt="" width={317} height={289} priority />
         </div>
       </div>
 

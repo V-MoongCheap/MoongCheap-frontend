@@ -18,6 +18,9 @@ export const SEARCH_PLACEHOLDER = '검색어를 입력해주세요.';
 /** 검색바의 접근성 이름. 시안에는 라벨이 없어 화면 밖 텍스트로만 준다. */
 export const SEARCH_INPUT_LABEL = '상품 검색';
 
+/** 검색어 지우기(×) 버튼의 접근성 이름. B-05 입력창과 B-06 검색줄이 같이 쓴다. 시안에는 아이콘만 있다. */
+export const SEARCH_CLEAR_LABEL = `${SEARCH_INPUT_LABEL}어 지우기`;
+
 /* ── 최근 검색어 ── */
 
 export const RECENT_SEARCHES = {

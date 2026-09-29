@@ -1,12 +1,16 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { SearchIcon } from '@/components/ui/Icons';
+import { CircleXIcon, SearchIcon } from '@/components/ui/Icons';
 import { SEARCH_QUERY_MAX_LENGTH, SEARCH_QUERY_MIN_LENGTH } from '@/constants/businessRules';
-import { SEARCH_INPUT_LABEL, SEARCH_PLACEHOLDER } from '@/constants/searchMessages';
+import {
+  SEARCH_CLEAR_LABEL,
+  SEARCH_INPUT_LABEL,
+  SEARCH_PLACEHOLDER,
+} from '@/constants/searchMessages';
 import { RecentSearches } from '@/features/search/components/RecentSearches';
 import { useRecentSearches } from '@/features/search/hooks/useRecentSearches';
 
@@ -18,6 +22,9 @@ import { useRecentSearches } from '@/features/search/hooks/useRecentSearches';
 // 검색 실행 조건은 BR-B05-01-01이다 - 공백을 제외하고 SEARCH_QUERY_MIN_LENGTH자 이상.
 // ⚠️ 미달 상태의 시안이 없다. 새 오류 문구를 지어내지 않고 실행만 막되, 버튼이 왜 안 먹는지
 //    보조기술에는 전달되도록 aria-disabled를 붙인다. 문구가 정해지면 여기에 안내를 얹는다.
+//
+// 지우기(×)는 시안 B-05에는 없고 명세 FN-B05-01에 있다(1자 이상이면 노출, 누르면 전체 삭제 후
+// 플레이스홀더 복귀, #172). 모양은 같은 검색어 칸인 B-06 검색줄(`SearchQueryBar`)의 ×를 따른다.
 
 interface SearchViewProps {
   /** 검색 결과 화면 경로. 라우트는 호출부(page)가 정한다. */
@@ -30,6 +37,7 @@ export function SearchView({ resultsHref, initialQuery = '' }: SearchViewProps) 
   const router = useRouter();
   const { keywords, add, remove, clear } = useRecentSearches();
   const [query, setQuery] = useState(initialQuery);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // 검색 실행은 `router.push`라 `Link`처럼 결과 경로를 미리 받아 두지 않는다. 그러면 결과 화면의
   // 로딩 화면(`search/results/loading.tsx`)을 모르는 채로 이동해, 서버 응답이 늦을 때 바깥쪽
@@ -55,6 +63,12 @@ export function SearchView({ resultsHref, initialQuery = '' }: SearchViewProps) 
     run(query);
   }
 
+  // 지우고 나서 바로 다시 입력할 수 있게 입력칸에 포커스를 돌려준다.
+  function handleClear() {
+    setQuery('');
+    inputRef.current?.focus();
+  }
+
   return (
     <div className="flex w-full flex-1 flex-col">
       {/* 시안 `818:9606` - 40 높이 알약 입력창 하나. 시안은 폭을 361로 고정했는데 좌우 여백이
@@ -69,11 +83,22 @@ export function SearchView({ resultsHref, initialQuery = '' }: SearchViewProps) 
             maxLength={SEARCH_QUERY_MAX_LENGTH}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={SEARCH_PLACEHOLDER}
-            // type="search"는 브라우저가 지우기 X를 덧붙인다. 시안 B-05 입력창에는 돋보기만
-            // 있으므로 text로 두고, 모바일 키보드의 확인 키만 enterKeyHint로 '검색'으로 바꾼다.
+            ref={inputRef}
+            // type="search"는 브라우저가 자체 지우기 X를 덧붙여 아래 ×와 겹친다. text로 두고,
+            // 모바일 키보드의 확인 키만 enterKeyHint로 '검색'으로 바꾼다.
             type="text"
             value={query}
           />
+          {query.length > 0 && (
+            <button
+              aria-label={SEARCH_CLEAR_LABEL}
+              className="text-content-quinary flex size-6 shrink-0 items-center justify-center"
+              onClick={handleClear}
+              type="button"
+            >
+              <CircleXIcon className="size-[18px]" />
+            </button>
+          )}
           <button
             aria-disabled={!canSubmit}
             aria-label={SEARCH_INPUT_LABEL}

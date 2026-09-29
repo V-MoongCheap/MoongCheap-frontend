@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { ComingSoonButton } from '@/components/ui/ComingSoonButton';
 import { GoBackButton } from '@/components/ui/GoBackButton';
 import { CartIcon, CircleXIcon } from '@/components/ui/Icons';
-import { SEARCH_INPUT_LABEL } from '@/constants/searchMessages';
+import { SEARCH_CLEAR_LABEL } from '@/constants/searchMessages';
 
 // B-06 상단 바. 시안 `818:9620`(search-results-bar의 `icon` 변형).
 //
@@ -48,7 +48,7 @@ export function SearchQueryBar({ query, searchHref }: SearchQueryBarProps) {
             {query}
           </Link>
           <Link
-            aria-label={`${SEARCH_INPUT_LABEL}어 지우기`}
+            aria-label={SEARCH_CLEAR_LABEL}
             className="text-content-quinary flex size-6 shrink-0 items-center justify-center"
             href={searchHref}
           >

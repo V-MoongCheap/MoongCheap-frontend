@@ -90,7 +90,6 @@ export function AwardResultView({ demandBoardId, listHref }: AwardResultViewProp
   const { showComingSoon } = useToast();
   const router = useProgressRouter();
 
-
   const boardId = toDemandBoardId(demandBoardId);
   const { data: result, error, isError, isPending, refetch } = useAwardResult(boardId);
   // 세션 만료(401)는 재시도해도 소용없어 오류 화면 대신 로그인 화면으로 보낸다(#159).

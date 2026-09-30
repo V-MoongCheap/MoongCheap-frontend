@@ -24,6 +24,11 @@ export interface ParticipationItem {
   readonly productName: string;
   /** 규격 요약. 시안 카드 부제. 출처는 상품명과 같은 상품의 `specSummary`. 없으면 undefined(부제 생략). */
   readonly specSummary?: string;
+  /**
+   * 상품 썸네일 URL. 출처는 상품명과 같은 상품의 `thumbnailUrl`(#229). 없으면 undefined.
+   * 카드는 그릴 수 있는 경로일 때만 이미지를 그리고, 아니면 회색 자리를 둔다(`lib/imageSource.ts`).
+   */
+  readonly thumbnailUrl?: string;
   /** 참여 수량(개). 출처: `quantity`. DTO상 null 허용이라 미확정이면 undefined(수량 문구 생략). */
   readonly quantity?: number;
   /**

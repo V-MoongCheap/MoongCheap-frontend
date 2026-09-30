@@ -79,9 +79,17 @@ interface ParticipationListProps {
    * 컴포넌트라 경로를 만드는 함수를 넘길 수 없다(함수는 client 경계를 넘지 못한다).
    */
   awardResultBaseHref: string;
+  /**
+   * 낙찰 전 배정완료 카드 탭 시 이동할 수요 상세(B-12) 경로의 앞부분. 수요 상세도 보드 기준
+   * (`/demand-boards/{id}`)이라 낙찰 결과와 같은 이유로 앞부분만 받는다.
+   */
+  demandBoardBaseHref: string;
 }
 
-export function ParticipationList({ awardResultBaseHref }: ParticipationListProps) {
+export function ParticipationList({
+  awardResultBaseHref,
+  demandBoardBaseHref,
+}: ParticipationListProps) {
   const [tab, setTab] = useState<ParticipationTab>(PARTICIPATION_TAB_ALL);
   const { showComingSoon } = useToast();
   const router = useProgressRouter();
@@ -104,14 +112,28 @@ export function ParticipationList({ awardResultBaseHref }: ParticipationListProp
   const canLoadMore = hasNextPage && !isFetchingNextPage && !isFetchNextPageError;
   const sentinelRef = useInfiniteScrollSentinel(canLoadMore, fetchNextPage);
 
-  // 카드 본문 탭 → 상세. 배정완료(낙찰됨)는 낙찰 결과(B-19)로 보낸다. 그 외 상태의 상세는
-  // 수요 상세(B-12)인데 라우트 부재라 '준비 중' 토스트로 둔다.
+  // 카드 본문 탭 → 상태별 상세(#217).
+  //  · 배정완료·낙찰 전(`ASSIGNED`) — 수요 상세(B-12). 낙찰 결과가 아직 없어 B-19는 빈 화면이 된다.
+  //  · 배정완료·낙찰 후(`PAYMENT_PENDING`) — 낙찰 결과(B-19).
+  //  · 완료(`CLOSED`) — 낙찰 결과(B-19). 결제완료 상태와 주문내역 CTA를 보여 준다(#205). 주문상세로
+  //    바로 보내려면 주문 id가 필요한데 참여 목록 응답에는 없다.
+  //  · 모이는 중 — 보드가 없어 갈 상세가 없다. 확인필요는 카드 아래 '대체상품 확인하기'가 진입점이다.
+  //    둘 다 '준비 중' 토스트로 둔다.
   //
-  // 배정완료라면 보드가 배정돼 있어 `demandBoardId`가 있다. 그래도 없으면(응답이 보드를 생략한
-  // 비정상 데이터) id 없는 경로로 보내 404를 만들지 말고 '준비 중'으로 떨어뜨린다.
+  // 보드 id가 없으면(응답이 보드를 생략한 비정상 데이터) id 없는 경로로 보내 404를 만들지 말고
+  // '준비 중'으로 떨어뜨린다.
   function openDetail(item: ParticipationItem) {
-    if (item.status === 'ALLOCATED' && item.demandBoardId !== undefined) {
-      router.push(`${awardResultBaseHref}/${encodeURIComponent(item.demandBoardId)}`);
+    const boardId = item.demandBoardId;
+    if (boardId === undefined) {
+      showComingSoon();
+      return;
+    }
+    if (item.status === 'ALLOCATED' && item.isAwaitingAward) {
+      router.push(`${demandBoardBaseHref}/${encodeURIComponent(boardId)}`);
+      return;
+    }
+    if (item.status === 'ALLOCATED' || item.status === 'DONE') {
+      router.push(`${awardResultBaseHref}/${encodeURIComponent(boardId)}`);
       return;
     }
     showComingSoon();

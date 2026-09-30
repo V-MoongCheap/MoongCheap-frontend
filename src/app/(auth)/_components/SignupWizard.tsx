@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useForm, useWatch } from 'react-hook-form';
 
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { AUTH_ERROR_MESSAGES, AUTH_SUCCESS_MESSAGES } from '@/constants/authMessages';
 import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
+import { useProgressRouter } from '@/hooks/useProgressRouter';
 import { cn } from '@/lib/cn';
 import { mockCheckIdDuplicate, mockCheckNicknameDuplicate, mockSignup } from '@/mocks/auth';
 import {
@@ -84,7 +85,7 @@ function deriveStatus(args: {
 }
 
 export function SignupWizard() {
-  const router = useRouter();
+  const router = useProgressRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 

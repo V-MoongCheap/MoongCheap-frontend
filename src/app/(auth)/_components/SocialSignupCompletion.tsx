@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react';
 
-import { useRouter } from 'next/navigation';
 import { useForm, useWatch } from 'react-hook-form';
 
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { AUTH_ERROR_MESSAGES, AUTH_SUCCESS_MESSAGES } from '@/constants/authMessages';
+import { useProgressRouter } from '@/hooks/useProgressRouter';
 import { ApiError } from '@/lib/api';
 import { checkNicknameAvailability, completeSocialSignup, getMe } from '@/lib/authApi';
 import { signupNicknameSchema } from '@/schemas/auth';
@@ -45,7 +45,7 @@ import {
 type CompletionStep = 'verifying' | 'terms' | 'nickname' | 'complete';
 
 export function SocialSignupCompletion() {
-  const router = useRouter();
+  const router = useProgressRouter();
 
   // 서버 완료 여부를 확인하기 전까진 어떤 스텝도 확정하지 않는다(가짜 완료 화면·잘못된 약관 노출 방지).
   const [step, setStep] = useState<CompletionStep>('verifying');

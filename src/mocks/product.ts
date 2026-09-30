@@ -1,4 +1,6 @@
+import { findMockSearchResult } from '@/mocks/search';
 import type { ProductDetail } from '@/types/product';
+import type { ProductSearchResult } from '@/types/search';
 
 /**
  * B-08 상품 상세 목 데이터. 백엔드 상품 상세 규격이 없어 화면 검수용으로만 쓴다.
@@ -130,13 +132,48 @@ const PRODUCT_DETAILS: Readonly<Record<string, () => ProductDetail>> = {
 };
 
 /**
- * 상품 상세 조회. 홈/검색 카드가 넘기는 id로 찾고, 목에 없는 id(다른 카드에서 진입)는
- * 시나리오 2(퀵 참여 있는 상세)를 기본값으로 돌려 화면이 항상 채워지게 한다.
+ * 검색 결과 목(`mocks/search.ts`) 카드 id → 같은 상품의 상세 목 id.
+ *
+ * 검색 API는 로그인이 필요해 미로그인이면 검색이 목으로 떨어지고, 목 카드의 id(`catalog-search-*`)로
+ * 상세에 들어온다. 이 id가 상세 목에 없어 골드를 눌러도 코어맥스가 열렸다(디자인팀 회신 9/29, #225).
+ */
+const SEARCH_CARD_DETAIL_IDS: Readonly<Record<string, string>> = {
+  'catalog-search-2': 'demand-3',
+  'catalog-search-3': goldDetail.id,
+};
+
+/**
+ * 상세 목이 없는 검색 목 카드(뷰티·다이어트·당케어)의 상세. 카드에 있는 상품명·규격·사진만 쓴다.
+ *
+ * 상품설명·브랜드·열람수·비슷한 상품은 카드에 없어 비우고, 화면이 그 줄을 숨긴다. 로그인 시 실데이터로
+ * 덮을 때(`useProductCatalogOverlay`)와 같은 방식이라 없는 문구를 만들지 않는다. 퀵 참여는 0건이다.
+ */
+function createSearchCardDetail(card: ProductSearchResult): ProductDetail {
+  return {
+    id: card.id,
+    name: card.name,
+    spec: card.spec,
+    thumbnailUrl: card.thumbnailUrl,
+    quickDeals: [],
+    infoSections: SHARED_INFO_SECTIONS,
+  };
+}
+
+/**
+ * 상품 상세 조회. 홈/검색 카드가 넘기는 id로 찾는다.
+ *
+ * 1. 상세 목이 있는 id(홈 카드, 검색 목의 골드·코어맥스)는 그 상세
+ * 2. 상세 목이 없는 검색 목 카드는 카드 값으로 만든 상세
+ * 3. 그 밖의 id(홈의 다른 카드)는 시나리오 2(퀵 참여 있는 상세)를 기본값으로 돌려 화면이 항상 채워지게 한다.
  */
 export async function mockGetProductDetail(productId: string): Promise<ProductDetail> {
-  const create = PRODUCT_DETAILS[productId];
+  const create = PRODUCT_DETAILS[SEARCH_CARD_DETAIL_IDS[productId] ?? productId];
   if (create !== undefined) {
-    return create();
+    return { ...create(), id: productId };
+  }
+  const searchCard = findMockSearchResult(productId);
+  if (searchCard !== undefined) {
+    return createSearchCardDetail(searchCard);
   }
   return { ...createCoreMaxDetail(), id: productId };
 }

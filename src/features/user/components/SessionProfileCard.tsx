@@ -2,13 +2,12 @@
 
 import { useEffect } from 'react';
 
-import { useRouter } from 'next/navigation';
-
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useSession } from '@/features/auth/session';
 import { ProfileCard, PROFILE_CARD_CONTAINER_CLASS } from '@/features/user/components/ProfileCard';
 import { RoleSwitchButton } from '@/features/user/components/RoleSwitchButton';
+import { useProgressRouter } from '@/hooks/useProgressRouter';
 import type { UserRole } from '@/types/auth';
 import type { ActiveRole } from '@/types/user';
 
@@ -34,7 +33,7 @@ function toActiveRole(role: UserRole): ActiveRole {
 }
 
 export function SessionProfileCard({ editHref, sellerApplyHref }: SessionProfileCardProps) {
-  const router = useRouter();
+  const router = useProgressRouter();
   const { user, isPending, isError, refetch } = useSession();
 
   // 미로그인(user === null)이면 로그인 화면으로 돌린다. 렌더 중 이동은 안 되므로 effect에서 처리하고,

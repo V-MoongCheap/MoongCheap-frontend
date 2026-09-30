@@ -5,7 +5,6 @@ import { useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 import { AppBar } from '@/components/layout/AppBar';
 import { Button } from '@/components/ui/Button';
@@ -33,6 +32,7 @@ import {
   pickPaymentMethodForDemand,
   usePaymentMethods,
 } from '@/features/user/hooks/usePaymentMethods';
+import { useProgressRouter } from '@/hooks/useProgressRouter';
 import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import {
@@ -100,7 +100,7 @@ export function QuickJoinView({
     paymentMethods.methods === null ? null : pickPaymentMethodForDemand(paymentMethods.methods);
   const [values, setValues] = useState<QuickJoinValues>(EMPTY_VALUES);
   const { showToast } = useToast();
-  const router = useRouter();
+  const router = useProgressRouter();
   const joinDemandBoard = useJoinDemandBoard();
   // 중복 제출 가드. 수요 등록(`DemandFormView`)과 같은 이유로 ref를 쓴다.
   const submittingRef = useRef(false);

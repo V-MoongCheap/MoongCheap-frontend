@@ -3,7 +3,6 @@
 import { useMemo, useState } from 'react';
 
 import { PackageOpen, SearchX } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ERROR_ACTION_CLASS, ErrorScreen } from '@/components/ui/ErrorScreen';
@@ -23,6 +22,7 @@ import { useRedirectOnUnauthorized } from '@/features/auth/session';
 import { ParticipationCard } from '@/features/participation/components/ParticipationCard';
 import { useMyDemands } from '@/features/participation/hooks/useMyDemands';
 import { useInfiniteScrollSentinel } from '@/hooks/useInfiniteScrollSentinel';
+import { useProgressRouter } from '@/hooks/useProgressRouter';
 import type { ParticipationItem } from '@/types/participation';
 
 // B-17 내 뭉치 참여 목록의 상호작용 셸(client). 탭(=상태 필터)마다 실API를 따로 조회하고
@@ -84,7 +84,7 @@ interface ParticipationListProps {
 export function ParticipationList({ awardResultBaseHref }: ParticipationListProps) {
   const [tab, setTab] = useState<ParticipationTab>(PARTICIPATION_TAB_ALL);
   const { showComingSoon } = useToast();
-  const router = useRouter();
+  const router = useProgressRouter();
 
   const {
     data,

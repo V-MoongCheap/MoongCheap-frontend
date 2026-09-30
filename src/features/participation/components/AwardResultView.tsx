@@ -2,7 +2,6 @@
 
 import { PackageOpen } from 'lucide-react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ERROR_ACTION_CLASS, ErrorScreen } from '@/components/ui/ErrorScreen';
@@ -12,6 +11,7 @@ import { AWARD_RESULT_ASSETS } from '@/constants/assets';
 import { ERROR_SCREEN_RETRY_LABEL } from '@/constants/commonMessages';
 import { useRedirectOnUnauthorized } from '@/features/auth/session';
 import { useAwardResult } from '@/features/participation/hooks/useAwardResult';
+import { useProgressRouter } from '@/hooks/useProgressRouter';
 import { ApiError } from '@/lib/api';
 import { toDemandBoardId } from '@/lib/demandBoardApi';
 import { formatWon } from '@/lib/formatPrice';
@@ -88,7 +88,7 @@ interface AwardResultViewProps {
 
 export function AwardResultView({ demandBoardId, listHref }: AwardResultViewProps) {
   const { showComingSoon } = useToast();
-  const router = useRouter();
+  const router = useProgressRouter();
 
   const boardId = toDemandBoardId(demandBoardId);
   const { data: result, error, isError, isPending, refetch } = useAwardResult(boardId);

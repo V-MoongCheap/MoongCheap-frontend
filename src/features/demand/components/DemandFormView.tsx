@@ -3,7 +3,6 @@
 import { useRef, useState } from 'react';
 
 import { Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 import { AppBar } from '@/components/layout/AppBar';
 import { Button } from '@/components/ui/Button';
@@ -24,6 +23,7 @@ import {
   pickPaymentMethodForDemand,
   usePaymentMethods,
 } from '@/features/user/hooks/usePaymentMethods';
+import { useProgressRouter } from '@/hooks/useProgressRouter';
 import { ApiError } from '@/lib/api';
 import { DEMAND_ERROR_CODE, toDemandCreateRequest } from '@/lib/demandApi';
 import { toCatalogId } from '@/lib/productApi';
@@ -104,7 +104,7 @@ export function DemandFormView({
     paymentMethods.methods === null ? null : pickPaymentMethodForDemand(paymentMethods.methods);
   const [values, setValues] = useState<DemandFormValues>(EMPTY_VALUES);
   const { showToast } = useToast();
-  const router = useRouter();
+  const router = useProgressRouter();
   const createDemand = useCreateDemand();
   const market = resolveMarketBand(product.listPrice);
 

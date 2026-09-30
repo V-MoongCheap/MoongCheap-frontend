@@ -2,8 +2,6 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 
-import { useRouter } from 'next/navigation';
-
 import { CircleXIcon, SearchIcon } from '@/components/ui/Icons';
 import { SEARCH_QUERY_MAX_LENGTH, SEARCH_QUERY_MIN_LENGTH } from '@/constants/businessRules';
 import {
@@ -13,6 +11,7 @@ import {
 } from '@/constants/searchMessages';
 import { RecentSearches } from '@/features/search/components/RecentSearches';
 import { useRecentSearches } from '@/features/search/hooks/useRecentSearches';
+import { useProgressRouter } from '@/hooks/useProgressRouter';
 
 // B-05 검색 입력 본문. 시안 `1153:72646`(기본) · `1153:72713`(타이핑 중).
 //
@@ -34,7 +33,7 @@ interface SearchViewProps {
 }
 
 export function SearchView({ resultsHref, initialQuery = '' }: SearchViewProps) {
-  const router = useRouter();
+  const router = useProgressRouter();
   const { keywords, add, remove, clear } = useRecentSearches();
   const [query, setQuery] = useState(initialQuery);
   const inputRef = useRef<HTMLInputElement>(null);

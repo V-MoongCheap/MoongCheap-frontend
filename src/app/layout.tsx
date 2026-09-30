@@ -1,6 +1,9 @@
+import { Suspense } from 'react';
+
 import type { Metadata, Viewport } from 'next';
 
 import { NavigationHistoryTracker } from '@/components/layout/NavigationHistoryTracker';
+import { NavigationProgress } from '@/components/layout/NavigationProgress';
 import { ToastProvider } from '@/components/ui/Toast';
 
 import { Providers } from './providers';
@@ -33,6 +36,11 @@ export default function RootLayout({
       <body className="bg-background-default min-h-svh">
         {/* 앱 내부 네비게이션을 세어 GoBackButton의 fallback 판별에 쓴다(화면 없음). */}
         <NavigationHistoryTracker />
+        {/* 화면 전환 진행 바(#215). `useSearchParams`를 쓰므로 Suspense로 감싸야 정적 화면이
+            통째로 클라이언트 렌더로 바뀌지 않는다. 대체 화면은 없다(바는 처음에 안 보인다). */}
+        <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
         {/* 전역 상태 경계. Providers(TanStack Query)·ToastProvider 모두 client지만 children은
             server 컴포넌트로 유지된다(client Provider의 자식 slot이라 경계를 넘지 않음). */}
         <Providers>

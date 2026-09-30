@@ -4,11 +4,11 @@ import { useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
 import { useForm, useWatch, type SubmitErrorHandler } from 'react-hook-form';
 
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { AUTH_ERROR_MESSAGES } from '@/constants/authMessages';
+import { useProgressRouter } from '@/hooks/useProgressRouter';
 import { ApiError } from '@/lib/api';
 import { login } from '@/lib/authApi';
 import { cn } from '@/lib/cn';
@@ -53,7 +53,7 @@ function ClearButton({ hasError, label, onClear }: ClearButtonProps) {
 }
 
 export function LoginForm() {
-  const router = useRouter();
+  const router = useProgressRouter();
   const queryClient = useQueryClient();
   // 검증·로그인 실패 안내는 모달로 띄운다. 메시지가 있으면 열린 상태.
   const [dialogMessage, setDialogMessage] = useState<string | null>(null);

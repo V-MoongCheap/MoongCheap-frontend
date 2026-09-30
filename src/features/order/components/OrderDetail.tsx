@@ -16,9 +16,22 @@ import { OUTLINE_ACTION_CLASS, OrderCard } from './OrderCard';
 const SECTION_TITLE_CLASS =
   'text-section-title-16 text-content-primary border-divider-default w-full border-b pb-2';
 
+/**
+ * 배송지를 입력하기 전 주문의 배송정보 자리 안내. 문구는 QA 요청(#220) 그대로다.
+ *
+ * 명세(BR-B15-01-15)는 여기에 배송지 입력 진입점을 두라고 하지만 배송지 입력 화면(B-15)이 연기 상태라
+ * 안내 한 줄만 둔다. 화면이 생기면 이 자리에 진입 버튼을 붙인다.
+ */
+const SHIPPING_ADDRESS_PENDING = '배송지 입력 전이에요';
+
 /** 금액 표기. 시안은 `35,100원`처럼 세 자리마다 끊는다. */
 function formatWon(amount: number): string {
   return `${amount.toLocaleString('ko-KR')}원`;
+}
+
+/** 배송지를 입력한 주문인지. 주소가 없거나 공백뿐이면 입력 전이다. */
+function hasShippingAddress(order: OrderDetailData): boolean {
+  return (order.shipping.address ?? '').trim() !== '';
 }
 
 interface OrderDetailProps {
@@ -54,18 +67,24 @@ export function OrderDetail({ order }: OrderDetailProps) {
 
       <section className="flex w-full flex-col gap-4 px-4">
         <h2 className={SECTION_TITLE_CLASS}>배송정보</h2>
-        <dl className="text-body-14 flex w-full flex-col gap-3">
-          {[
-            { label: '이름', value: order.shipping.recipient },
-            { label: '전화번호', value: order.shipping.phoneMasked },
-            { label: '주소', value: order.shipping.address },
-          ].map(({ label, value }) => (
-            <div className="flex w-full items-center" key={label}>
-              <dt className="text-content-tertiary w-19 shrink-0">{label}</dt>
-              <dd className="text-content-primary min-w-0 flex-1">{value}</dd>
-            </div>
-          ))}
-        </dl>
+        {/* 배송지 유무는 주소로만 판단한다. 배송지 입력 전 주문도 전화번호는 서버 마스킹이 '****'를
+            만들어 보내서, 전화번호로는 입력 여부를 알 수 없다(#220). */}
+        {hasShippingAddress(order) ? (
+          <dl className="text-body-14 flex w-full flex-col gap-3">
+            {[
+              { label: '이름', value: order.shipping.recipient },
+              { label: '전화번호', value: order.shipping.phoneMasked },
+              { label: '주소', value: order.shipping.address },
+            ].map(({ label, value }) => (
+              <div className="flex w-full items-center" key={label}>
+                <dt className="text-content-tertiary w-19 shrink-0">{label}</dt>
+                <dd className="text-content-primary min-w-0 flex-1">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p className="text-body-14 text-content-tertiary">{SHIPPING_ADDRESS_PENDING}</p>
+        )}
       </section>
 
       <section className="flex w-full flex-col gap-4 px-4">

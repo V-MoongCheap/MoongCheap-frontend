@@ -128,7 +128,9 @@ export function QuickJoinView({
     payMethod !== null &&
     !paymentMethods.isFetching &&
     DEMAND_FORM_CONSENTS.every(({ key }) => values.consents[key]);
-  const isSubmitting = joinDemandBoard.isPending;
+  // 제출 중 표시(버튼 잠금 + 스피너, #219). 수요 등록(`DemandFormView`)과 같은 이유로 `isPending`을
+  // 쓰지 않는다. 탭 즉시 잠그고, 다른 화면으로 이동하는 동안에는 풀지 않는다.
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   /**
    * 참여 확정 제출. 성공·이미 참여 중이면 내 대기(B-17)로 replace한다. 뒤로 가기로 이미 제출한
@@ -142,15 +144,18 @@ export function QuickJoinView({
     }
 
     submittingRef.current = true;
+    setIsSubmitting(true);
     joinDemandBoard.mutate(
       { demandBoardId: boardId, payMethodId: payMethod.id, values },
       {
+        // 성공하면 잠금을 풀지 않는다. 내 대기로 이동하는 동안 스피너를 유지한다.
         onSuccess: () => {
           showToast(QUICK_JOIN.submitSuccess);
           router.replace(participationListHref);
         },
+        // 다른 화면으로 이동하는 실패(마감·이미 참여 중·없는 보드)도 성공과 같이 잠금을 유지한다.
+        // 이 화면에 남는 실패만 풀어 다시 누를 수 있게 한다.
         onError: (error) => {
-          submittingRef.current = false;
           const code = error instanceof ApiError ? error.code : undefined;
 
           // 제출 사이에 마감됐다. 상세로 돌려보내 마감 상태를 보여 준다(명세 '화면을 마감 상태로 갱신').
@@ -167,14 +172,19 @@ export function QuickJoinView({
           // B-17 이동').
           if (code === DEMAND_BOARD_ERROR_CODE.ALREADY_EXISTS) {
             router.replace(participationListHref);
-          }
-          // 보여 준 결제수단이 그사이 삭제·비활성됐다. 목록을 다시 받아 섹션과 제출 조건을 맞춘다.
-          if (code === DEMAND_BOARD_ERROR_CODE.PAY_METHOD_NOT_FOUND) {
-            paymentMethods.refetch();
+            return;
           }
           // 보드가 사라졌다. 상세에서 '종료된 공구예요'를 보여 준다.
           if (code === DEMAND_BOARD_ERROR_CODE.NOT_FOUND) {
             router.replace(detailHref);
+            return;
+          }
+
+          submittingRef.current = false;
+          setIsSubmitting(false);
+          // 보여 준 결제수단이 그사이 삭제·비활성됐다. 목록을 다시 받아 섹션과 제출 조건을 맞춘다.
+          if (code === DEMAND_BOARD_ERROR_CODE.PAY_METHOD_NOT_FOUND) {
+            paymentMethods.refetch();
           }
         },
       },
@@ -284,9 +294,12 @@ export function QuickJoinView({
         </div>
 
         {/* 하단 고정. 이미 참여 중이면 내 대기로, 마감이면 잠긴 버튼으로 바꾼다(명세 화면 상태
-            '비활성: 마감', '미노출: 참여 중'). 제출 중에는 잠그고 스피너를 붙인다. */}
+            '비활성: 마감', '미노출: 참여 중'). 제출 중에는 잠그고 스피너를 붙인다.
+
+            제출 중에는 참여 중이어도 내 대기 링크로 바꾸지 않는다(#219). 참여에 성공하면 보드를 다시
+            받아 참여 중이 되는데, 내 대기로 이동하는 동안 스피너 대신 링크가 떠 멈춘 것처럼 보인다. */}
         <div className="max-w-mobile bg-surface-primary fixed inset-x-0 bottom-0 mx-auto w-full p-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
-          {current.isParticipating ? (
+          {current.isParticipating && !isSubmitting ? (
             <Link
               className={cn(
                 SUBMIT_CLASS,

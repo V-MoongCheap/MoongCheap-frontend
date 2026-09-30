@@ -132,9 +132,13 @@ export function DemandFormView({
     !paymentMethods.isFetching &&
     values.priceBand !== null &&
     DEMAND_FORM_CONSENTS.every(({ key }) => values.consents[key]);
-  const isSubmitting = createDemand.isPending;
-  // 중복 제출 가드. `isPending`은 다음 렌더에서야 true가 되므로, 그 사이의 두 번째 탭은 통과한다.
-  // ref는 탭 즉시 바뀌어 같은 틱의 두 번째 호출까지 막는다.
+  // 제출 중 표시(버튼 잠금 + 스피너, #219). `createDemand.isPending`을 쓰지 않는 이유가 둘이다.
+  // - `isPending`은 React Query 알림 스케줄러를 한 번 거쳐 늦게 반영된다. 클릭 핸들러에서 켠 state는
+  //   이벤트가 끝나고 그리기 전에 반영돼 탭 즉시 잠긴다.
+  // - `isPending`은 응답이 오면 풀려, 목록으로 이동하는 동안 버튼이 다시 활성으로 보인다. 이 state는
+  //   성공하면 풀지 않고 이동이 끝날 때까지 스피너를 유지한다. 실패했을 때만 푼다.
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  // 중복 제출 가드. state는 다음 렌더에서야 읽히므로, ref로 같은 틱의 두 번째 호출까지 막는다.
   const submittingRef = useRef(false);
 
   /**
@@ -160,6 +164,7 @@ export function DemandFormView({
     });
 
     submittingRef.current = true;
+    setIsSubmitting(true);
     createDemand.mutate(request, {
       // 성공하면 가드를 풀지 않는다. 목록으로 이동하는 동안 버튼이 다시 눌려 409가 나지 않게 한다.
       onSuccess: () => {
@@ -167,13 +172,16 @@ export function DemandFormView({
         router.replace(participationListHref);
       },
       onError: (error) => {
-        submittingRef.current = false;
         showToast(error.message);
         // 같은 상품에 진행 중인 수요가 이미 있으면 B-17에서 기존 건을 보게 한다
         // (FN-B09-04 예외처리 '이미 접수한 상태 → 안내 후 B-17 이동').
+        // 성공과 같이 이동하므로 잠금을 풀지 않는다.
         if (error instanceof ApiError && error.code === DEMAND_ERROR_CODE.ALREADY_EXISTS) {
           router.replace(participationListHref);
+          return;
         }
+        submittingRef.current = false;
+        setIsSubmitting(false);
         // 보여 준 결제수단이 그사이 삭제·비활성됐다. 목록을 다시 받아 섹션과 제출 조건을 맞춘다.
         if (error instanceof ApiError && error.code === DEMAND_ERROR_CODE.PAY_METHOD_NOT_FOUND) {
           paymentMethods.refetch();

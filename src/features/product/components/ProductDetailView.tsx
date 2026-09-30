@@ -25,7 +25,7 @@ import type { ProductDetail } from '@/types/product';
 // B-08 상품 상세 화면 본문. 시안 node 1153:72748(퀵 참여 0건) / 1153:73735(3건).
 //
 // 구성: 뒤로가기 헤더 · 상품 이미지(실시간 열람 배지 + '비슷한 상품' 칩) · 브랜드 행(찜) ·
-//       상품명/규격 · 진행중인 뭉치 퀵 참여 · 상품설명(자세히 보기 펼침) · 정보 아코디언 3종 ·
+//       상품명/규격 · 진행중인 뭉치 퀵 참여 · 상품설명(자세히 보기 펼침) · 정보 아코디언(비면 숨김) ·
 //       하단 고정 CTA(뭉치 참여하기).
 //
 // 데이터: 상품 도감 상세(name·규격·썸네일·상품설명·정가)는 `GET /api/product-catalog/{id}`로
@@ -34,7 +34,7 @@ import type { ProductDetail } from '@/types/product';
 // 404(없는 상품)면 mock 대신 404를 그리고, 그 판정이 나기 전까지는 mock을 그리지 않는다(#151).
 // 실데이터를 받으면 퀵 참여 딜은 수요보드 조회(`GET /api/demand-boards/catalog/{id}`)로 그리고,
 // 백엔드에 필드가 없는 브랜드·실시간 열람수·비슷한 상품 썸네일은 숨긴다(#173). 정보 아코디언은
-// 상품과 무관한 안내 문구라 그대로 둔다.
+// 채울 문구가 없어 비어 있으면 숨긴다(#218).
 //
 // 미구현 진입점은 노출하되 탭 시 '준비 중' 토스트다(ComingSoonButton).
 //  - 비슷한 상품(Full) · 찜(시안 전용)
@@ -302,14 +302,17 @@ export function ProductDetailView({
           </section>
         )}
 
-        {/* 정보 아코디언 3종. 얇은 상단 구분선으로 섹션을 나눈다. */}
-        <section className="flex w-full flex-col">
-          {product.infoSections.map((info) => (
-            <Accordion key={info.id} title={info.title} className="border-border-subtle border-t">
-              {info.body}
-            </Accordion>
-          ))}
-        </section>
+        {/* 정보 아코디언(상품 상세정보·배송정보·교환/환불/반품 정보). 얇은 상단 구분선으로 섹션을 나눈다.
+            본문 시안·명세·백엔드 필드가 없어 지금은 비어 있고, 비어 있으면 섹션째 숨긴다(#218). */}
+        {product.infoSections.length > 0 && (
+          <section className="flex w-full flex-col">
+            {product.infoSections.map((info) => (
+              <Accordion key={info.id} title={info.title} className="border-border-subtle border-t">
+                {info.body}
+              </Accordion>
+            ))}
+          </section>
+        )}
       </div>
 
       {/* 하단 고정 CTA → 일정 타임라인(FN-B09-05) → [확인] → 수요 등록(B-09). 경로는 page가 준다.

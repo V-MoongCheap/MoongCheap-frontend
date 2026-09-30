@@ -62,6 +62,6 @@ export interface ProductDetail extends ProductCatalogSummary {
    * 실데이터 상품은 `useCatalogQuickDeals`(수요보드 조회)의 결과를 그린다.
    */
   quickDeals: readonly ProductQuickDeal[];
-  /** 아코디언 정보 섹션들. (mock — BE 미제공) */
+  /** 아코디언 정보 섹션들. (mock, BE 미제공) 빈 배열이면 화면이 섹션째 숨긴다(#218). */
   infoSections: readonly ProductInfoSection[];
 }

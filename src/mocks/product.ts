@@ -13,7 +13,10 @@ import type { ProductSearchResult } from '@/types/search';
  * 비슷한 상품 썸네일은 반입된 홈 에셋(#60)을 재사용하고, 대표 사진은 흰 배경 상세 사진을 쓴다
  * (아래 `GOLD_DETAIL_IMAGE`). 상품설명(description)은 BE 연동 시 실데이터로
  * 덮이므로(client fetch, [[lib/productApi]]), mock에는 표시 확인용 텍스트만 둔다.
- * 아코디언 본문도 상품/정책 데이터라, 지금은 일반 안내 문구를 placeholder로 둔다.
+ *
+ * 정보 아코디언(상품 상세정보·배송정보·교환/환불/반품 정보)은 비워 둔다. 본문 시안·명세·백엔드 필드가
+ * 모두 없어, 채우던 개발용 안내 문구('연동 후 제공됩니다')가 사용자에게 그대로 보였다(#218).
+ * 비어 있으면 화면이 섹션을 숨긴다. 문구가 정해지면 여기에 넣는다.
  */
 
 /**
@@ -32,25 +35,6 @@ const CKD_BRAND_LOGO = '/images/product-detail/2-4.webp';
 const GOLD_DETAIL_IMAGE = '/images/product-detail/2-1.webp';
 const CORE_MAX_DETAIL_IMAGE = '/images/product-detail/2-5.webp';
 
-/** 상품 상세정보/배송정보/교환·환불 아코디언 공통 placeholder. 규격 확정 시 서버 값으로 대체. */
-const SHARED_INFO_SECTIONS = [
-  {
-    id: 'detail',
-    title: '상품 상세정보',
-    body: '상품 상세정보는 상품·콘텐츠 데이터 연동 후 제공됩니다. 원산지·용량·성분 등 표기 정보가 이 영역에 표시됩니다.',
-  },
-  {
-    id: 'shipping',
-    title: '배송정보',
-    body: '뭉치가 성사되면 셀러가 일괄 발송합니다. 배송비·예상 도착일 등 상세 배송 정책은 연동 후 안내됩니다.',
-  },
-  {
-    id: 'return',
-    title: '교환/환불/반품 정보',
-    body: '교환·환불·반품 정책은 관련 법령과 셀러 정책에 따릅니다. 상세 조건은 연동 후 안내됩니다.',
-  },
-] as const;
-
 function hoursFromNow(hours: number): string {
   return new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
 }
@@ -65,14 +49,14 @@ const goldDetail: ProductDetail = {
   listPrice: 29900,
   thumbnailUrl: GOLD_DETAIL_IMAGE,
   description:
-    '대한민국 1등 유산균 락토핏 생유산균 골드입니다.\n건강한 장 건강을 위한 프로바이오틱스와 아연을 함께 담았습니다.\n하루 한 포, 간편하게 챙기는 유산균 습관을 시작해보세요.\n\n[주요 특징]\n· 프로바이오틱스 100억 CFU 보장\n· 아연 함유로 정상적인 면역기능에 도움\n· 장 건강과 면역 건강을 한 번에\n· 80포 대용량 구성으로 온 가족이 함께\n\n[섭취 방법]\n1일 1회, 1회 1포를 물과 함께 섭취하세요.\n\n[보관 방법]\n직사광선을 피해 서늘하고 건조한 곳에 보관하세요.\n\n※ 실제 상품설명은 백엔드 GET /api/product-catalog/{id}의 description에서 내려옵니다. 이 문구는 미로그인·미배선 시 보여줄 mock입니다.',
+    '대한민국 1등 유산균 락토핏 생유산균 골드입니다.\n건강한 장 건강을 위한 프로바이오틱스와 아연을 함께 담았습니다.\n하루 한 포, 간편하게 챙기는 유산균 습관을 시작해보세요.\n\n[주요 특징]\n· 프로바이오틱스 100억 CFU 보장\n· 아연 함유로 정상적인 면역기능에 도움\n· 장 건강과 면역 건강을 한 번에\n· 80포 대용량 구성으로 온 가족이 함께\n\n[섭취 방법]\n1일 1회, 1회 1포를 물과 함께 섭취하세요.\n\n[보관 방법]\n직사광선을 피해 서늘하고 건조한 곳에 보관하세요.',
   viewingCount: 504,
   similarThumbnails: [
     '/images/main-home/card-list-1/1-2.webp',
     '/images/main-home/card-list-1/1-4.webp',
   ],
   quickDeals: [],
-  infoSections: SHARED_INFO_SECTIONS,
+  infoSections: [],
 };
 
 /**
@@ -92,7 +76,7 @@ function createCoreMaxDetail(): ProductDetail {
     listPrice: 33900,
     thumbnailUrl: CORE_MAX_DETAIL_IMAGE,
     description:
-      '락토핏 생유산균 코어맥스, 더 강력해진 유산균 케어.\n장 건강이 걱정된다면 코어맥스로 시작하세요.\n\n[주요 특징]\n· 고함량 프로바이오틱스 배합\n· 아연 함유로 면역 건강까지\n· 장까지 살아서 도달하는 코팅 유산균\n· 80포 대용량 구성\n\n[섭취 방법]\n1일 1회, 1회 1포를 물과 함께 섭취하세요.\n\n[보관 방법]\n직사광선을 피해 서늘하고 건조한 곳에 보관하세요.\n\n※ 실제 상품설명은 백엔드 GET /api/product-catalog/{id}의 description에서 내려옵니다. 이 문구는 미로그인·미배선 시 보여줄 mock입니다.',
+      '락토핏 생유산균 코어맥스, 더 강력해진 유산균 케어.\n장 건강이 걱정된다면 코어맥스로 시작하세요.\n\n[주요 특징]\n· 고함량 프로바이오틱스 배합\n· 아연 함유로 면역 건강까지\n· 장까지 살아서 도달하는 코팅 유산균\n· 80포 대용량 구성\n\n[섭취 방법]\n1일 1회, 1회 1포를 물과 함께 섭취하세요.\n\n[보관 방법]\n직사광선을 피해 서늘하고 건조한 곳에 보관하세요.',
     viewingCount: 231,
     similarThumbnails: [
       '/images/main-home/card-list-1/1-1.webp',
@@ -121,7 +105,7 @@ function createCoreMaxDetail(): ProductDetail {
         sellerCount: 1,
       },
     ],
-    infoSections: SHARED_INFO_SECTIONS,
+    infoSections: [],
   };
 }
 
@@ -155,7 +139,7 @@ function createSearchCardDetail(card: ProductSearchResult): ProductDetail {
     spec: card.spec,
     thumbnailUrl: card.thumbnailUrl,
     quickDeals: [],
-    infoSections: SHARED_INFO_SECTIONS,
+    infoSections: [],
   };
 }
 

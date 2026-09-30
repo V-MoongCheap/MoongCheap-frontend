@@ -230,6 +230,7 @@ function toParticipationItem(dto: DemandItemDto): ParticipationItem | null {
     demandBoardId: dto.demandBoard?.id,
     productName: catalog.name,
     specSummary: catalog.specSummary ?? undefined,
+    thumbnailUrl: catalog.thumbnailUrl ?? undefined,
     quantity: dto.quantity ?? undefined,
     priceLabel: formatPriceLabel(dto, status),
     participantCount: dto.demandBoard?.participantCount,

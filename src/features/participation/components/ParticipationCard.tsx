@@ -1,8 +1,11 @@
 import type { ReactNode } from 'react';
 
+import Image from 'next/image';
+
 import { getParticipationStatusMeta } from '@/constants/participationStatus';
 import { ParticipationDeadline } from '@/features/participation/components/ParticipationDeadline';
 import { cn } from '@/lib/cn';
+import { isRenderableImageSrc } from '@/lib/imageSource';
 import type { ParticipationItem } from '@/types/participation';
 
 // B-17 내 뭉치 참여 카드 한 건. 시안 구성:
@@ -14,10 +17,10 @@ import type { ParticipationItem } from '@/types/participation';
 //  [상태별 액션 버튼(선택)]
 //
 // 상태별 하단 액션(대체상품 확인하기·참여 취소)은 호출부(client)가 action 슬롯으로 주입한다.
-// 카드 본문 탭 → 수요 상세(B-12)는 onOpenDetail로 받는다(라우트 부재 시 호출부가 토스트 처리).
+// 카드 본문 탭은 onOpenDetail로 받는다. 상태별 이동 경로(수요 상세·낙찰 결과·준비 중)는 호출부가 정한다.
 //
-// 상품 이미지는 아직 목 데이터에 원본이 없어 회색 placeholder로 둔다. 실제 썸네일 연동 시
-// 이 자리를 next/image로 교체한다.
+// 썸네일은 앱이 서빙하는 경로일 때만 그리고, 아니면 회색 자리를 둔다(외부 URL은 next/image가
+// 던진다 — lib/imageSource.ts). AwardResultView·SubstituteOfferView와 같은 방침이다(#229).
 
 interface ParticipationCardProps {
   item: ParticipationItem;
@@ -33,9 +36,16 @@ export function ParticipationCard({ item, onOpenDetail, action }: ParticipationC
   const body = (
     <>
       <div className="flex w-full gap-3">
-        {/* 썸네일(원본 미연동, 회색 placeholder) + 상태 배지 오버레이 */}
+        {/* 썸네일(없거나 그릴 수 없으면 회색 자리) + 상태 배지 오버레이 */}
         <div className="relative size-20 shrink-0">
-          <div aria-hidden className="bg-surface-secondary rounded-12 size-20" />
+          <div
+            aria-hidden
+            className="bg-surface-secondary rounded-12 relative size-20 overflow-hidden"
+          >
+            {isRenderableImageSrc(item.thumbnailUrl) && (
+              <Image alt="" className="object-cover" fill sizes="80px" src={item.thumbnailUrl} />
+            )}
+          </div>
           <span
             className={cn(
               'text-caption-10 rounded-round absolute top-1 left-1 px-1.5 py-0.5',

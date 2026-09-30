@@ -14,6 +14,11 @@
  * 용어표(낙찰 = award/winningBid)를 따른다.
  */
 export interface AwardResult {
+  /**
+   * 자동결제가 끝났는지(내 수요 `CLOSED`). true면 자동결제 안내·낙찰 취소 CTA 대신 결제 완료를
+   * 보인다(#205 — 결제 후에도 '자동결제돼요'·[낙찰 취소하기]가 남던 결함).
+   */
+  readonly isPaid: boolean;
   /** 상품명. 상품 카드 제목(볼드). */
   readonly productName: string;
   /** 상품 썸네일. `isRenderableImageSrc`를 통과할 때만 그린다. */

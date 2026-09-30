@@ -2,6 +2,7 @@
 
 import { PackageOpen } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ERROR_ACTION_CLASS, ErrorScreen } from '@/components/ui/ErrorScreen';
@@ -24,11 +25,20 @@ import { isRenderableImageSrc } from '@/lib/imageSource';
 // 예전에는 확인 다이얼로그 뒤 '낙찰을 취소했어요' 토스트를 띄웠지만 서버에선 아무것도 취소되지 않아
 // 거짓 안내였다. B-17 배정완료 카드의 [참여 취소](#185)와 같은 처리다. 취소 흐름은 BE 규격 확정 시.
 //
+// 자동결제가 끝나도(내 수요 CLOSED) 보드가 종료되기 전까지는 같은 응답이 온다. 그때는 자동결제 안내·
+// 취소 CTA 대신 결제 완료 안내와 [주문 내역 보기]를 그린다(#205).
+//
 // 값은 실데이터만 그린다. 응답에 없는 값은 줄을 숨기고, 조회 전에는 스켈레톤을 그린다(#187 —
 // 예전에는 mock을 먼저 그리고 응답으로 덮어, mock이 실데이터처럼 보였다).
 const HEADLINE = '낙찰 되었어요!';
 /** 자동결제 예정 시각이 응답에 없을 때의 안내 문구. */
 const SUBHEAD_FALLBACK = '48시간 후 등록된 결제수단으로 자동결제돼요.';
+/** 자동결제가 끝난 뒤(내 수요 CLOSED)의 안내 문구(#205). 잠정 카피. */
+const SUBHEAD_PAID = '등록된 결제수단으로 결제가 완료됐어요.';
+
+/** 하단 CTA 공통 클래스. 코랄 필 primary 버튼(공통 primary 버튼 컴포넌트 확정 시 교체). */
+const CTA_CLASS =
+  'bg-surface-button-primary-default text-content-oncolor text-button-15 active:bg-surface-button-primary-pressed focus-visible:ring-effect-focus-ring-primary rounded-16 flex h-13 w-full items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-offset-2';
 
 /** 낙찰 결과가 없을 때(없는 보드·아직 낙찰 전·내 수요 없음) 백엔드가 주는 상태 코드. */
 const NOT_FOUND_STATUS = 404;
@@ -84,9 +94,11 @@ interface AwardResultViewProps {
   demandBoardId: string;
   /** 결과가 없을 때 돌아갈 목록(B-17) 경로. 라우트 문자열은 페이지가 주입한다. */
   listHref: string;
+  /** 결제 완료 뒤 CTA가 보내는 주문 내역 경로. 라우트 문자열은 페이지가 주입한다. */
+  ordersHref: string;
 }
 
-export function AwardResultView({ demandBoardId, listHref }: AwardResultViewProps) {
+export function AwardResultView({ demandBoardId, listHref, ordersHref }: AwardResultViewProps) {
   const { showComingSoon } = useToast();
   const router = useProgressRouter();
 
@@ -132,8 +144,10 @@ export function AwardResultView({ demandBoardId, listHref }: AwardResultViewProp
     );
   }
 
-  const subhead =
-    result.paymentDeadlineLabel === undefined
+  // 결제가 끝났으면 예정 시각 안내 대신 완료 안내를 보인다(#205).
+  const subhead = result.isPaid
+    ? SUBHEAD_PAID
+    : result.paymentDeadlineLabel === undefined
       ? SUBHEAD_FALLBACK
       : `${result.paymentDeadlineLabel}에 등록된 결제수단으로 자동결제돼요.`;
 
@@ -214,7 +228,9 @@ export function AwardResultView({ demandBoardId, listHref }: AwardResultViewProp
               </div>
             )}
             <div className="flex items-center justify-between gap-3">
-              <span className="text-heading-18 text-content-primary">결제 예정 금액</span>
+              <span className="text-heading-18 text-content-primary">
+                {result.isPaid ? '결제 금액' : '결제 예정 금액'}
+              </span>
               <span className="text-heading-18 text-content-brand">
                 {formatWon(result.expectedPaymentPrice)}
               </span>
@@ -223,16 +239,18 @@ export function AwardResultView({ demandBoardId, listHref }: AwardResultViewProp
         )}
       </div>
 
-      {/* 하단 CTA. 코랄 필 primary 버튼. 공통 primary 버튼 컴포넌트 규약 확정 시 그것으로 교체한다.
-          전체폭 CTA 타이포·높이는 디자인 컨벤션(§10)의 text-button-15 · h-13(52) 표준을 따른다. */}
+      {/* 하단 CTA. 전체폭 CTA 타이포·높이는 디자인 컨벤션(§10)의 text-button-15 · h-13(52) 표준을 따른다.
+          자동결제 전에만 낙찰 취소가 가능하므로, 결제가 끝났으면 주문 내역으로 안내한다(#205). */}
       <div className="px-4 pt-6 pb-6">
-        <button
-          type="button"
-          onClick={showComingSoon}
-          className="bg-surface-button-primary-default text-content-oncolor text-button-15 active:bg-surface-button-primary-pressed focus-visible:ring-effect-focus-ring-primary rounded-16 flex h-13 w-full items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-        >
-          뭉치 낙찰 취소하기
-        </button>
+        {result.isPaid ? (
+          <Link className={CTA_CLASS} href={ordersHref}>
+            주문 내역 보기
+          </Link>
+        ) : (
+          <button className={CTA_CLASS} onClick={showComingSoon} type="button">
+            뭉치 낙찰 취소하기
+          </button>
+        )}
       </div>
     </div>
   );

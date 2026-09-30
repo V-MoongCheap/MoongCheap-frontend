@@ -8,6 +8,7 @@ export const metadata: Metadata = {
 };
 
 const LIST_HREF = '/waiting';
+const ORDERS_HREF = '/orders';
 
 // B-19 낙찰 성공 정보. 내 뭉치 참여 목록(B-17) 카드 → 낙찰 결과 확인으로 이어지는 화면.
 //
@@ -29,7 +30,11 @@ export default async function AwardResultPage({
   return (
     <main className="max-w-mobile bg-background-default mx-auto flex min-h-svh w-full flex-col">
       <AppBar backHref={LIST_HREF} title="낙찰 결과" />
-      <AwardResultView demandBoardId={demandBoardId} listHref={LIST_HREF} />
+      <AwardResultView
+        demandBoardId={demandBoardId}
+        listHref={LIST_HREF}
+        ordersHref={ORDERS_HREF}
+      />
     </main>
   );
 }

@@ -25,20 +25,26 @@ import {
 const SAFETY_TIMEOUT_MS = 10_000;
 /** 끝까지 찬 바가 사라지는 연출 시간. `animations.css`의 done 전환 시간과 맞춘다. */
 const FADE_OUT_MS = 500;
-/** 시간 초과로 끝낸 상태. 주소 키는 항상 '/'로 시작하므로 겹치지 않는다. */
-const TIMED_OUT = 'timed-out';
 
-type Phase = 'idle' | 'loading' | 'done';
+/**
+ * 진행 바 상태. `loading`은 출발한 화면의 주소를 들고 있고, 주소가 바뀌면 `done`으로 한 방향으로만
+ * 넘어간다. 주소를 매 렌더 비교해 단계를 계산하면, 도착 직후 0.5초 안에 뒤로가기로 출발 화면에
+ * 돌아왔을 때 다시 `loading`이 되어 바가 최대 10초 떠 있었다(PR #226 리뷰).
+ */
+type Progress = { phase: 'idle' } | { phase: 'loading'; from: string } | { phase: 'done' };
 
 export function NavigationProgress() {
   const pathname = usePathname();
   const search = useSearchParams().toString();
   const location = toLocationKey(pathname, search);
 
-  // 이동을 시작한 화면의 주소. 지금 주소와 같으면 아직 기다리는 중이고, 달라졌으면 도착한 것이다.
-  const [startedFrom, setStartedFrom] = useState<string | null>(null);
-  const phase: Phase =
-    startedFrom === null ? 'idle' : startedFrom === location ? 'loading' : 'done';
+  const [progress, setProgress] = useState<Progress>({ phase: 'idle' });
+
+  // 출발한 화면에서 주소가 바뀌면 도착이다. effect를 거치지 않고 렌더 중에 넘긴다(이전 렌더 값으로
+  // 상태를 고치는 React 권장 방식). 조건이 `loading`일 때만 참이라 한 번만 실행된다.
+  if (progress.phase === 'loading' && progress.from !== location) {
+    setProgress({ phase: 'done' });
+  }
 
   // 시작 신호는 이벤트 콜백에서 오므로 렌더 시점의 주소를 ref로 넘겨 둔다.
   const locationRef = useRef(location);
@@ -47,7 +53,9 @@ export function NavigationProgress() {
   }, [location]);
 
   useEffect(() => {
-    const unsubscribe = onNavigationStart(() => setStartedFrom(locationRef.current));
+    const unsubscribe = onNavigationStart(() =>
+      setProgress({ phase: 'loading', from: locationRef.current }),
+    );
 
     function handleClick(event: MouseEvent) {
       if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
@@ -70,21 +78,26 @@ export function NavigationProgress() {
     };
   }, []);
 
+  // 단계가 바뀔 때만 타이머를 다시 건다. `done`이 된 뒤에는 주소가 어디로 가든 타이머가 이어져
+  // 0.5초 뒤 사라진다. 그 사이 새 이동이 시작되면(`loading`) 정리 함수가 사라지기 타이머를 지운다.
   useEffect(() => {
-    if (phase === 'loading') {
-      const timer = window.setTimeout(() => setStartedFrom(TIMED_OUT), SAFETY_TIMEOUT_MS);
+    if (progress.phase === 'loading') {
+      const timer = window.setTimeout(() => setProgress({ phase: 'done' }), SAFETY_TIMEOUT_MS);
       return () => window.clearTimeout(timer);
     }
-    if (phase === 'done') {
-      const timer = window.setTimeout(() => setStartedFrom(null), FADE_OUT_MS);
+    if (progress.phase === 'done') {
+      const timer = window.setTimeout(() => setProgress({ phase: 'idle' }), FADE_OUT_MS);
       return () => window.clearTimeout(timer);
     }
     return undefined;
-  }, [phase]);
+  }, [progress.phase]);
 
   return (
     <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-60 h-[3px]">
-      <div className="nav-progress-fill bg-surface-brand h-full w-full" data-phase={phase} />
+      <div
+        className="nav-progress-fill bg-surface-brand h-full w-full"
+        data-phase={progress.phase}
+      />
     </div>
   );
 }

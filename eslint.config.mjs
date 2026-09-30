@@ -63,6 +63,7 @@ const eslintConfig = defineConfig([
       'tailwind.config.ts',
       'eslint.config.mjs',
       'commitlint.config.mjs',
+      'vitest.config.mts',
     ],
     rules: {
       'import/no-default-export': 'off',

@@ -22,15 +22,17 @@ export default async function DemandBoardDetailPage({
   const base = `/demand-boards/${encodeURIComponent(demandBoardId)}`;
 
   return (
-    <DemandBoardDetailView
-      // 공유·직접 진입이면 뒤로 갈 곳이 없어 홈을 준다(명세 '홈 복귀').
-      backHref="/"
-      demandBoardId={demandBoardId}
-      // [함께 신청하기] → 퀵 참여. 일정 타임라인은 상세에서 이미 보여 줘 안내 화면을 거치지 않는다(#188).
-      joinHref={`${base}/join`}
-      notFoundHref="/"
-      participationListHref="/waiting"
-      productHrefBase="/products"
-    />
+    <main className="flex w-full flex-1 flex-col">
+      <DemandBoardDetailView
+        // 공유·직접 진입이면 뒤로 갈 곳이 없어 홈을 준다(명세 '홈 복귀').
+        backHref="/"
+        demandBoardId={demandBoardId}
+        // [함께 신청하기] → 퀵 참여. 일정 타임라인은 상세에서 이미 보여 줘 안내 화면을 거치지 않는다(#188).
+        joinHref={`${base}/join`}
+        notFoundHref="/"
+        participationListHref="/waiting"
+        productHrefBase="/products"
+      />
+    </main>
   );
 }

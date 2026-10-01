@@ -167,7 +167,7 @@ export function SearchResultsView({ query, productHrefBase }: SearchResultsViewP
       ) : (
         // 시안: 좌우 여백 16, 카드 사이 20.
         <ul className="flex w-full flex-col gap-5 p-4">
-          {visible.map((product) => (
+          {visible.map((product, index) => (
             <SearchResultCard
               demandLoadState={
                 demand.pendingIds.has(product.id)
@@ -177,6 +177,7 @@ export function SearchResultsView({ query, productHrefBase }: SearchResultsViewP
                     : undefined
               }
               href={`${productHrefBase}/${encodeURIComponent(product.id)}`}
+              isAboveFold={index === 0}
               key={product.id}
               product={product}
             />

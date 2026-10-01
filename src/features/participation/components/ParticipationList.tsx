@@ -39,6 +39,11 @@ import type { ParticipationItem } from '@/types/participation';
 //    재사용한다.
 
 /**
+ * 첫 화면(393×852)에 보이는 카드 수. 이 카드들의 썸네일은 지연 로드하지 않는다(LCP 후보라서).
+ */
+const ABOVE_FOLD_CARD_COUNT = 3;
+
+/**
  * 마감 임박순 정렬 키. 아직 안 끝난 것(마감 가까운 순) → 이미 마감된 것(최근 마감 순) → 마감 없음.
  * 마감이 지난 카드가 임박 카드보다 위에 오면 '임박순'으로 읽히지 않아 뒤로 보낸다.
  */
@@ -196,7 +201,7 @@ export function ParticipationList({
     content = (
       <div className="flex w-full flex-col">
         <ul className="flex w-full flex-col gap-3 px-4 pt-4 pb-2">
-          {sortedItems.map((item) => (
+          {sortedItems.map((item, index) => (
             <li key={item.id}>
               <ParticipationCard
                 action={renderAction(item, inFilteredTab, {
@@ -205,6 +210,7 @@ export function ParticipationList({
                   onSubstitute: () => router.push(ROUTES.substitute(item.id)),
                   onCancel: showComingSoon,
                 })}
+                isAboveFold={index < ABOVE_FOLD_CARD_COUNT}
                 item={item}
                 onOpenDetail={() => openDetail(item)}
               />

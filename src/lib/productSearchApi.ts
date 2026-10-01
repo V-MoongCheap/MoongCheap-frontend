@@ -45,6 +45,16 @@ export interface ProductSearchResponseDto {
   page: number;
 }
 
+/** 상품 검색 경로. 조회와 HTML preload(`lib/apiPreload`)가 같은 주소를 쓰도록 한 곳에서 만든다. */
+export function productSearchPath(query: string, page = 0, size: number = LIST_PAGE_SIZE): string {
+  const params = new URLSearchParams({
+    q: query,
+    page: String(page),
+    size: String(size),
+  });
+  return `/api/products-search/search?${params.toString()}`;
+}
+
 /**
  * 상품 검색. `GET /api/products-search/search?q=&page=&size=`.
  *
@@ -56,11 +66,6 @@ export async function searchProducts(
   page = 0,
   size: number = LIST_PAGE_SIZE,
 ): Promise<ProductSearchResponseDto> {
-  const params = new URLSearchParams({
-    q: query,
-    page: String(page),
-    size: String(size),
-  });
-  const response = await apiFetch(`/api/products-search/search?${params.toString()}`);
+  const response = await apiFetch(productSearchPath(query, page, size));
   return (await response.json()) as ProductSearchResponseDto;
 }

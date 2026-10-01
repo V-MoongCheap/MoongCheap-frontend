@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 
 import { ProductDetailView } from '@/features/product/components/ProductDetailView';
+import { preloadApiGet } from '@/lib/apiPreload';
+import { productCatalogDetailPath, toCatalogId } from '@/lib/productApi';
 import { mockGetProductDetail } from '@/mocks/product';
 
 export const metadata: Metadata = {
@@ -21,6 +23,10 @@ export default async function ProductDetailPage({
 }) {
   const { productId } = await params;
   const product = await mockGetProductDetail(productId);
+  // 도감 실데이터 조회를 HTML 단계로 앞당긴다. LCP인 상품 이미지가 이 응답 뒤에야 그려진다(`lib/apiPreload`).
+  if (toCatalogId(productId) !== null) {
+    preloadApiGet(productCatalogDetailPath(productId));
+  }
 
   // key로 상품이 바뀔 때 뷰를 리마운트한다. ProductDetailView가 초기 prop을 state로 복사하고
   // 실데이터를 그 위에 덮는 구조라, 리마운트 없이 상세→상세로 이동하면 이전 상품 state가 남는다.
@@ -28,16 +34,18 @@ export default async function ProductDetailPage({
   // CTA '뭉치 참여하기'는 수요 등록(B-09) 앞에 일정 타임라인을 거친다(FN-B09-05, BR-B09-05-01,
   // TC-B08-01-04). 두 화면 모두 상품 하나에서 출발하므로 경로가 이 상품 아래에 있다.
   return (
-    <ProductDetailView
-      key={productId}
-      // 없는 상품(404)은 공유·직접 진입이 많아 뒤로 갈 곳이 없을 수 있다. 홈을 출구로 준다.
-      notFoundHref="/"
-      participateHref={`/products/${encodeURIComponent(productId)}/timeline`}
-      // 이 상품에 이미 진행 중 수요가 있으면 CTA가 내 대기(B-17)로 보낸다(#191·#192).
-      participationListHref="/waiting"
-      product={product}
-      // 퀵 참여 카드 → 수요 상세(B-12). 카드 id는 수요보드 id다.
-      quickDealHrefBase="/demand-boards"
-    />
+    <main className="flex w-full flex-1 flex-col">
+      <ProductDetailView
+        key={productId}
+        // 없는 상품(404)은 공유·직접 진입이 많아 뒤로 갈 곳이 없을 수 있다. 홈을 출구로 준다.
+        notFoundHref="/"
+        participateHref={`/products/${encodeURIComponent(productId)}/timeline`}
+        // 이 상품에 이미 진행 중 수요가 있으면 CTA가 내 대기(B-17)로 보낸다(#191·#192).
+        participationListHref="/waiting"
+        product={product}
+        // 퀵 참여 카드 → 수요 상세(B-12). 카드 id는 수요보드 id다.
+        quickDealHrefBase="/demand-boards"
+      />
+    </main>
   );
 }

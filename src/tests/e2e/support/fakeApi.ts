@@ -19,7 +19,13 @@ import type { PaymentMethodResponseDto } from '@/types/api/payment';
  */
 export const E2E_API_BASE_URL = 'http://api.e2e.test';
 
-const APP_ORIGIN = 'http://localhost:3100';
+/**
+ * 테스트용 앱 서버 포트. `playwright.config.ts`도 이 값을 쓴다. 두 곳에 따로 적으면 포트만 바뀌었을 때
+ * 아래 CORS 허용 주소가 어긋나, 브라우저가 응답을 막아 모든 요청이 '네트워크 오류'로 보인다.
+ */
+export const E2E_APP_PORT = 3100;
+
+const APP_ORIGIN = `http://localhost:${E2E_APP_PORT}`;
 
 export interface FakeMember {
   loginId: string;
@@ -147,6 +153,23 @@ export class FakeBackend {
       };
     }
 
+    /* ── 수요보드 목록(상품 상세 퀵참여 카드) ── */
+    const boardsMatch = /^\/api\/demand-boards\/catalog\/(\d+)$/.exec(path);
+    if (method === 'GET' && boardsMatch !== null) {
+      const boards = s.catalogBoards[Number(boardsMatch[1])] ?? [];
+      return {
+        status: 200,
+        body: { demandBoards: boards, size: boards.length, hasNext: false, page: 0 },
+      };
+    }
+
+    /* ── 이하 로그인 필요 ── */
+    // 검색·도감도 여기 아래다. 실제 백엔드가 둘 다 세션을 요구한다(`lib/productSearchApi.ts`의
+    // permitAll 주석, 비로그인 상품 상세에서 `/api/product-catalog/{id}` 401 실측).
+    if (path.startsWith('/api/') && !s.loggedIn) {
+      return unauthorized;
+    }
+
     /* ── 상품 검색·도감 ── */
     if (method === 'GET' && path === '/api/products-search/search') {
       const q = (url.searchParams.get('q') ?? '').trim();
@@ -168,19 +191,6 @@ export class FakeBackend {
       return catalog === undefined
         ? apiError(404, 'PRODUCT_001', '상품을 찾을 수 없습니다.')
         : { status: 200, body: catalog };
-    }
-    const boardsMatch = /^\/api\/demand-boards\/catalog\/(\d+)$/.exec(path);
-    if (method === 'GET' && boardsMatch !== null) {
-      const boards = s.catalogBoards[Number(boardsMatch[1])] ?? [];
-      return {
-        status: 200,
-        body: { demandBoards: boards, size: boards.length, hasNext: false, page: 0 },
-      };
-    }
-
-    /* ── 이하 로그인 필요 ── */
-    if (path.startsWith('/api/') && !s.loggedIn) {
-      return unauthorized;
     }
 
     /* ── 배송지 ── */

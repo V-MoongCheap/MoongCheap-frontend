@@ -7,6 +7,8 @@
 수요 집결형 역경매 공동구매 플랫폼 프론트엔드<br />
 kt cloud TECH UP 2기 통합 프로젝트 2팀 · 브이
 
+**테스트 서버** · <a href="https://moongcheap.shop">moongcheap.shop</a>
+
 <p>
   <a href="https://github.com/V-MoongCheap/MoongCheap-frontend/actions/workflows/ci.yml"><img src="https://github.com/V-MoongCheap/MoongCheap-frontend/actions/workflows/ci.yml/badge.svg?branch=develop" alt="CI" /></a>
   <a href="https://github.com/V-MoongCheap/MoongCheap-frontend/actions/workflows/security.yml"><img src="https://github.com/V-MoongCheap/MoongCheap-frontend/actions/workflows/security.yml/badge.svg?branch=develop" alt="Security" /></a>
@@ -18,6 +20,8 @@ kt cloud TECH UP 2기 통합 프로젝트 2팀 · 브이
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Tailwind_CSS_v4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS v4" />
   <img src="https://img.shields.io/badge/TanStack_Query_v5-FF4154?style=flat-square&logo=reactquery&logoColor=white" alt="TanStack Query v5" />
+  <img src="https://img.shields.io/badge/Vitest-6E9F18?style=flat-square&logo=vitest&logoColor=white" alt="Vitest" />
+  <img src="https://img.shields.io/badge/Playwright-2EAD33?style=flat-square&logo=playwright&logoColor=white" alt="Playwright" />
   <img src="https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker" />
   <img src="https://img.shields.io/badge/Node_20-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 20" />
 </p>
@@ -80,25 +84,25 @@ kt cloud TECH UP 2기 통합 프로젝트 2팀 · 브이
 
 ## 진행 상황
 
-MVP 화면 퍼블리싱을 마치고 실 API 연동을 진행 중입니다. 백엔드 규격이 나온 영역부터 연동했고, 규격이 없는 화면은 `src/mocks/`의 목 데이터로 동작합니다.
+MVP 화면 퍼블리싱과 핵심 거래 흐름(수요 등록 -> 참여 -> 낙찰 -> 주문)의 실 API 연동을 마치고 QA 대응 중입니다. 백엔드 규격이 없는 화면은 `src/mocks/`의 목 데이터로 동작합니다.
 
-| 영역           | 상태                                                                     |
-| -------------- | ------------------------------------------------------------------------ |
-| 프로젝트 세팅  | 완료 · 툴링 · CI · 컨벤션 · 이슈/PR 템플릿                               |
-| 디자인 토큰    | 완료 · 생성 파이프라인 · 다크 모드 · 반응형 기준폭                       |
-| 공통 레이어    | 완료 · 상태 레지스트리 · 화면 카탈로그 · 비즈니스 상수 · 공용 UI 18종    |
-| 인증           | **연동 완료** · 소셜 로그인 · 세션 · 닉네임 변경 · 회원탈퇴              |
-| 홈피드         | 퍼블리싱 완료 · 카드 5종 · 배너 캐러셀 · 마감 타이머                     |
-| 상품 도감 검색 | **연동 완료** · 검색 · 최근 검색어 · 필터 탭                             |
-| 상품 상세      | 퍼블리싱 완료 · 상품 도감 상세 **연동 완료**                             |
-| 수요 등록·참여 | 퍼블리싱 완료 · 수요 등록 **연동 완료** · 참여 목록 연동은 리뷰 중       |
-| 낙찰 결과      | 퍼블리싱 완료 · 백엔드 응답에 없는 항목이 있어 연동 보류                 |
-| 마이페이지     | 완료 · 허브 · 프로필 · 알림 설정 · 배송지(**연동 완료**)                 |
-| 주문           | **연동 완료** · 주문 내역 · 주문 상세                                    |
-| 결제           | 대기 · 백엔드에 결제 엔드포인트 없음. 결제수단 등록 화면은 퍼블리싱 완료 |
-| 판매자 전환    | 퍼블리싱 완료 · 사업자번호 검증 API 없음                                 |
-| 배포           | 완료 · `output: 'standalone'` 기반 컨테이너 이미지                       |
-| 반응형         | 토큰 기반 완료 · 화면별 3폭 적용은 후속                                  |
+| 영역           | 상태                                                                                                           |
+| -------------- | -------------------------------------------------------------------------------------------------------------- |
+| 프로젝트 세팅  | 완료 · 툴링 · CI · 컨벤션 · 이슈/PR 템플릿 · 단위 테스트(Vitest) · E2E(Playwright)                             |
+| 디자인 토큰    | 완료 · 생성 파이프라인 · 다크 모드 · 반응형 기준폭                                                             |
+| 공통 레이어    | 완료 · 상태 레지스트리 · 화면 카탈로그 · 비즈니스 상수 · 공용 UI 19종                                          |
+| 인증           | **연동 완료** · 소셜 로그인 · 아이디 로그인 · 세션 · 닉네임 변경 · 회원탈퇴. 회원가입은 준비 중(목)            |
+| 홈피드         | 퍼블리싱 완료 · 카드 5종 · 배너 캐러셀 · 마감 타이머. 홈 API가 없어 목 데이터                                  |
+| 상품 도감 검색 | **연동 완료** · 검색 · 최근 검색어 · 필터 탭 · 검색어 지우기                                                   |
+| 상품 상세      | **연동 완료** · 상품 도감 상세 · 퀵 참여 목록 · 내 참여 상태별 CTA                                             |
+| 수요 등록·참여 | **연동 완료** · 수요 등록 · 수요 상세 · 퀵 참여 · 내 참여 목록 · 대체상품 수락/거절                            |
+| 낙찰 결과      | **연동 완료** · 낙찰 정보 · 결제 완료 표시. 낙찰 취소는 준비 중                                                |
+| 마이페이지     | 완료 · 허브 주문 요약·배송지 **연동 완료** · 프로필 · 알림 설정(목) · 찜 목록은 준비 중                        |
+| 주문           | **연동 완료** · 주문 내역 · 주문 상세                                                                          |
+| 결제           | 결제수단 목록 조회·기본 결제수단 지정 **연동 완료**. 결제는 낙찰 후 백엔드 자동결제. 결제수단 등록은 범위 제외 |
+| 판매자 전환    | 퍼블리싱 완료 · 사업자번호 검증 API 없음(목)                                                                   |
+| 배포           | 완료 · Jenkins -> ECR -> GitOps · `output: 'standalone'` 컨테이너 이미지                                       |
+| 반응형         | 토큰 기반 완료 · 화면별 3폭 적용은 후속                                                                        |
 
 연동하지 않은 화면과 그 이유는 [`docs/deferred-setup.md`](./docs/deferred-setup.md)에 있습니다.
 
@@ -114,14 +118,20 @@ cp .env.local.example .env.local
 npm run dev           # http://localhost:3000
 ```
 
-| 스크립트               | 하는 일                         |
-| ---------------------- | ------------------------------- |
-| `npm run dev`          | 개발 서버 (Turbopack)           |
-| `npm run build`        | 프로덕션 빌드                   |
-| `npm run lint`         | ESLint (`-- --fix`로 자동 수정) |
-| `npm run typecheck`    | `tsc --noEmit`                  |
-| `npm run format`       | Prettier 적용                   |
-| `npm run format:check` | Prettier 검사 (CI용)            |
+| 스크립트               | 하는 일                                      |
+| ---------------------- | -------------------------------------------- |
+| `npm run dev`          | 개발 서버 (Turbopack)                        |
+| `npm run build`        | 프로덕션 빌드                                |
+| `npm run start`        | 빌드 결과물 실행                             |
+| `npm run test`         | Vitest 단위 테스트 1회 실행                  |
+| `npm run test:watch`   | Vitest 감시 모드                             |
+| `npm run test:e2e`     | Playwright E2E (프로덕션 빌드 + 가짜 백엔드) |
+| `npm run lint`         | ESLint (`-- --fix`로 자동 수정)              |
+| `npm run typecheck`    | `tsc --noEmit`                               |
+| `npm run format`       | Prettier 적용                                |
+| `npm run format:check` | Prettier 검사 (CI용)                         |
+
+E2E는 브라우저를 내려받지 않고 로컬에 설치된 Chrome을 씁니다. 실제 백엔드 없이 `src/tests/e2e/support/fakeApi.ts`가 API 응답을 대신하며, CI에서는 돌지 않습니다.
 
 ### 환경변수
 
@@ -148,20 +158,22 @@ docker run --rm -p 3000:3000 moongcheap-frontend
 
 실제로 설치된 것만 적었습니다. 도입을 미룬 것과 그 이유는 [`docs/deferred-setup.md`](./docs/deferred-setup.md)에 있습니다.
 
-| 분류       | 사용 기술                                         | 고른 이유                                                                                       |
-| ---------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| 프레임워크 | Next.js 16 (App Router, Turbopack)                | 수요 -> 응찰 -> 공동구매 -> 주문으로 이어지는 화면 흐름을 라우트 구조로 그대로 표현             |
-| UI         | React 19                                          | 상품 카드·응찰 목록처럼 반복되는 UI의 재사용                                                    |
-| 언어       | TypeScript (`strict`, `any` 금지)                 | 외부 백엔드 응답을 다룰 때 생기는 null 처리 누락을 컴파일 타임에 차단                           |
-| 스타일     | Tailwind CSS v4 + `clsx` + `tailwind-merge`       | CSS-first 설정이라 디자인 토큰을 CSS 변수로 그대로 주입할 수 있음                               |
-| 서버 상태  | TanStack Query v5                                 | 세션·주문·배송지가 같은 캐시를 공유해 중복 요청을 없애고, 로그아웃 시 캐시를 한 번에 비움       |
-| 아이콘     | `lucide-react`                                    | 시안 글리프와 맞는 아이콘은 에셋 대신 대체해 번들·만료 URL 문제를 피함                          |
-| 폼·검증    | `react-hook-form` + `zod` + `@hookform/resolvers` | 비제어 입력이라 리렌더가 적고, 검증 규칙을 스키마 한 곳에 모아 서버 규칙 확정 시 그 파일만 교체 |
-| 품질       | ESLint · Prettier · `import/order`                | 2인 협업에서 스타일 편차와 diff 노이즈 제거                                                     |
-| Git 훅     | husky · lint-staged · commitlint                  | 커밋 시점에 lint·typecheck·메시지 규칙을 검사해 CI 실패를 로컬에서 차단                         |
-| CI         | GitHub Actions                                    | PR마다 lint · typecheck · format 검사, 주간 의존성 취약점 감사                                  |
-| 배포       | Docker (`output: 'standalone'`)                   | 런타임에 필요한 파일만 담아 이미지를 줄이고 비루트 사용자로 실행                                |
-| 협업       | GitHub · Notion · Figma · Discord                 | 코드 · 문서 · 디자인 · 소통 분리                                                                |
+| 분류       | 사용 기술                                         | 고른 이유                                                                                                       |
+| ---------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 프레임워크 | Next.js 16 (App Router, Turbopack)                | 수요 -> 응찰 -> 공동구매 -> 주문으로 이어지는 화면 흐름을 라우트 구조로 그대로 표현                             |
+| UI         | React 19                                          | 상품 카드·응찰 목록처럼 반복되는 UI의 재사용                                                                    |
+| 언어       | TypeScript (`strict`, `any` 금지)                 | 외부 백엔드 응답을 다룰 때 생기는 null 처리 누락을 컴파일 타임에 차단                                           |
+| 스타일     | Tailwind CSS v4 + `clsx` + `tailwind-merge`       | CSS-first 설정이라 디자인 토큰을 CSS 변수로 그대로 주입할 수 있음                                               |
+| 서버 상태  | TanStack Query v5                                 | 세션·주문·배송지가 같은 캐시를 공유해 중복 요청을 없애고, 로그아웃 시 캐시를 한 번에 비움                       |
+| 아이콘     | `lucide-react`                                    | 시안 글리프와 맞는 아이콘은 에셋 대신 대체해 번들·만료 URL 문제를 피함                                          |
+| 폼·검증    | `react-hook-form` + `zod` + `@hookform/resolvers` | 비제어 입력이라 리렌더가 적고, 검증 규칙을 스키마 한 곳에 모아 서버 규칙 확정 시 그 파일만 교체                 |
+| 품질       | ESLint · Prettier · `import/order`                | 2인 협업에서 스타일 편차와 diff 노이즈 제거                                                                     |
+| 테스트     | Vitest                                            | 응답 변환·상태 전이·폼 스키마 같은 순수 로직을 node 환경에서 빠르게 검증                                        |
+| E2E        | Playwright · `@axe-core/playwright`               | 가짜 백엔드로 핵심 흐름(탐색·수요 등록·로그인/배송지)을 모바일 뷰포트에서 검증하고 접근성(WCAG 2.1 AA)까지 확인 |
+| Git 훅     | husky · lint-staged · commitlint                  | 커밋 시점에 lint·typecheck·메시지 규칙을 검사해 CI 실패를 로컬에서 차단                                         |
+| CI         | GitHub Actions                                    | PR마다 lint · typecheck · format · test · build 검사, 주간 의존성 취약점 감사                                   |
+| 배포       | Jenkins · Docker (`output: 'standalone'`) · ECR   | 의존성·시크릿·이미지 스캔 후 ECR에 푸시하고 GitOps 저장소의 이미지 태그를 갱신                                  |
+| 협업       | GitHub · Notion · Figma · Discord                 | 코드 · 문서 · 디자인 · 소통 분리                                                                                |
 
 각 설정의 상세 근거와 커스텀 룰 설명은 [`docs/setup-decisions.md`](./docs/setup-decisions.md)에 있습니다.
 
@@ -182,7 +194,6 @@ docker run --rm -p 3000:3000 moongcheap-frontend
 | 항목                 | 상태                                                   |
 | -------------------- | ------------------------------------------------------ |
 | 전역 클라이언트 상태 | 미도입. 서버 상태는 Query 캐시로 충분해 Zustand를 보류 |
-| 테스트 러너          | 미정                                                   |
 | PWA                  | 미정                                                   |
 
 ---
@@ -214,17 +225,21 @@ MoongCheap-frontend
 │   ├── raw/                  # 디자인팀이 전달한 Figma Variables JSON (원본)
 │   └── build-tokens.mjs      # raw -> src/app/globals.css 생성기
 ├── docs/                     # 컨벤션·설정 근거·보안 요건
+├── scripts/                  # 이미지 에셋 최적화(optimize-images.mjs)
 ├── Dockerfile                # standalone 기반 컨테이너 이미지
+├── Jenkinsfile               # 빌드·스캔·ECR 푸시·GitOps 이미지 태그 갱신
+├── vitest.config.mts         # 단위 테스트 설정
+├── playwright.config.ts      # E2E 설정 (빌드 서버 + 가짜 API 주소)
 └── src/
     ├── app/                  # App Router. 페이지는 조립만 한다
-    │   ├── (auth)/           #   로그인·회원가입·소셜 콜백
-    │   ├── (main)/           #   홈피드·내 참여 목록(탭 셸)
+    │   ├── (auth)/           #   로그인·회원가입·소셜 콜백·소셜 가입 완료
+    │   ├── (main)/           #   탭 셸: 홈피드·도감 검색(search)·내 대기(waiting)
     │   ├── award-result/     #   낙찰 결과
-    │   ├── demands/          #   수요 상세
-    │   ├── mypage/           #   마이페이지·프로필·알림·배송지·결제수단
+    │   ├── demand-boards/    #   수요 상세·퀵 참여(join)
+    │   ├── mypage/           #   허브·프로필·알림·배송지·결제수단·찜·판매자 전환
     │   ├── orders/           #   주문 내역·상세
-    │   ├── products/         #   상품 상세·수요 등록
-    │   └── search/           #   상품 도감 검색·결과
+    │   ├── products/         #   상품 상세·일정 타임라인·수요 등록
+    │   └── splash/           #   스플래시
     ├── components/
     │   ├── layout/           # 셸 요소 (AppBar, BottomNav …)
     │   └── ui/               # 도메인을 모르는 프리미티브 (Button, Toast, Skeleton …)
@@ -235,7 +250,7 @@ MoongCheap-frontend
     ├── mocks/                # API 미연동 구간용 목 데이터
     ├── schemas/              # zod 폼 스키마
     ├── types/                # 화면이 요구하는 타입
-    └── tests/                # 테스트 설정 (러너 미정)
+    └── tests/                # 단위 테스트(*.test.ts, src 구조를 따름) · E2E(e2e/*.spec.ts)
 ```
 
 </details>
@@ -303,12 +318,13 @@ npm run format
 
 ### 자동 검사
 
-| 시점   | 검사                                                                   |
-| ------ | ---------------------------------------------------------------------- |
-| commit | commitlint(메시지) · lint-staged · 전체 typecheck                      |
-| PR     | GitHub Actions - lint · typecheck · format:check                       |
-| PR     | CodeRabbit 자동 리뷰 - 설정은 [`.coderabbit.yaml`](./.coderabbit.yaml) |
-| 주간   | 의존성 취약점 감사 (`security.yml`)                                    |
+| 시점   | 검사                                                                                |
+| ------ | ----------------------------------------------------------------------------------- |
+| commit | commitlint(메시지) · lint-staged · 전체 typecheck                                   |
+| PR     | GitHub Actions - lint · typecheck · format:check · test · build                     |
+| PR     | CodeRabbit 자동 리뷰 - 설정은 [`.coderabbit.yaml`](./.coderabbit.yaml)              |
+| 주간   | 의존성 취약점 감사 (`security.yml`)                                                 |
+| 배포   | Jenkins - lint·typecheck · 의존성 스캔(Trivy) · 시크릿 스캔(Gitleaks) · 이미지 스캔 |
 
 ---
 

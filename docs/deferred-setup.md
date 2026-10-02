@@ -28,11 +28,15 @@
 
 ## 도입 완료
 
-| 패키지                                          | 도입 시점                                                                    |
-| ----------------------------------------------- | ---------------------------------------------------------------------------- |
-| `zod`, `@hookform/resolvers`, `react-hook-form` | 인증 폼 화면(로그인·회원가입) 착수, PR #5                                    |
-| `@tanstack/react-query`                         | 세션 조회(`GET /api/members/me`) 전역 상태 확립, #70 (devtools는 미도입)     |
-| `sharp` (devDep)                                | 이미지 에셋 최적화 스크립트(`scripts/optimize-images.mjs`)·`next/image`, #60 |
+| 패키지                                              | 도입 시점                                                                      |
+| --------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `zod`, `@hookform/resolvers`, `react-hook-form`     | 인증 폼 화면(로그인·회원가입) 착수, PR #5                                      |
+| `@tanstack/react-query`                             | 세션 조회(`GET /api/members/me`) 전역 상태 확립, #70 (devtools는 미도입)       |
+| `sharp` (devDep)                                    | 이미지 에셋 최적화 스크립트(`scripts/optimize-images.mjs`)·`next/image`, #60   |
+| `vitest` (devDep)                                   | 순수 로직 단위 테스트(`src/tests/`, node 환경), CI에 `npm run test` 추가, #240 |
+| `@playwright/test`, `@axe-core/playwright` (devDep) | 핵심 흐름 E2E·접근성 검사(`src/tests/e2e/`, 가짜 백엔드), 로컬 실행 전용, #242 |
+
+`vitest.config.mts`는 tsconfig 경로 별칭(`@/*`)을 그대로 씁니다. 컴포넌트 테스트를 들일 때 jsdom·Testing Library를 추가합니다. 단위 테스트는 `*.test.ts`, E2E는 `*.spec.ts`로 나눕니다. E2E의 CI 편입은 미정입니다.
 
 `src/schemas/`는 위 도입과 함께 생성했습니다. `src/stores/`는 `zustand` 도입 시 함께 만듭니다.
 TanStack Query 도입으로 `src/app/providers.tsx`(QueryClientProvider)·`src/features/auth/session.ts`(세션 캐시)를 함께 만들었습니다.
@@ -41,29 +45,33 @@ TanStack Query 도입으로 `src/app/providers.tsx`(QueryClientProvider)·`src/f
 
 관련 코드를 임의로 작성하지 않고 비워 둔 상태입니다. (확정된 항목은 [결정된 사항](#결정된-사항)으로 이동)
 
-- **로그인 식별자** — 아이디(`loginId`) 기반. 백엔드 `ProfileResponseDto.loginId`(소셜 전용 계정은 `null`). 로그인 폼 입력 식별자 확정은 로그인 화면 후속과 함께 정리([`src/schemas/auth.ts`](../src/schemas/auth.ts)).
-- **비밀번호 정책** — 자릿수·문자 조합 규칙. 현재 8~64자는 잠정값, 서버 규칙 확정 시 교체
+- **아이디 형식 규칙** — 허용 문자·자릿수. 서버 미확정이라 로그인 폼은 "필수(빈값 금지)"만 검증한다([`src/schemas/auth.ts`](../src/schemas/auth.ts)).
+- **비밀번호 정책** — 자릿수·문자 조합 규칙. 현재 8~16자·대소문자·숫자·특수문자 각 1개 이상은 Figma 시안 문구 기반 잠정값, 서버 규칙 확정 시 교체
 - **PWA 채택 여부** — 미정. 현재 관련 의존성·설정 없음(하단 참고).
 
 ## 결정된 사항
 
+- **로그인 식별자 = 아이디(`loginId`)** — 아이디 로그인은 `POST /api/auth/login`으로 실 API 연동(#201). 백엔드 `ProfileResponseDto.loginId`는 소셜 전용 계정이면 `null`. 회원가입은 아직 준비 중(목).
 - **인증 방식 = httpOnly 쿠키(SID)** — Authorization 헤더 미사용. 소셜/일반 로그인 동일 구조, 토큰을 JS로 저장/파싱하지 않음([`security-baseline.md`](./security-baseline.md) 요건 1).
 - **API 계층·응답 포맷·베이스 URL·에러 코드 확정**(2026-09-08 실측) — 최소 구성의 `src/lib/api.ts`(`apiFetch`, `credentials:'include'`)를 자체 작성.
   - **베이스 URL**: 단일 `NEXT_PUBLIC_API_BASE_URL` 하나(도메인 A·B 구분 없음). 로컬 `http://localhost:8080`.
   - **성공 응답**: 래퍼 없는 **bare DTO** → `json() as DTO`.
   - **실패 응답**: `{ success:false, data:null, error:{ code, message, fieldErrors } }` 봉투 → `apiFetch`가 비2xx에서 throw.
   - **에러 코드**: HTTP status + 비즈니스 코드 병용. `error.code`에 도메인 코드(예: `COMMON_401`, `SEARCH_001`).
-- **공용 UI 프리미티브 = as-built(2회 규칙)** — 규약 문서를 먼저 쓰지 않고, 두 번째 사용처가 생길 때 `src/components/ui`로 추출한다. 현재 `Button`·`Checkbox`·`ToggleSwitch`·`SegmentControl`·`Accordion`·`AlertDialog`·`Toast`·`Skeleton`·`EmptyState`·`ErrorScreen`/`ErrorState`·`StatusBadge`·`GoBackButton`·`ComingSoonButton` 등이 있고 디자인 토큰(globals.css 생성물)에 바인딩한다.
+- **공용 UI 프리미티브 = as-built(2회 규칙)** — 규약 문서를 먼저 쓰지 않고, 두 번째 사용처가 생길 때 `src/components/ui`로 추출한다. 현재 `Button`·`Checkbox`·`Radio`·`ToggleSwitch`·`SegmentControl`·`Accordion`·`Dialog`·`AlertDialog`·`Toast`·`Skeleton`·`EmptyState`·`ErrorBoundary`·`ErrorScreen`/`ErrorState`·`NotFoundScreen`·`StatusBadge`·`GoBackButton`·`ComingSoonButton`·`Icons`(19종)가 있고 디자인 토큰(globals.css 생성물)에 바인딩한다.
 - **자동 리뷰·환경 견본 도입** — `.coderabbit.yaml`(PR 자동 리뷰, 자체 규약)·`.env.local.example`(`NEXT_PUBLIC_API_BASE_URL` 견본)을 MoongCheap용으로 자체 작성(#18). `env.d.ts`는 아직 미도입.
 - **소셜 로그인(카카오/구글) 채택 · 백엔드 OAuth 규격 확정** — 웹 OAuth 전체 리다이렉트 방식(모바일 웹, PWA 예정). 백엔드와 아래 규격 합의 완료.
   - **진입**: 프론트는 `{baseUrl}/oauth2/authorization/kakao`(또는 `.../google`)로 단순 이동(`location.href`/`<a>`, fetch 아님).
   - **콜백**: 백엔드가 provider와 code 교환 → **SID(httpOnly 쿠키)** 세션 발급 후 프론트로 리다이렉트. **쿼리로 토큰을 넘기지 않음** → 프론트는 토큰 저장/파싱 없음([`security-baseline.md`](./security-baseline.md) 요건 1 충족).
-  - **착지 URL**: 성공 `https://moongcheap.com/oauth/callback`(`src/app/(auth)/oauth/callback` 라우트 유지) · 실패 `https://moongcheap.com/oauth/failed?reason=denied|provider_error|server_error`.
+  - **착지 URL**: 프론트 배포 도메인 기준 성공 `/oauth/callback`(`src/app/(auth)/oauth/callback`) · 실패 `/oauth/failed?reason=denied|provider_error|server_error`. 도메인은 백엔드 설정이 정한다(테스트 서버 `https://moongcheap.shop`. `moongcheap.com`은 무관한 타사 도메인이니 쓰지 않는다).
   - **가입/연동**: 최초 소셜 로그인은 **완료 스텝**을 거친다. 백엔드가 약관 미동의(=최초 유저)를 콜백에 `?status=incomplete`로 되돌리면 프론트는 `/oauth/complete`로 이동해 **약관 동의 + 닉네임**을 받고 `POST /api/auth/social-signup/complete`로 가입을 확정한다(완료 유저 재로그인은 곧장 홈). 동일 이메일이어도 **자동 연동 없이 별개 계정** 신규 가입.
   - **세션**: 일반 로그인과 세션·갱신·로그아웃 구조 동일.
-  - **env**: `KAKAO_CLIENT_ID` / `GOOGLE_CLIENT_ID`를 백엔드가 제공 예정(키 이름 확정 후 `.env.local` 배선).
+  - **env**: provider client ID·secret은 백엔드만 가진다. 프론트는 `NEXT_PUBLIC_API_BASE_URL` 하나로 인가 이동 주소를 만든다.
   - **보류**: 로그인 후 "원래 가려던 페이지로 복귀"는 보호 라우트 가드 도입 시 프론트 `sessionStorage` 방식으로 추가 예정(백엔드 지원 불필요, 고정 URL로 충분).
-- **목(mock) 전략** — MSW 없이 async 함수가 `AuthResult`를 반환하는 방식으로 진행(뼈대 작성자 의도). 실제 연동 시 함수 본문만 API 호출로 교체하고 반환 타입은 유지([`src/mocks/auth.ts`](../src/mocks/auth.ts)).
+- **목(mock) 전략** — MSW 없이 `src/mocks/`의 async 함수가 화면 타입을 반환하는 방식. 실제 연동 시 함수 본문만 API 호출로 교체하고 반환 타입은 유지한다.
+  - **연동 완료(목 제거)**: 로그인(소셜·아이디)·세션·회원 정보, 상품 도감 검색·상세, 수요 등록·상세·퀵 참여, 내 참여 목록·대체상품, 낙찰 결과, 주문 목록·상세, 배송지, 결제수단 조회·기본 지정, 마이페이지 주문 요약.
+  - **목 잔여(백엔드 규격 없음)**: 홈피드([`home.ts`](../src/mocks/home.ts)), 회원가입·휴대폰 인증([`auth.ts`](../src/mocks/auth.ts)), 알림 설정의 마케팅 동의([`notification.ts`](../src/mocks/notification.ts)), 판매자 전환 사업자번호 검증([`seller.ts`](../src/mocks/seller.ts)).
+  - **폴백·기본값으로만 남은 목**: 상품 상세는 [`product.ts`](../src/mocks/product.ts)를 초기값으로 깔고 실데이터로 덮는다. 검색 결과는 네트워크 실패·401일 때만 [`search.ts`](../src/mocks/search.ts)로 대체한다.
 
 ## PWA
 

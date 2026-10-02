@@ -27,11 +27,13 @@ Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · ESLint �
 
 **서버 상태**: @tanstack/react-query (세션 조회 전역 상태 확립 시 도입, #70).
 
-**아직 설치하지 않은 것**: 전역 클라이언트 상태(Zustand), 테스트 러너(미정). 필요한 시점에 추가합니다. → [`docs/deferred-setup.md`](docs/deferred-setup.md)
+**테스트**: Vitest (순수 로직 단위 테스트, node 환경, `src/tests/**/*.test.ts`, #240) · Playwright (핵심 흐름 E2E + axe 접근성 검사, 가짜 백엔드, `src/tests/e2e/*.spec.ts`, #242). `npm run test` / `npm run test:e2e`.
+
+**아직 설치하지 않은 것**: 전역 클라이언트 상태(Zustand). 필요한 시점에 추가합니다. → [`docs/deferred-setup.md`](docs/deferred-setup.md)
 
 ## 규격 — 확정된 것과 아직 미정인 것
 
-초기 도구 세팅을 지나 API 계층(`src/lib/api.ts`)·인증·여러 화면이 들어와 있습니다. 아래 **미정** 항목은 여전히 추측으로 채우지 말고, 규격이 나온 뒤에 작성합니다.
+MVP 화면과 핵심 거래 흐름(수요 등록 → 참여 → 낙찰 → 주문)이 실 API로 연동되어 QA·시연 대응 단계입니다. 아래 **미정** 항목은 여전히 추측으로 채우지 말고, 규격이 나온 뒤에 작성합니다.
 
 **결정됨**
 
@@ -43,7 +45,8 @@ Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · ESLint �
 **미정 (합의/결정 전 — 추측 금지)**
 
 - **PWA 채택 여부** — 미정. 현재 관련 의존성·설정 없음.
-- **도메인 B 거래 흐름** — 장바구니·주문·결제·정산 API 상당수 미확정. 해당 화면은 mock+screen-local 유지.
+- **도메인 B 남은 범위** — 수요 등록·참여·대체상품·낙찰 결과·주문 목록/상세·결제수단 조회/기본 지정은 실 API 연동 완료. 장바구니·정산·결제수단 등록·참여/낙찰 취소는 미확정이라 화면에 넣지 않거나 '준비 중' 안내로 둔다.
+- **목(mock) 잔여** — 홈피드·회원가입·알림 설정(마케팅 동의)·판매자 전환은 백엔드 규격이 없어 `src/mocks/`로 동작한다. 규격이 나오면 함수 본문만 API 호출로 교체한다.
 
 자세한 근거·해소 이력은 [`docs/deferred-setup.md`](docs/deferred-setup.md) 참고.
 

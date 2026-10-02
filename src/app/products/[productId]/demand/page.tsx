@@ -1,4 +1,6 @@
 import { DemandFormView } from '@/features/demand/components/DemandFormView';
+import { preloadApiGet } from '@/lib/apiPreload';
+import { productCatalogDetailPath, toCatalogId } from '@/lib/productApi';
 import { mockGetProductDetail } from '@/mocks/product';
 
 // B-09 수요 등록/참여. 상품 상세(B-08)의 하단 CTA `뭉치 참여하기`가 일정 타임라인
@@ -19,16 +21,22 @@ export default async function DemandFormPage({
   // 실데이터로 덮는다(`useProductCatalogOverlay`). 그 훅이 초기 상품을 state로 복사하므로 상품이
   // 바뀌면 리마운트되도록 key를 준다(B-08 페이지와 같은 이유).
   const product = await mockGetProductDetail(productId);
+  // 상품 요약(이미지·상품명)이 도감 조회 뒤에 그려지므로 HTML 단계에서 미리 요청한다(`lib/apiPreload`).
+  if (toCatalogId(productId) !== null) {
+    preloadApiGet(productCatalogDetailPath(productId));
+  }
 
   return (
-    <DemandFormView
-      backHref={`/products/${productId}`}
-      key={productId}
-      // 없는 상품(404)이면 backHref(상품 상세)도 404라 홈을 출구로 준다.
-      notFoundHref="/"
-      participationListHref="/waiting"
-      paymentMethodsHref="/mypage/payment-methods"
-      product={product}
-    />
+    <main className="flex w-full flex-1 flex-col">
+      <DemandFormView
+        backHref={`/products/${productId}`}
+        key={productId}
+        // 없는 상품(404)이면 backHref(상품 상세)도 404라 홈을 출구로 준다.
+        notFoundHref="/"
+        participationListHref="/waiting"
+        paymentMethodsHref="/mypage/payment-methods"
+        product={product}
+      />
+    </main>
   );
 }

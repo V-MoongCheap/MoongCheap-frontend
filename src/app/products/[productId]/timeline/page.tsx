@@ -23,5 +23,9 @@ export default async function ProductTimelinePage({
 }) {
   const { productId } = await params;
 
-  return <DemandGuideView nextHref={`/products/${encodeURIComponent(productId)}/demand`} />;
+  return (
+    <main className="flex w-full flex-1 flex-col">
+      <DemandGuideView nextHref={`/products/${encodeURIComponent(productId)}/demand`} />
+    </main>
+  );
 }

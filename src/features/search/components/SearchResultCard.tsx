@@ -54,9 +54,20 @@ interface SearchResultCardProps {
   href: string;
   /** 수요보드 조회 상태. 없으면 조회를 마쳤거나(값이 `product`에 있다) 조회 대상이 아니다. */
   demandLoadState?: 'loading' | 'failed';
+  /**
+   * 첫 화면에 보이는 카드인지. 참이면 사진을 지연 로드하지 않고 우선 받는다. 첫 카드 사진이 검색 결과
+   * 화면의 LCP 요소라 지연 로드 대상에서 뺀다. 사진은 검색 응답 뒤에 생겨서, Phase 4 측정에서 이 변경만으로는
+   * LCP 차이가 없었다. LCP를 줄인 것은 검색 API preload다(`lib/apiPreload`).
+   */
+  isAboveFold?: boolean;
 }
 
-export function SearchResultCard({ product, href, demandLoadState }: SearchResultCardProps) {
+export function SearchResultCard({
+  product,
+  href,
+  demandLoadState,
+  isAboveFold = false,
+}: SearchResultCardProps) {
   const status = product.demandStatus === undefined ? null : STATUS_BADGE[product.demandStatus];
   // 하단 행은 참여 인원이 있을 때만 그린다. P1은 보드 수만 넘겨서 하단 행 없이 배지로만 보인다.
   const hasFooter = product.participantCount !== undefined;
@@ -77,7 +88,9 @@ export function SearchResultCard({ product, href, demandLoadState }: SearchResul
             <Image
               alt=""
               className="object-contain"
+              fetchPriority={isAboveFold ? 'high' : undefined}
               fill
+              loading={isAboveFold ? 'eager' : undefined}
               sizes="361px"
               src={product.thumbnailUrl}
             />

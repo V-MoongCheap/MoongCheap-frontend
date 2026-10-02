@@ -41,7 +41,15 @@ export function ProductSummarySection({
         {/* 썸네일. 외부 절대 URL은 next/image가 렌더에서 던지므로 `isRenderableImageSrc`로 걸러 낸다. */}
         <span className="bg-background-subtle rounded-8 relative block size-22.5 shrink-0 overflow-hidden">
           {isRenderableImageSrc(product.thumbnailUrl) && (
-            <Image alt="" className="object-contain" fill sizes="90px" src={product.thumbnailUrl} />
+            <Image
+              alt=""
+              className="object-contain"
+              fetchPriority="high"
+              fill
+              loading="eager"
+              sizes="90px"
+              src={product.thumbnailUrl}
+            />
           )}
         </span>
 

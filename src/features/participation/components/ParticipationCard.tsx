@@ -28,9 +28,20 @@ interface ParticipationCardProps {
   onOpenDetail?: () => void;
   /** 상태별 하단 액션(선택). 필터 탭에서만 주입된다. */
   action?: ReactNode;
+  /**
+   * 첫 화면에 보이는 카드인지. 참이면 썸네일을 지연 로드하지 않는다. 첫 카드 썸네일이 참여 목록 화면의
+   * LCP 요소라 지연 로드 대상에서 뺀다. 썸네일은 목록 응답 뒤에 생겨서, Phase 4 측정에서 이 변경만으로는
+   * LCP 차이가 없었다.
+   */
+  isAboveFold?: boolean;
 }
 
-export function ParticipationCard({ item, onOpenDetail, action }: ParticipationCardProps) {
+export function ParticipationCard({
+  item,
+  onOpenDetail,
+  action,
+  isAboveFold = false,
+}: ParticipationCardProps) {
   const meta = getParticipationStatusMeta(item.status);
 
   const body = (
@@ -43,7 +54,15 @@ export function ParticipationCard({ item, onOpenDetail, action }: ParticipationC
             className="bg-surface-secondary rounded-12 relative size-20 overflow-hidden"
           >
             {isRenderableImageSrc(item.thumbnailUrl) && (
-              <Image alt="" className="object-cover" fill sizes="80px" src={item.thumbnailUrl} />
+              <Image
+                alt=""
+                className="object-cover"
+                fetchPriority={isAboveFold ? 'high' : undefined}
+                fill
+                loading={isAboveFold ? 'eager' : undefined}
+                sizes="80px"
+                src={item.thumbnailUrl}
+              />
             )}
           </div>
           <span

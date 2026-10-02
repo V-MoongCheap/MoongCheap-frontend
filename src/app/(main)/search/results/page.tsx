@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation';
 import { SEARCH_QUERY_MIN_LENGTH } from '@/constants/businessRules';
 import { SearchQueryBar } from '@/features/search/components/SearchQueryBar';
 import { SearchResultsView } from '@/features/search/components/SearchResultsView';
+import { preloadApiGet } from '@/lib/apiPreload';
+import { productSearchPath } from '@/lib/productSearchApi';
 
 export const metadata: Metadata = {
   title: '검색 결과',
@@ -34,6 +36,8 @@ export default async function SearchResultsPage({
   if (query.length < SEARCH_QUERY_MIN_LENGTH) {
     redirect('/search');
   }
+  // 첫 페이지 검색을 HTML 단계로 앞당긴다. LCP인 첫 카드 사진이 이 응답 뒤에야 그려진다(`lib/apiPreload`).
+  preloadApiGet(productSearchPath(query));
 
   return (
     // 배경은 셸((main) 레이아웃)의 `background/default`를 그대로 쓴다.

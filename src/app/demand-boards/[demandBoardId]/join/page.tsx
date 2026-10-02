@@ -21,12 +21,14 @@ export default async function QuickJoinPage({
   const { demandBoardId } = await params;
 
   return (
-    <QuickJoinView
-      demandBoardId={demandBoardId}
-      detailHref={`/demand-boards/${encodeURIComponent(demandBoardId)}`}
-      notFoundHref="/"
-      participationListHref="/waiting"
-      paymentMethodsHref="/mypage/payment-methods"
-    />
+    <main className="flex w-full flex-1 flex-col">
+      <QuickJoinView
+        demandBoardId={demandBoardId}
+        detailHref={`/demand-boards/${encodeURIComponent(demandBoardId)}`}
+        notFoundHref="/"
+        participationListHref="/waiting"
+        paymentMethodsHref="/mypage/payment-methods"
+      />
+    </main>
   );
 }

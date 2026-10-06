@@ -30,6 +30,11 @@ export const PRODUCT_ERROR_CODE = {
   NOT_FOUND: 'PRODUCT_001',
 } as const;
 
+/** 상품 도감 상세 경로. 조회와 HTML preload(`lib/apiPreload`)가 같은 주소를 쓰도록 한 곳에서 만든다. */
+export function productCatalogDetailPath(id: string): string {
+  return `/api/product-catalog/${encodeURIComponent(id)}`;
+}
+
 /**
  * 화면 상품 id(라우트 `productId`)를 백엔드 도감 id(Long)로 바꾼다. 바꿀 수 없으면 null.
  *
@@ -50,6 +55,6 @@ export function toCatalogId(id: string): number | null {
  * id는 백엔드에서 Long이라 숫자 문자열이어야 한다(홈 목의 문자열 id로는 404가 난다).
  */
 export async function fetchProductCatalogDetail(id: string): Promise<ProductCatalogDetailDto> {
-  const response = await apiFetch(`/api/product-catalog/${encodeURIComponent(id)}`);
+  const response = await apiFetch(productCatalogDetailPath(id));
   return (await response.json()) as ProductCatalogDetailDto;
 }

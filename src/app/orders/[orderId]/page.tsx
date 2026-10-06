@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 
 import { AppBar } from '@/components/layout/AppBar';
 import { OrderDetailView } from '@/features/order/components/OrderDetailView';
+import { preloadApiGet } from '@/lib/apiPreload';
+import { orderDetailPath } from '@/lib/orderApi';
 
 export const metadata: Metadata = {
   title: '주문상세',
@@ -22,6 +24,8 @@ export default async function OrderDetailPage({
   params: Promise<{ orderId: string }>;
 }) {
   const { orderId } = await params;
+  // 주문 상세 조회를 HTML 단계로 앞당긴다(`lib/apiPreload`).
+  preloadApiGet(orderDetailPath(orderId));
 
   return (
     <main className="flex w-full flex-1 flex-col">

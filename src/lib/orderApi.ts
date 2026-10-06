@@ -206,6 +206,11 @@ export async function getOrders(tab: OrderListTabKey, page: number): Promise<Ord
   };
 }
 
+/** 주문 상세 경로. 조회와 HTML preload(`lib/apiPreload`)가 같은 주소를 쓰도록 한 곳에서 만든다. */
+export function orderDetailPath(orderNo: string): string {
+  return `/api/orders/${encodeURIComponent(orderNo)}`;
+}
+
 /**
  * 주문 상세. 없는 주문과 남의 주문은 둘 다 404 `ORDER_001`로 온다. 조회가 주문번호 + 회원 id로 걸려
  * 있어서다. 화면은 다른 조회 실패와 같이 다룬다(`OrderDetailView` 주석).
@@ -213,7 +218,7 @@ export async function getOrders(tab: OrderListTabKey, page: number): Promise<Ord
  * `GET /api/orders/{orderNo}`
  */
 export async function getOrderDetail(orderNo: string): Promise<OrderDetail> {
-  const response = await apiFetch(`/api/orders/${encodeURIComponent(orderNo)}`);
+  const response = await apiFetch(orderDetailPath(orderNo));
   const dto = (await response.json()) as OrderDetailResponseDto;
   return toOrderDetail(dto);
 }

@@ -63,6 +63,8 @@ const eslintConfig = defineConfig([
       'tailwind.config.ts',
       'eslint.config.mjs',
       'commitlint.config.mjs',
+      'vitest.config.mts',
+      'playwright.config.ts',
     ],
     rules: {
       'import/no-default-export': 'off',
@@ -71,7 +73,16 @@ const eslintConfig = defineConfig([
 
   // Override default ignores of eslint-config-next.
   // public/**: 정적 에셋은 린트 대상 아님(.prettierignore와 동일 정책).
-  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'public/**']),
+  // playwright-report/·test-results/: E2E 실행 결과물(번들된 리포트 JS 포함).
+  globalIgnores([
+    '.next/**',
+    'out/**',
+    'build/**',
+    'next-env.d.ts',
+    'public/**',
+    'playwright-report/**',
+    'test-results/**',
+  ]),
 ]);
 
 export default eslintConfig;
